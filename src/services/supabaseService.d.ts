@@ -6,6 +6,7 @@ declare class SupabaseService {
   clearApiKey(): void;
   signOut(): Promise<{ success: boolean; error?: string }>;
   getUserProfile(): Promise<any>;
+  createBacklinkRequest(data: any): Promise<any>;
   // Add other methods as needed
 }
 

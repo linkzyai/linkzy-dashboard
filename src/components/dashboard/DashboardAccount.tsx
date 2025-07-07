@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DashboardLayout from './DashboardLayout';
 import ContextualHelp from '../ContextualHelp';
 import CelebrationModal from '../CelebrationModal';
+import PurchaseCreditsModal from './PurchaseCreditsModal';
 import { 
   AlertCircle,
   AlertTriangle,
@@ -104,6 +105,18 @@ const DashboardAccount = () => {
   const [wpSearch, setWpSearch] = useState('');
   const [wpTypeFilter, setWpTypeFilter] = useState<'all' | 'post' | 'page'>('all');
   const [wpPolling, setWpPolling] = useState(false);
+  
+  // Mock data - replace with real data from context/API
+  const userData = {
+    email: user?.email || 'user@example.com',
+    website: user?.website || 'https://example.com',
+    niche: user?.niche || 'Technology',
+    apiKey: user?.api_key || 'demo_api_key_123',
+    credits: user?.creditsRemaining || 3,
+    plan: user?.plan || 'Free',
+    joinDate: 'December 2024'
+  };
+  
   // Assume userData.apiKey or user?.api_key is available for snippet personalization
   const userApiKey = user?.api_key || userData.apiKey || 'demo_api_key_123';
   const apiSnippet = `<script>
@@ -134,16 +147,7 @@ const DashboardAccount = () => {
     setTimeout(() => setSnippetCopied(false), 2000);
   };
 
-  // Mock data - replace with real data from context/API
-  const userData = {
-    email: user?.email || 'user@example.com',
-    website: user?.website || 'https://example.com',
-    niche: user?.niche || 'Technology',
-    apiKey: user?.creditsRemaining || 3,
-    credits: user?.creditsRemaining || 3,
-    plan: user?.plan || 'Free',
-    joinDate: 'December 2024'
-  };
+
 
   // Mock active requests
   const activeRequests = [
@@ -496,7 +500,7 @@ const DashboardAccount = () => {
     return matchesType && matchesSearch;
   });
 
-  const [trackedContent, setTrackedContent] = useState([]);
+  const [trackedContent, setTrackedContent] = useState<any[]>([]);
   const [trackedLoading, setTrackedLoading] = useState(false);
   const [trackedError, setTrackedError] = useState('');
 
@@ -975,19 +979,12 @@ const DashboardAccount = () => {
   // Purchase Credits Modal
   if (showPurchaseModal) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
-        <div className="bg-gray-900 border border-orange-500 rounded-2xl shadow-xl p-8 w-full max-w-md relative">
-          <button className="absolute top-4 right-4 text-gray-400 hover:text-white" onClick={() => setShowPurchaseModal(false)}><span className="text-2xl">&times;</span></button>
-          <h2 className="text-2xl font-bold text-white mb-6">Purchase Credits</h2>
-          <div className="space-y-4">
-            {[3, 10, 25, 50].map((amt) => (
-              <button key={amt} className="w-full bg-orange-500 hover:bg-orange-600 text-white px-6 py-4 rounded-lg font-semibold text-lg" onClick={() => handlePurchaseCredits(amt)}>
-                Buy {amt} Credits
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      <PurchaseCreditsModal
+        isOpen={showPurchaseModal}
+        onClose={() => setShowPurchaseModal(false)}
+        currentCredits={credits}
+        currentPlan={userData.plan}
+      />
     );
   }
 
