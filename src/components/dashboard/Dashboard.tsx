@@ -215,27 +215,6 @@ const Dashboard = () => {
 
   return (
     <>
-      <button
-        onClick={async () => {
-          const { data: { user } } = await supabase.auth.getUser();
-          console.log("Supabase user:", user);
-          alert(user ? `Authenticated as: ${user.email}` : "Not authenticated");
-        }}
-        style={{
-          position: 'fixed',
-          top: 10,
-          right: 10,
-          zIndex: 9999,
-          background: '#333',
-          color: '#fff',
-          padding: '10px 20px',
-          border: 'none',
-          borderRadius: '5px'
-        }}
-      >
-        Check Supabase Auth
-      </button>
-
       <DashboardLayout title="Overview">
         <div className="p-6">
           {/* Welcome Section with guidance for new users */}

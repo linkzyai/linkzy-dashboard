@@ -238,9 +238,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Sign out error:', error);
     }
     
+    // Always clear the auth state regardless of any errors
     setIsAuthenticated(false);
     setUser(null);
-    window.location.href = '/';
+    
+    // Use a more reliable redirect method
+    try {
+      window.location.replace('/');
+    } catch (redirectError) {
+      console.error('Redirect error:', redirectError);
+      // Fallback to simple href
+      window.location.href = '/';
+    }
   };
 
   const value = {
