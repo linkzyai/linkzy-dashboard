@@ -83,27 +83,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: string, session: any) => {
-        console.log('🔄 Auth state changed:', event);
+        console.log('🔄 Auth state changed:', event, 'Session:', !!session);
         try {
           if (event === 'SIGNED_IN') {
             console.log('✅ User signed in, updating auth state');
-            // Fetch user data when signed in
-            const { isAuthenticated: authStatus, user: authUser } = await supabaseService.getAuthStatus();
-            if (authStatus && authUser) {
+            // Get user directly from session instead of calling getAuthStatus
+            if (session?.user) {
+              const userData = {
+                id: session.user.id,
+                email: session.user.email,
+                api_key: session.user.user_metadata?.api_key || `linkzy_${session.user.email?.replace('@', '_').replace('.', '_')}_${Date.now()}`,
+                creditsRemaining: 3,
+                plan: 'Free'
+              };
               setIsAuthenticated(true);
-              setUser(authUser);
-              // Ensure API key is set
-              if (authUser.api_key) {
-                supabaseService.setApiKey(authUser.api_key);
-              } else if (authUser.user_metadata?.api_key) {
-                supabaseService.setApiKey(authUser.user_metadata.api_key);
-              }
+              setUser(userData);
+              supabaseService.setApiKey(userData.api_key);
+              localStorage.setItem('linkzy_user', JSON.stringify(userData));
+              console.log('✅ Auth state updated successfully');
             }
           } else if (event === 'SIGNED_OUT') {
             console.log('🚪 User signed out');
             setIsAuthenticated(false);
             setUser(null);
             supabaseService.clearApiKey();
+            localStorage.removeItem('linkzy_user');
           } else if (event === 'TOKEN_REFRESHED') {
             console.log('🔄 Session token refreshed');
           } else if (event === 'USER_UPDATED') {
