@@ -119,6 +119,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
+  // Temporarily bypass email verification for development
+  // TODO: Re-enable email verification when email system is properly configured
+  /*
   // If authenticated but email not verified, show verification prompt
   if (isAuthenticated && !emailVerified) {
     return (
@@ -174,6 +177,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       </div>
     );
   }
+  */
 
   // If not authenticated, show login/registration prompt
   if (!isAuthenticated) {
