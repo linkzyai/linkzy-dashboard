@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Proxy Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #000;
+            color: #fff;
+        }
+        .button {
+            background: #f97316;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .button:hover { background: #ea580c; }
+        .result {
+            background: #1f2937;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+        .success { border-left: 4px solid #10b981; }
+        .error { border-left: 4px solid #ef4444; }
+        .warning { border-left: 4px solid #f59e0b; }
+        .info { border-left: 4px solid #3b82f6; }
+    </style>
+</head>
+<body>
+    <h1>🔧 CORS Bypass & Proxy Test</h1>
+    <p>Testing different ways to bypass CORS restrictions</p>
+    
+    <div>
+        <button class="button" onclick="testDirectAPI()">Direct API Test</button>
+        <button class="button" onclick="testWithProxy()">Test with CORS Proxy</button>
+        <button class="button" onclick="testManusSupport()">Contact Manus Support</button>
+        <button class="button" onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div id="results"></div>
+    
+    <script>
+        const MANUS_API = 'https://vgh0i1cjwd5k.manus.space';
+        
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            document.getElementById('results').appendChild(div);
+            div.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function testDirectAPI() {
+            addResult('🎯 Testing direct API with various CORS configurations...', 'info');
+            
+            const testConfigs = [
+                {
+                    name: 'Standard CORS',
+                    config: {
+                        method: 'POST',
+                        mode: 'cors',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        }
+                    }
+                },
+                {
+                    name: 'No Credentials',
+                    config: {
+                        method: 'POST',
+                        mode: 'cors',
+                        credentials: 'omit',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        }
+                    }
+                },
+                {
+                    name: 'Minimal Headers',
+                    config: {
+                        method: 'POST',
+                        mode: 'cors',
+                        credentials: 'omit',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                }
+            ];
+            
+            const testData = {
+                email: 'test@linkzy-cors-test.com',
+                name: 'test@linkzy-cors-test.com'
+            };
+            
+            for (const test of testConfigs) {
+                try {
+                    addResult(`Testing: ${test.name}`, 'info');
+                    
+                    const response = await fetch(`${MANUS_API}/api/auth/register`, {
+                        ...test.config,
+                        body: JSON.stringify(testData)
+                    });
+                    
+                    if (response.ok) {
+                        addResult(`✅ ${test.name} succeeded! Status: ${response.status}`, 'success');
+                        const data = await response.json();
+                        addResult(`Response: ${JSON.stringify(data, null, 2)}`, 'success');
+                        return; // Stop on first success
+                    } else {
+                        addResult(`⚠️ ${test.name} got response but with error: ${response.status}`, 'warning');
+                    }
+                    
+                } catch (error) {
+                    addResult(`❌ ${test.name} failed: ${error.message}`, 'error');
+                }
+            }
+        }
+        
+        async function testWithProxy() {
+            addResult('🔄 Testing with CORS proxy services...', 'info');
+            
+            const corsProxies = [
+                'https://cors-anywhere.herokuapp.com/',
+                'https://api.allorigins.win/raw?url=',
+                'https://corsproxy.io/?'
+            ];
+            
+            const testData = {
+                email: 'test@linkzy-proxy-test.com',
+                name: 'test@linkzy-proxy-test.com'
+            };
+            
+            for (const proxy of corsProxies) {
+                try {
+                    addResult(`Testing proxy: ${proxy}`, 'info');
+                    
+                    const proxyUrl = `${proxy}${encodeURIComponent(`${MANUS_API}/api/auth/register`)}`;
+                    
+                    const response = await fetch(proxyUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(testData)
+                    });
+                    
+                    if (response.ok) {
+                        addResult(`✅ Proxy ${proxy} worked! Status: ${response.status}`, 'success');
+                        const data = await response.json();
+                        addResult(`Response: ${JSON.stringify(data, null, 2)}`, 'success');
+                        addResult(`🎉 Use this proxy for registration: ${proxy}`, 'success');
+                        return;
+                    } else {
+                        addResult(`⚠️ Proxy ${proxy} responded but with error: ${response.status}`, 'warning');
+                    }
+                    
+                } catch (error) {
+                    addResult(`❌ Proxy ${proxy} failed: ${error.message}`, 'error');
+                }
+            }
+            
+            addResult('❌ All proxies failed. CORS configuration needed on server.', 'error');
+        }
+        
+        function testManusSupport() {
+            const supportMessage = `Subject: CORS Configuration Request for Linkzy API Integration
+
+Hello Manus Support Team,
+
+I'm integrating with the Linkzy API but encountering CORS (Cross-Origin Resource Sharing) issues.
+
+**Problem:**
+- Frontend domain: ${window.location.origin}
+- API endpoint: ${MANUS_API}/api/auth/register
+- Error: "No 'Access-Control-Allow-Origin' header is present"
+
+**Required Fix:**
+Please add these CORS headers to your API server:
+
+\`\`\`
+Access-Control-Allow-Origin: ${window.location.origin}
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept
+Access-Control-Allow-Credentials: true
+\`\`\`
+
+**For broader compatibility, you could use:**
+\`\`\`
+Access-Control-Allow-Origin: *
+\`\`\`
+
+**Technical Details:**
+- Browser: ${navigator.userAgent}
+- API Base: ${MANUS_API}
+- Integration: Linkzy SaaS Platform
+
+This is blocking user registrations. Please prioritize this fix.
+
+Thank you!`;
+
+            navigator.clipboard.writeText(supportMessage).then(() => {
+                addResult('📋 Support message copied to clipboard!', 'success');
+                addResult('Send this message to Manus support team.', 'info');
+                
+                // Also try to open email client
+                const mailtoLink = `mailto:support@manus.space?subject=CORS Configuration Request for Linkzy API&body=${encodeURIComponent(supportMessage)}`;
+                window.open(mailtoLink);
+                
+            }).catch(err => {
+                addResult('❌ Failed to copy to clipboard. Please copy manually:', 'error');
+                addResult(supportMessage, 'info');
+            });
+        }
+        
+        // Auto-run basic test on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            addResult('🚀 CORS Bypass Test Page Loaded', 'success');
+            addResult(`Target API: ${MANUS_API}`, 'info');
+            addResult(`Frontend Origin: ${window.location.origin}`, 'info');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linkzy API Test - MANUS EXACT SPECIFICATIONS</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #000;
+            color: #fff;
+        }
+        .test-button {
+            background: #f97316;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .test-button:hover {
+            background: #ea580c;
+        }
+        .test-button:disabled {
+            background: #6b7280;
+            cursor: not-allowed;
+        }
+        .result {
+            background: #1f2937;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+        .success { border-left: 4px solid #10b981; }
+        .error { border-left: 4px solid #ef4444; }
+        .warning { border-left: 4px solid #f59e0b; }
+        .info { border-left: 4px solid #3b82f6; }
+        .url-display {
+            background: #374151;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 13px;
+        }
+        .working-box {
+            background: #059669;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .spec-box {
+            background: #1e40af;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Linkzy API Test - MANUS EXACT SPECIFICATIONS</h1>
+    <p>Testing with the EXACT format provided by Manus support team!</p>
+    
+    <div class="spec-box">
+        <h3>📋 MANUS EXACT SPECIFICATIONS</h3>
+        <div style="font-family: monospace; font-size: 12px; margin: 10px 0;">
+            <div><strong>API Endpoint:</strong> https://xlhyimcj0p7p.manus.space/register</div>
+            <div><strong>Method:</strong> POST</div>
+            <div><strong>Headers:</strong> { "Content-Type": "application/json" }</div>
+            <div><strong>Request Body:</strong> { "email": userEmail, "name": userEmail }</div>
+            <div><strong>Success Response:</strong> { "message": "User created successfully", "api_key": "linkzy_user_email_key", "user": {...} }</div>
+        </div>
+    </div>
+    
+    <div class="url-display">
+        <strong>✅ WORKING API:</strong> <span id="current-api">https://xlhyimcj0p7p.manus.space</span>
+        <br>
+        <strong>Frontend:</strong> <span id="frontend-url">-</span>
+        <br>
+        <strong>Status:</strong> <span id="connection-status" style="color: #10b981;">Ready for testing</span>
+    </div>
+    
+    <div>
+        <button class="test-button" onclick="testManusSpecifications()">🎯 Test MANUS Exact Specs</button>
+        <button class="test-button" onclick="testCreativizeEmail()">👤 Test hello@creativize.net</button>
+        <button class="test-button" onclick="testRandomEmail()">🎲 Test Random Email</button>
+        <button class="test-button" onclick="clearResults()">🗑️ Clear Results</button>
+    </div>
+    
+    <div id="results"></div>
+    
+    <script>
+        const MANUS_API_BASE = 'https://xlhyimcj0p7p.manus.space'; // EXACT MANUS ENDPOINT
+        
+        // Update UI
+        document.getElementById('current-api').textContent = MANUS_API_BASE;
+        document.getElementById('frontend-url').textContent = window.location.origin;
+        
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            document.getElementById('results').appendChild(div);
+            div.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        function updateConnectionStatus(status, type = 'info') {
+            const statusEl = document.getElementById('connection-status');
+            statusEl.textContent = status;
+            statusEl.style.color = type === 'success' ? '#10b981' : 
+                                  type === 'error' ? '#ef4444' : 
+                                  type === 'warning' ? '#f59e0b' : '#3b82f6';
+        }
+        
+        async function testManusSpecifications() {
+            addResult('🎯 Testing with MANUS EXACT SPECIFICATIONS...', 'info');
+            
+            // EXACT format specified by Manus
+            const testData = {
+                email: 'test@linkzy-manus-spec.com',
+                name: 'test@linkzy-manus-spec.com'  // EXACT: name = email
+            };
+            
+            addResult(`📤 MANUS Request Format: ${JSON.stringify(testData, null, 2)}`, 'info');
+            
+            try {
+                addResult('🚀 Making request to /register (MANUS endpoint)...', 'info');
+                
+                // EXACT headers specified by Manus
+                const response = await fetch(`${MANUS_API_BASE}/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'  // EXACT headers
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                addResult(`📡 Response status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'warning');
+                
+                const responseText = await response.text();
+                let responseData;
+                try {
+                    responseData = JSON.parse(responseText);
+                } catch {
+                    responseData = responseText;
+                }
+                
+                if (response.ok) {
+                    addResult(`🎉 SUCCESS! MANUS API WORKING! Status: ${response.status}`, 'success');
+                    addResult(`📦 Response: ${JSON.stringify(responseData, null, 2)}`, 'success');
+                    updateConnectionStatus('✅ MANUS API Working!', 'success');
+                    
+                    // Check for api_key field as specified by Manus
+                    if (responseData.api_key) {
+                        addResult(`🔑 API Key found in response.api_key: ${responseData.api_key}`, 'success');
+                        addResult('✅ Perfect! This matches MANUS specifications exactly!', 'success');
+                        showSuccessActions(responseData.api_key);
+                    } else {
+                        addResult('⚠️ No api_key field found in response', 'warning');
+                    }
+                } else {
+                    addResult(`❌ Request failed (${response.status}): ${JSON.stringify(responseData)}`, 'error');
+                    updateConnectionStatus('❌ Request Failed', 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ Request failed: ${error.message}`, 'error');
+                updateConnectionStatus('❌ Connection Failed', 'error');
+            }
+        }
+        
+        async function testCreativizeEmail() {
+            addResult('👤 Testing with your creativize email (MANUS format)...', 'info');
+            
+            const testData = {
+                email: 'hello@creativize.net',
+                name: 'hello@creativize.net'  // MANUS format
+            };
+            
+            addResult(`📤 Request: ${JSON.stringify(testData, null, 2)}`, 'info');
+            
+            try {
+                const response = await fetch(`${MANUS_API_BASE}/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const responseText = await response.text();
+                let responseData;
+                try {
+                    responseData = JSON.parse(responseText);
+                } catch {
+                    responseData = responseText;
+                }
+                
+                if (response.ok) {
+                    addResult(`🎉 CREATIVIZE REGISTRATION SUCCESSFUL! Status: ${response.status}`, 'success');
+                    addResult(`📦 Response: ${JSON.stringify(responseData, null, 2)}`, 'success');
+                    
+                    if (responseData.api_key) {
+                        addResult(`🔑 Your API Key: ${responseData.api_key}`, 'success');
+                        addResult('🚀 You can now use this to access the dashboard!', 'success');
+                        showSuccessActions(responseData.api_key);
+                    }
+                } else {
+                    addResult(`❌ Registration failed (${response.status}): ${JSON.stringify(responseData)}`, 'error');
+                    
+                    if (response.status === 400 || response.status === 409) {
+                        addResult('💡 Account might already exist. Try using the existing API key or contact support.', 'warning');
+                    }
+                }
+                
+            } catch (error) {
+                addResult(`❌ Registration failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testRandomEmail() {
+            const randomId = Math.random().toString(36).substring(2, 8);
+            const testEmail = `test-${randomId}@linkzy-test.com`;
+            
+            addResult(`🎲 Testing with random email: ${testEmail}`, 'info');
+            
+            const testData = {
+                email: testEmail,
+                name: testEmail
+            };
+            
+            try {
+                const response = await fetch(`${MANUS_API_BASE}/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const responseText = await response.text();
+                let responseData;
+                try {
+                    responseData = JSON.parse(responseText);
+                } catch {
+                    responseData = responseText;
+                }
+                
+                if (response.ok) {
+                    addResult(`🎉 Random email registration successful!`, 'success');
+                    addResult(`📦 Response: ${JSON.stringify(responseData, null, 2)}`, 'success');
+                    
+                    if (responseData.api_key) {
+                        addResult(`🔑 Generated API Key: ${responseData.api_key}`, 'success');
+                    }
+                } else {
+                    addResult(`❌ Random email failed: ${JSON.stringify(responseData)}`, 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ Random email test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        function showSuccessActions(apiKey) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'working-box';
+            successDiv.innerHTML = `
+                <h3>🎉 SUCCESS! Account Created with MANUS API!</h3>
+                <p><strong>Your API key:</strong> <code style="background: #1f2937; padding: 4px 8px; border-radius: 4px;">${apiKey}</code></p>
+                
+                <h4>🚀 Next Steps:</h4>
+                <div style="margin: 15px 0;">
+                    <button onclick="goToDashboard('${apiKey}')" style="background: white; color: #059669; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px;">
+                        🚀 Go to Dashboard
+                    </button>
+                    <button onclick="copyApiKey('${apiKey}')" style="background: #1f2937; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px;">
+                        📋 Copy API Key
+                    </button>
+                </div>
+                
+                <p style="font-size: 12px; margin-top: 15px;">
+                    ✅ Registration working with MANUS exact specifications!<br>
+                    ✅ API key received in response.api_key field<br>
+                    ✅ Ready for production use!
+                </p>
+            `;
+            document.getElementById('results').appendChild(successDiv);
+        }
+        
+        function goToDashboard(apiKey) {
+            localStorage.setItem('linkzy_api_key', apiKey);
+            addResult('🔄 Storing API key and redirecting...', 'success');
+            setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 1000);
+        }
+        
+        function copyApiKey(apiKey) {
+            navigator.clipboard.writeText(apiKey).then(() => {
+                addResult('📋 API key copied to clipboard!', 'success');
+            });
+        }
+        
+        // Auto-run on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            addResult('🚀 MANUS API Test Tool Loaded (EXACT SPECIFICATIONS)', 'success');
+            addResult(`✅ Using MANUS WORKING API: ${MANUS_API_BASE}`, 'success');
+            addResult(`✅ Request format: { email: userEmail, name: userEmail }`, 'success');
+            addResult(`✅ Expected response: { api_key: "linkzy_user_email_key" }`, 'success');
+            addResult(`Frontend: ${window.location.origin}`, 'info');
+        });
+    </script>
+</body>
+</html>

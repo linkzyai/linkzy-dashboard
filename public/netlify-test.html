@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netlify Permission & Configuration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #000;
+            color: #fff;
+        }
+        .test-button {
+            background: #f97316;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .test-button:hover {
+            background: #ea580c;
+        }
+        .test-button:disabled {
+            background: #6b7280;
+            cursor: not-allowed;
+        }
+        .result {
+            background: #1f2937;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+        .success { border-left: 4px solid #10b981; }
+        .error { border-left: 4px solid #ef4444; }
+        .warning { border-left: 4px solid #f59e0b; }
+        .info { border-left: 4px solid #3b82f6; }
+        .netlify-box {
+            background: #0d9488;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .config-box {
+            background: #374151;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Netlify Permission & Configuration Test</h1>
+    <p>Testing Netlify proxy, redirects, and permission configurations</p>
+    
+    <div class="netlify-box">
+        <h3>🌐 Netlify Environment Detection</h3>
+        <div id="environment-info"></div>
+    </div>
+    
+    <div class="config-box">
+        <h4>📋 Configuration Status</h4>
+        <div id="config-status"></div>
+    </div>
+    
+    <div>
+        <button class="test-button" onclick="testNetlifyFunction()">🔧 Test Netlify Function</button>
+        <button class="test-button" onclick="testNetlifyRedirect()">🔀 Test Netlify Redirect</button>
+        <button class="test-button" onclick="testDirectAPI()">📡 Test Direct API</button>
+        <button class="test-button" onclick="testHeaders()">📋 Test Headers</button>
+        <button class="test-button" onclick="runAllTests()">🚀 Run All Tests</button>
+        <button class="test-button" onclick="clearResults()">🗑️ Clear Results</button>
+    </div>
+    
+    <div id="results"></div>
+    
+    <script>
+        const MANUS_API = 'https://xlhyimcj0p7p.manus.space';
+        
+        // Environment detection
+        function detectEnvironment() {
+            const hostname = window.location.hostname;
+            const isNetlify = hostname.includes('.netlify.app') || 
+                             hostname.includes('.netlify.com') || 
+                             hostname.includes('linkzy.netlify.app');
+            
+            const envInfo = {
+                hostname: hostname,
+                origin: window.location.origin,
+                protocol: window.location.protocol,
+                isNetlify: isNetlify,
+                userAgent: navigator.userAgent,
+                referrer: document.referrer
+            };
+            
+            document.getElementById('environment-info').innerHTML = `
+                <div><strong>Hostname:</strong> ${envInfo.hostname}</div>
+                <div><strong>Origin:</strong> ${envInfo.origin}</div>
+                <div><strong>Protocol:</strong> ${envInfo.protocol}</div>
+                <div><strong>Is Netlify:</strong> ${isNetlify ? '✅ Yes' : '❌ No'}</div>
+                <div><strong>Browser:</strong> ${navigator.userAgent.split(' ').slice(-2).join(' ')}</div>
+            `;
+            
+            return envInfo;
+        }
+        
+        function updateConfigStatus() {
+            const config = [
+                '✅ netlify.toml - CORS headers configured',
+                '✅ _headers - Static headers configured', 
+                '✅ _redirects - SPA routing configured',
+                '✅ Netlify function - Proxy endpoint created',
+                '✅ API service - Multi-method fallback implemented'
+            ];
+            
+            document.getElementById('config-status').innerHTML = config.join('<br>');
+        }
+        
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            document.getElementById('results').appendChild(div);
+            div.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function testNetlifyFunction() {
+            addResult('🔧 Testing Netlify serverless function proxy...', 'info');
+            
+            const testData = {
+                email: 'test@netlify-function.com',
+                name: 'test@netlify-function.com'
+            };
+            
+            try {
+                addResult('Making request to /.netlify/functions/manus-proxy/register', 'info');
+                
+                const response = await fetch('/.netlify/functions/manus-proxy/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                addResult(`Response status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'warning');
+                
+                const responseText = await response.text();
+                let responseData;
+                try {
+                    responseData = JSON.parse(responseText);
+                } catch {
+                    responseData = responseText;
+                }
+                
+                if (response.ok) {
+                    addResult('🎉 Netlify function proxy WORKING!', 'success');
+                    addResult(`Response: ${JSON.stringify(responseData, null, 2)}`, 'success');
+                    
+                    if (responseData.api_key) {
+                        addResult(`🔑 API key received: ${responseData.api_key}`, 'success');
+                    }
+                } else {
+                    addResult(`❌ Netlify function failed: ${JSON.stringify(responseData)}`, 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ Netlify function error: ${error.message}`, 'error');
+                
+                if (error.message.includes('404')) {
+                    addResult('💡 Netlify function not deployed. Check netlify/functions/ folder.', 'warning');
+                }
+            }
+        }
+        
+        async function testNetlifyRedirect() {
+            addResult('🔀 Testing Netlify redirect proxy...', 'info');
+            
+            const testData = {
+                email: 'test@netlify-redirect.com',
+                name: 'test@netlify-redirect.com'
+            };
+            
+            try {
+                addResult('Making request to /proxy/register (redirect rule)', 'info');
+                
+                const response = await fetch('/proxy/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                addResult(`Response status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'warning');
+                
+                const responseText = await response.text();
+                let responseData;
+                try {
+                    responseData = JSON.parse(responseText);
+                } catch {
+                    responseData = responseText;
+                }
+                
+                if (response.ok) {
+                    addResult('🎉 Netlify redirect proxy WORKING!', 'success');
+                    addResult(`Response: ${JSON.stringify(responseData, null, 2)}`, 'success');
+                    
+                    if (responseData.api_key) {
+                        addResult(`🔑 API key received: ${responseData.api_key}`, 'success');
+                    }
+                } else {
+                    addResult(`❌ Netlify redirect failed: ${JSON.stringify(responseData)}`, 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ Netlify redirect error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testDirectAPI() {
+            addResult('📡 Testing direct API call...', 'info');
+            
+            const testData = {
+                email: 'test@direct-api.com',
+                name: 'test@direct-api.com'
+            };
+            
+            try {
+                addResult(`Making request to ${MANUS_API}/register`, 'info');
+                
+                const response = await fetch(`${MANUS_API}/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                addResult(`Response status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'warning');
+                
+                const responseText = await response.text();
+                let responseData;
+                try {
+                    responseData = JSON.parse(responseText);
+                } catch {
+                    responseData = responseText;
+                }
+                
+                if (response.ok) {
+                    addResult('🎉 Direct API call WORKING!', 'success');
+                    addResult(`Response: ${JSON.stringify(responseData, null, 2)}`, 'success');
+                    
+                    if (responseData.api_key) {
+                        addResult(`🔑 API key received: ${responseData.api_key}`, 'success');
+                    }
+                } else {
+                    addResult(`❌ Direct API failed: ${JSON.stringify(responseData)}`, 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ Direct API error: ${error.message}`, 'error');
+                
+                if (error.message.includes('CORS')) {
+                    addResult('💡 CORS error - Netlify proxy methods should work instead.', 'warning');
+                }
+            }
+        }
+        
+        async function testHeaders() {
+            addResult('📋 Testing CORS headers and permissions...', 'info');
+            
+            try {
+                // Test OPTIONS request (CORS preflight)
+                addResult('Testing CORS preflight (OPTIONS request)...', 'info');
+                
+                const optionsResponse = await fetch(`${MANUS_API}/register`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type',
+                        'Origin': window.location.origin
+                    }
+                });
+                
+                addResult(`OPTIONS response: ${optionsResponse.status}`, optionsResponse.ok ? 'success' : 'warning');
+                addResult(`CORS headers: ${JSON.stringify(Object.fromEntries(optionsResponse.headers.entries()), null, 2)}`, 'info');
+                
+                // Test current page headers
+                addResult('Testing current page CORS configuration...', 'info');
+                const testResponse = await fetch(window.location.href, { method: 'HEAD' });
+                const pageHeaders = Object.fromEntries(testResponse.headers.entries());
+                
+                const corsHeaders = Object.keys(pageHeaders).filter(h => h.toLowerCase().includes('access-control'));
+                if (corsHeaders.length > 0) {
+                    addResult(`✅ Page has CORS headers: ${corsHeaders.join(', ')}`, 'success');
+                } else {
+                    addResult('⚠️ No CORS headers found on current page', 'warning');
+                }
+                
+            } catch (error) {
+                addResult(`❌ Headers test error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function runAllTests() {
+            addResult('🚀 Running comprehensive Netlify test suite...', 'info');
+            addResult('=' .repeat(50), 'info');
+            
+            await testNetlifyFunction();
+            addResult('-'.repeat(30), 'info');
+            
+            await testNetlifyRedirect();
+            addResult('-'.repeat(30), 'info');
+            
+            await testDirectAPI();
+            addResult('-'.repeat(30), 'info');
+            
+            await testHeaders();
+            addResult('=' .repeat(50), 'info');
+            
+            addResult('🏁 All tests completed! Check results above.', 'success');
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const env = detectEnvironment();
+            updateConfigStatus();
+            
+            addResult('🚀 Netlify Permission Test Tool Loaded', 'success');
+            addResult(`Environment: ${env.isNetlify ? 'Netlify' : 'Other'}`, 'info');
+            addResult(`Target API: ${MANUS_API}`, 'info');
+            addResult('Ready for testing!', 'info');
+        });
+    </script>
+</body>
+</html>

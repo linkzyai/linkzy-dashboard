@@ -1,0 +1,50 @@
+# Netlify Configuration for Linkzy with Supabase Integration
+# Fixed CSP to allow Supabase connections
+
+[build]
+  publish = "dist"
+  command = "npm run build"
+
+# Headers configuration for CORS and Supabase
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # CORS headers
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization, Accept, X-Requested-With"
+    Access-Control-Allow-Credentials = "true"
+    Access-Control-Max-Age = "86400"
+    
+    # Updated CSP to allow Supabase and Stripe
+    Content-Security-Policy = "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src 'self' https://*.supabase.co https://sljlwvrtwqmhmjunyplr.supabase.co https://*.manus.space https://js.stripe.com https://api.stripe.com https://checkout.stripe.com https://api.resend.com https://*.resend.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; frame-src https://js.stripe.com https://checkout.stripe.com;"
+
+# Legacy API proxy (keeping for fallback)
+[[redirects]]
+  from = "/proxy/register"
+  to = "https://dyh6i3cqkq07.manus.space/register"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/proxy/*"
+  to = "https://dyh6i3cqkq07.manus.space/:splat"
+  status = 200
+  force = true
+
+# SPA fallback (must be last)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Environment variables for Supabase
+[context.production.environment]
+  VITE_SUPABASE_URL = "https://sljlwvrtwqmhmjunyplr.supabase.co"
+  VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU"
+  VITE_SITE_URL = "https://linkzy.ai"
+
+[context.deploy-preview.environment]
+  VITE_SUPABASE_URL = "https://sljlwvrtwqmhmjunyplr.supabase.co"
+  VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU"
+  VITE_SITE_URL = "https://linkzy.ai"

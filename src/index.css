@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+@keyframes chainlink-rotate {
+  0% {
+    transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+  }
+  25% {
+    transform: translate(-50%, -50%) rotateX(5deg) rotateY(10deg) rotateZ(2deg);
+  }
+  50% {
+    transform: translate(-50%, -50%) rotateX(0deg) rotateY(20deg) rotateZ(0deg);
+  }
+  75% {
+    transform: translate(-50%, -50%) rotateX(-5deg) rotateY(10deg) rotateZ(-2deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+  }
+}
+
+.animate-chainlink-rotate {
+  animation: chainlink-rotate 20s ease-in-out infinite;
+}
+
+.orange-gradient {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+}
+
+/* Animation for modals */
+.animate-in {
+  animation: scale-in 0.3s ease-out;
+}
+
+@keyframes scale-in {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Animation for confetti */
+@keyframes confetti-fall {
+  0% { 
+    transform: translateY(-10vh) rotate(0deg); 
+    opacity: 1;
+  }
+  100% { 
+    transform: translateY(100vh) rotate(720deg); 
+    opacity: 0;
+  }
+}
+
+.animate-confetti-fall {
+  animation: confetti-fall linear forwards;
+}
+
+/* Animation for celebration modal */
+@keyframes bounce-in {
+  0% { 
+    transform: scale(0.8); 
+    opacity: 0; 
+  }
+  40% { 
+    transform: scale(1.1); 
+  }
+  70% { 
+    transform: scale(0.95); 
+  }
+  100% { 
+    transform: scale(1); 
+    opacity: 1; 
+  }
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.5s ease-out;
+}
+
+/* Mobile optimization */
+@media (max-width: 768px) {
+  /* Larger touch targets */
+  button, 
+  a.btn,
+  .btn,
+  input[type="submit"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Improved form inputs */
+  input, select, textarea {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+  }
+  
+  /* Mobile scrolling */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+  }
+  
+  /* Hide scrollbars on mobile while keeping functionality */
+  .hide-scrollbar {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+  
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+  
+  /* Bottom navigation space */
+  .pb-bottom-nav {
+    padding-bottom: 5rem !important;
+  }
+}
+
+/* Swipe animations */
+.swipe-container {
+  overflow-x: hidden;
+  position: relative;
+  touch-action: pan-x;
+}
+
+.swipe-item {
+  transition: transform 0.3s ease;
+}

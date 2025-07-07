@@ -1,0 +1,26 @@
+# Netlify Headers Configuration
+# Fixed to allow Supabase connections
+
+/*
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+  Access-Control-Allow-Headers: Content-Type, Authorization, Accept, X-Requested-With
+  Access-Control-Allow-Credentials: true
+  Access-Control-Max-Age: 86400
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  X-XSS-Protection: 1; mode=block
+  Referrer-Policy: strict-origin-when-cross-origin
+  Content-Security-Policy: default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src 'self' https://*.supabase.co https://sljlwvrtwqmhmjunyplr.supabase.co https://*.manus.space https://js.stripe.com https://api.stripe.com https://checkout.stripe.com https://api.resend.com https://*.resend.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;
+
+/api/*
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+  Access-Control-Allow-Headers: Content-Type, Authorization, Accept, X-Requested-With
+  Access-Control-Allow-Credentials: true
+
+/proxy/*
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+  Access-Control-Allow-Headers: Content-Type, Authorization, Accept, X-Requested-With
+  Access-Control-Allow-Credentials: true
