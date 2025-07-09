@@ -208,15 +208,6 @@ const SignIn = () => {
         <div className="max-w-md w-full">
           <div className="bg-gray-900 border border-gray-700 rounded-2xl p-8">
             <div style={{color: 'red', fontWeight: 'bold', marginBottom: 8}}>DEBUG: This is the live SignIn code! The Google button should be below.</div>
-            {/* Google Sign-In Button */}
-            <button
-              onClick={handleGoogleSignIn}
-              className="w-full bg-white text-black font-semibold py-3 rounded-lg flex items-center justify-center space-x-2 border border-gray-300 hover:bg-gray-100 transition-colors mb-4"
-            >
-              <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
-              <span>Sign in with Google</span>
-            </button>
-
             {/* Logo and Title */}
             <div className="text-center mb-8">
               <div className="flex items-center justify-center space-x-3 mb-4">
@@ -411,6 +402,16 @@ const SignIn = () => {
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
+                </button>
+                {/* Google Sign-In Button (moved below Sign In) */}
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  className="w-full bg-gray-800 text-white font-semibold py-3 rounded-lg flex items-center justify-center space-x-2 border border-gray-700 hover:bg-gray-700 transition-colors mt-4"
+                  style={{ boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)' }}
+                >
+                  <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+                  <span>Sign in with Google</span>
                 </button>
               </form>
             ) : showResendConfirmation ? (

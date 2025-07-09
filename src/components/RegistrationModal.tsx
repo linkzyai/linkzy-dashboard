@@ -267,10 +267,11 @@ Having trouble? Contact hello@linkzy.ai for help.`);
         <div style={{color: 'red', fontWeight: 'bold', marginBottom: 8}}>DEBUG: This is the live RegistrationModal code! The Google button should be below.</div>
         <button
           onClick={handleGoogleSignIn}
-          className="w-full bg-white text-black font-semibold py-3 rounded-lg flex items-center justify-center space-x-2 border border-gray-300 hover:bg-gray-100 transition-colors mb-4"
+          className="w-full bg-gray-800 text-white font-semibold py-3 rounded-lg flex items-center justify-center space-x-2 border border-gray-700 hover:bg-gray-700 transition-colors mt-4"
+          style={{ boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)' }}
         >
           <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
-          <span>Sign in with Google</span>
+          <span>Sign up with Google</span>
         </button>
 
         {/* Toggle between Sign Up and Sign In */}
@@ -542,6 +543,34 @@ Having trouble? Contact hello@linkzy.ai for help.`);
               Forgot your password?
             </button>
           </div>
+        )}
+
+        {isSignUp ? (
+          <>
+            {/* ...existing sign up form... */}
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              className="w-full bg-gray-800 text-white font-semibold py-3 rounded-lg flex items-center justify-center space-x-2 border border-gray-700 hover:bg-gray-700 transition-colors mt-4"
+              style={{ boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)' }}
+            >
+              <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+              <span>Sign up with Google</span>
+            </button>
+          </>
+        ) : (
+          <>
+            {/* ...existing sign in form... */}
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              className="w-full bg-gray-800 text-white font-semibold py-3 rounded-lg flex items-center justify-center space-x-2 border border-gray-700 hover:bg-gray-700 transition-colors mt-4"
+              style={{ boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)' }}
+            >
+              <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+              <span>Sign in with Google</span>
+            </button>
+          </>
         )}
       </div>
     </div>
