@@ -53,9 +53,9 @@ export default function AuthCallback() {
           // If metadata is present, insert into users table
           const apiKey = `linkzy_${session.user.email.replace('@', '_').replace(/\./g, '_')}_${Date.now()}`;
           setStatus('Creating your account...');
-          const { error: insertError } = await supabase
+          const { error: upsertError } = await supabase
             .from('users')
-            .insert([{
+            .upsert([{
               id: session.user.id,
               email: session.user.email,
               website: websiteVal,
@@ -64,9 +64,9 @@ export default function AuthCallback() {
               credits: 3,
               plan: 'free'
             }]);
-          if (insertError) {
-            console.error('Database insert error details:', insertError)
-            setStatus('Database error: ' + insertError.message)
+          if (upsertError) {
+            console.error('Database upsert error details:', upsertError)
+            setStatus('Database error: ' + upsertError.message)
             return
           }
           localStorage.setItem('linkzy_user', JSON.stringify(session.user))
@@ -93,9 +93,9 @@ export default function AuthCallback() {
     if (!website || !niche || !user) return;
     setStatus('Creating your account...');
     const apiKey = `linkzy_${user.email.replace('@', '_').replace(/\./g, '_')}_${Date.now()}`;
-    const { error: insertError } = await supabase
+    const { error: upsertError } = await supabase
       .from('users')
-      .insert([{
+      .upsert([{
         id: user.id,
         email: user.email,
         website,
@@ -104,9 +104,9 @@ export default function AuthCallback() {
         credits: 3,
         plan: 'free'
       }]);
-    if (insertError) {
-      console.error('Database insert error details:', insertError)
-      setStatus('Database error: ' + insertError.message)
+    if (upsertError) {
+      console.error('Database upsert error details:', upsertError)
+      setStatus('Database error: ' + upsertError.message)
       return
     }
     localStorage.setItem('linkzy_user', JSON.stringify(user))
