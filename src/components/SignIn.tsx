@@ -379,6 +379,17 @@ const SignIn = () => {
                   </div>
                 </div>
 
+                {/* Google Sign-In Button (now above Sign In) */}
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  className="w-full bg-gray-800 text-white font-semibold py-3 rounded-lg flex items-center justify-center space-x-2 border border-gray-700 hover:bg-gray-700 transition-colors mb-4"
+                  style={{ boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)' }}
+                >
+                  <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+                  <span>Sign in with Google</span>
+                </button>
+
                 {/* Submit Button */}
                 <button
                   type="submit"
@@ -401,16 +412,6 @@ const SignIn = () => {
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
-                </button>
-                {/* Google Sign-In Button (moved below Sign In) */}
-                <button
-                  type="button"
-                  onClick={handleGoogleSignIn}
-                  className="w-full bg-gray-800 text-white font-semibold py-3 rounded-lg flex items-center justify-center space-x-2 border border-gray-700 hover:bg-gray-700 transition-colors mt-4"
-                  style={{ boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)' }}
-                >
-                  <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
-                  <span>Sign in with Google</span>
                 </button>
               </form>
             ) : showResendConfirmation ? (

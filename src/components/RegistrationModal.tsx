@@ -264,16 +264,6 @@ Having trouble? Contact hello@linkzy.ai for help.`);
           </div>
           <p className="text-gray-400 text-sm">Get started with 3 free backlink credits</p>
         </div>
-        <button
-          onClick={handleGoogleSignIn}
-          className="w-full bg-gray-800 text-white font-semibold py-3 rounded-lg flex items-center justify-center space-x-2 border border-gray-700 hover:bg-gray-700 transition-colors mt-4"
-          style={{ boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)' }}
-        >
-          <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
-          <span>Sign up with Google</span>
-        </button>
-
-        {/* Toggle between Sign Up and Sign In */}
         <div className="flex bg-gray-800 rounded-lg p-1 mb-6">
           <button
             onClick={() => setIsSignUp(true)}
@@ -339,195 +329,282 @@ Having trouble? Contact hello@linkzy.ai for help.`);
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Email */}
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-              Email Address
-              {isSignUp && <span className="text-red-500 ml-1">*</span>}
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="email"
-                id="registration-email"
-                name="email"
-                autoComplete={isSignUp ? "username" : "email"}
-                aria-required="true"
-                aria-invalid={fieldsValidated && !email ? "true" : "false"}
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (fieldsValidated && !e.target.value) {
-                    setError('Email is required');
-                  }
-                }}
-                onFocus={() => setFormFocused('email')}
-                onBlur={() => setFormFocused(null)}
-                className={`w-full bg-gray-800 border ${
-                  fieldsValidated && !email ? 'border-red-500 focus:border-red-500' : 
-                  formFocused === 'email' ? 'border-orange-500' : 'border-gray-600'
-                } rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors`}
-                placeholder="your@email.com"
-                required
-              />
+        {isSignUp ? (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Email */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+                Email Address
+                {isSignUp && <span className="text-red-500 ml-1">*</span>}
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="email"
+                  id="registration-email"
+                  name="email"
+                  autoComplete={isSignUp ? "username" : "email"}
+                  aria-required="true"
+                  aria-invalid={fieldsValidated && !email ? "true" : "false"}
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (fieldsValidated && !e.target.value) {
+                      setError('Email is required');
+                    }
+                  }}
+                  onFocus={() => setFormFocused('email')}
+                  onBlur={() => setFormFocused(null)}
+                  className={`w-full bg-gray-800 border ${
+                    fieldsValidated && !email ? 'border-red-500 focus:border-red-500' : 
+                    formFocused === 'email' ? 'border-orange-500' : 'border-gray-600'
+                  } rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors`}
+                  placeholder="your@email.com"
+                  required
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Password */}
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-              Password
-              {isSignUp && <span className="text-red-500 ml-1">*</span>}
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type={showPassword ? "text" : "password"}
-                id="password"
-                name="password"
-                autoComplete={isSignUp ? "new-password" : "current-password"}
-                aria-required="true"
-                aria-invalid={fieldsValidated && !password ? "true" : "false"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-10 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
-                placeholder="Enter your password"
-                required
-                minLength={isSignUp ? 6 : undefined}
-              />
-              <button
-                type="button"
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-orange-500 focus:outline-none"
-                tabIndex={-1}
-                onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+            {/* Password */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+                Password
+                {isSignUp && <span className="text-red-500 ml-1">*</span>}
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  name="password"
+                  autoComplete={isSignUp ? "new-password" : "current-password"}
+                  aria-required="true"
+                  aria-invalid={fieldsValidated && !password ? "true" : "false"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-10 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                  placeholder="Enter your password"
+                  required
+                  minLength={isSignUp ? 6 : undefined}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-orange-500 focus:outline-none"
+                  tabIndex={-1}
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {isSignUp && (
+                <p className="text-gray-500 text-xs mt-1">Minimum 6 characters required</p>
+              )}
             </div>
+
+            {/* Sign Up Fields */}
             {isSignUp && (
-              <p className="text-gray-500 text-xs mt-1">Minimum 6 characters required</p>
+              <>
+                <div>
+                  <label htmlFor="website" className="block text-sm font-medium text-gray-300 mb-2">
+                    Website URL
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
+                  <div className="relative">
+                    <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="url"
+                      id="website"
+                      name="website"
+                      autoComplete="url"
+                      aria-required="true"
+                      aria-invalid={fieldsValidated && !website ? "true" : "false"}
+                      value={website}
+                      onChange={(e) => {
+                        setWebsite(e.target.value);
+                        if (fieldsValidated && !e.target.value) {
+                          setError('Website URL is required');
+                        }
+                      }}
+                      onFocus={() => setFormFocused('website')}
+                      onBlur={() => setFormFocused(null)}
+                      className={`w-full bg-gray-800 border ${
+                        fieldsValidated && !website ? 'border-red-500 focus:border-red-500' : 
+                        formFocused === 'website' ? 'border-orange-500' : 'border-gray-600'
+                      } rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors`}
+                      placeholder="https://yourwebsite.com"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="niche" className="block text-sm font-medium text-gray-300 mb-2">
+                    Your Niche
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
+                  <div className="relative">
+                    <Target className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <select 
+                      value={niche} 
+                      onChange={(e) => {
+                        setNiche(e.target.value);
+                        if (fieldsValidated && !e.target.value) {
+                          setError('Please select your niche');
+                        }
+                      }}
+                      name="niche"
+                      id="niche"
+                      aria-required="true"
+                      aria-invalid={fieldsValidated && !niche ? "true" : "false"}
+                      onFocus={() => setFormFocused('niche')}
+                      onBlur={() => setFormFocused(null)}
+                      className={`w-full pl-10 pr-4 py-3 bg-gray-800 border ${
+                        fieldsValidated && !niche ? 'border-red-500 focus:border-red-500' : 
+                        formFocused === 'niche' ? 'border-orange-500' : 'border-gray-600'
+                      } rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 appearance-none`}
+                      required
+                    >
+                      <option value="">Select your niche...</option>
+                    <option value="technology">🖥️ Technology & Software</option>
+                    <option value="home-services">🏠 Home Services & Contractors</option>
+                    <option value="creative-arts">🎨 Creative Services & Arts</option>
+                    <option value="food-restaurants">🍕 Food, Restaurants & Recipes</option>
+                    <option value="health-wellness">💊 Health & Wellness</option>
+                    <option value="finance-business">💰 Finance & Business</option>
+                    <option value="travel-lifestyle">✈️ Travel & Lifestyle</option>
+                    <option value="education">📚 Education & Learning</option>
+                    <option value="ecommerce">🛒 E-commerce & Retail</option>
+                    <option value="automotive">🚗 Automotive & Transportation</option>
+                    <option value="real-estate">🏡 Real Estate & Property</option>
+                    <option value="sports-outdoors">⚽ Sports & Outdoors</option>
+                    <option value="beauty-fashion">💄 Beauty & Fashion</option>
+                    <option value="pets-animals">🐕 Pets & Animals</option>
+                    <option value="gaming-entertainment">🎮 Gaming & Entertainment</option>
+                    <option value="parenting-family">👶 Parenting & Family</option>
+                    <option value="diy-crafts">🔨 DIY & Crafts</option>
+                    <option value="legal-professional">⚖️ Legal & Professional Services</option>
+                    <option value="marketing-advertising">📈 Marketing & Advertising</option>
+                    <option value="news-media">📰 News & Media</option>
+                    <option value="spirituality-religion">🙏 Spirituality & Religion</option>
+                    <option value="green-sustainability">🌱 Green Living & Sustainability</option>
+                    <option value="self-improvement">🚀 Self-Improvement & Productivity</option>
+                    <option value="politics-advocacy">🗳️ Politics & Advocacy</option>
+                    <option value="local-community">🏘️ Local & Community</option>
+                  </select>
+                  </div>
+                </div>
+              </>
             )}
-          </div>
 
-          {/* Sign Up Fields */}
-          {isSignUp && (
-            <>
-              <div>
-                <label htmlFor="website" className="block text-sm font-medium text-gray-300 mb-2">
-                  Website URL
-                  <span className="text-red-500 ml-1">*</span>
-                </label>
-                <div className="relative">
-                  <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="url"
-                    id="website"
-                    name="website"
-                    autoComplete="url"
-                    aria-required="true"
-                    aria-invalid={fieldsValidated && !website ? "true" : "false"}
-                    value={website}
-                    onChange={(e) => {
-                      setWebsite(e.target.value);
-                      if (fieldsValidated && !e.target.value) {
-                        setError('Website URL is required');
-                      }
-                    }}
-                    onFocus={() => setFormFocused('website')}
-                    onBlur={() => setFormFocused(null)}
-                    className={`w-full bg-gray-800 border ${
-                      fieldsValidated && !website ? 'border-red-500 focus:border-red-500' : 
-                      formFocused === 'website' ? 'border-orange-500' : 'border-gray-600'
-                    } rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors`}
-                    placeholder="https://yourwebsite.com"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="niche" className="block text-sm font-medium text-gray-300 mb-2">
-                  Your Niche
-                  <span className="text-red-500 ml-1">*</span>
-                </label>
-                <div className="relative">
-                  <Target className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <select 
-                    value={niche} 
-                    onChange={(e) => {
-                      setNiche(e.target.value);
-                      if (fieldsValidated && !e.target.value) {
-                        setError('Please select your niche');
-                      }
-                    }}
-                    name="niche"
-                    id="niche"
-                    aria-required="true"
-                    aria-invalid={fieldsValidated && !niche ? "true" : "false"}
-                    onFocus={() => setFormFocused('niche')}
-                    onBlur={() => setFormFocused(null)}
-                    className={`w-full pl-10 pr-4 py-3 bg-gray-800 border ${
-                      fieldsValidated && !niche ? 'border-red-500 focus:border-red-500' : 
-                      formFocused === 'niche' ? 'border-orange-500' : 'border-gray-600'
-                    } rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 appearance-none`}
-                    required
-                  >
-                    <option value="">Select your niche...</option>
-                  <option value="technology">🖥️ Technology & Software</option>
-                  <option value="home-services">🏠 Home Services & Contractors</option>
-                  <option value="creative-arts">🎨 Creative Services & Arts</option>
-                  <option value="food-restaurants">🍕 Food, Restaurants & Recipes</option>
-                  <option value="health-wellness">💊 Health & Wellness</option>
-                  <option value="finance-business">💰 Finance & Business</option>
-                  <option value="travel-lifestyle">✈️ Travel & Lifestyle</option>
-                  <option value="education">📚 Education & Learning</option>
-                  <option value="ecommerce">🛒 E-commerce & Retail</option>
-                  <option value="automotive">🚗 Automotive & Transportation</option>
-                  <option value="real-estate">🏡 Real Estate & Property</option>
-                  <option value="sports-outdoors">⚽ Sports & Outdoors</option>
-                  <option value="beauty-fashion">💄 Beauty & Fashion</option>
-                  <option value="pets-animals">🐕 Pets & Animals</option>
-                  <option value="gaming-entertainment">🎮 Gaming & Entertainment</option>
-                  <option value="parenting-family">👶 Parenting & Family</option>
-                  <option value="diy-crafts">🔨 DIY & Crafts</option>
-                  <option value="legal-professional">⚖️ Legal & Professional Services</option>
-                  <option value="marketing-advertising">📈 Marketing & Advertising</option>
-                  <option value="news-media">📰 News & Media</option>
-                  <option value="spirituality-religion">🙏 Spirituality & Religion</option>
-                  <option value="green-sustainability">🌱 Green Living & Sustainability</option>
-                  <option value="self-improvement">🚀 Self-Improvement & Productivity</option>
-                  <option value="politics-advocacy">🗳️ Politics & Advocacy</option>
-                  <option value="local-community">🏘️ Local & Community</option>
-                </select>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Submit Button */}
-          {isLoading ? (
-            <div className="space-y-3">
-              <div className="bg-gray-800 rounded-lg p-4">
-                <div className="flex items-center space-x-3 mb-2">
-                  <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="text-white font-medium">{loadingMessage}</span>
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
-                  <div className="bg-orange-500 h-2 rounded-full animate-pulse" style={{ width: '70%' }}></div>
-                </div>
-              </div>
-            </div>
-          ) : (
+            {/* Google Sign-Up Button (now above Create Account) */}
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              className="w-full bg-gray-800 text-white font-semibold py-3 rounded-lg flex items-center justify-center space-x-2 border border-gray-700 hover:bg-gray-700 transition-colors mb-4"
+              style={{ boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)' }}
+            >
+              <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+              <span>Sign up with Google</span>
+            </button>
             <button
               type="submit"
               className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-lg transition-colors"
             >
-              {isSignUp ? 'Create Account' : 'Sign In'}
+              Create Account
             </button>
-          )}
-        </form>
+          </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Email */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+                Email Address
+                {isSignUp && <span className="text-red-500 ml-1">*</span>}
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="email"
+                  id="registration-email"
+                  name="email"
+                  autoComplete={isSignUp ? "username" : "email"}
+                  aria-required="true"
+                  aria-invalid={fieldsValidated && !email ? "true" : "false"}
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (fieldsValidated && !e.target.value) {
+                      setError('Email is required');
+                    }
+                  }}
+                  onFocus={() => setFormFocused('email')}
+                  onBlur={() => setFormFocused(null)}
+                  className={`w-full bg-gray-800 border ${
+                    fieldsValidated && !email ? 'border-red-500 focus:border-red-500' : 
+                    formFocused === 'email' ? 'border-orange-500' : 'border-gray-600'
+                  } rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors`}
+                  placeholder="your@email.com"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+                Password
+                {isSignUp && <span className="text-red-500 ml-1">*</span>}
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  name="password"
+                  autoComplete={isSignUp ? "new-password" : "current-password"}
+                  aria-required="true"
+                  aria-invalid={fieldsValidated && !password ? "true" : "false"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-10 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                  placeholder="Enter your password"
+                  required
+                  minLength={isSignUp ? 6 : undefined}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-orange-500 focus:outline-none"
+                  tabIndex={-1}
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {isSignUp && (
+                <p className="text-gray-500 text-xs mt-1">Minimum 6 characters required</p>
+              )}
+            </div>
+
+            {/* Google Sign-In Button (now above Sign In) */}
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              className="w-full bg-gray-800 text-white font-semibold py-3 rounded-lg flex items-center justify-center space-x-2 border border-gray-700 hover:bg-gray-700 transition-colors mb-4"
+              style={{ boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)' }}
+            >
+              <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+              <span>Sign in with Google</span>
+            </button>
+            <button
+              type="submit"
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-lg transition-colors"
+            >
+              Sign In
+            </button>
+          </form>
+        )}
 
         {/* Forgot Password */}
         {!isSignUp && (
