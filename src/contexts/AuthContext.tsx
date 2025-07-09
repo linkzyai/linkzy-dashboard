@@ -41,7 +41,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Check if user is already logged in on app start
     let isMounted = true;
     const initAuth = async () => {
+      console.log('[AuthProvider] initAuth running');
       try {
+        console.log('[AuthProvider] about to call getAuthStatus');
         // Use the new robust auth status checker
         const { isAuthenticated: authStatus, user: authUser } = await supabaseService.getAuthStatus();
         console.log('[AuthProvider] getAuthStatus:', { authStatus, authUser });
