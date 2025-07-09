@@ -11,14 +11,20 @@ export default function AuthCallback() {
   const [niche, setNiche] = useState('');
   const [user, setUser] = useState<any>(null);
   const { login } = useAuth();
+  const [timeoutError, setTimeoutError] = useState(false);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setTimeoutError(true);
+      setStatus('Confirmation timed out. Please try signing in again.');
+    }, 10000); // 10 seconds
     const handleAuthCallback = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession()
         
         if (error) {
           setStatus('Confirmation failed: ' + error.message)
+          clearTimeout(timer);
           return
         }
 
@@ -38,6 +44,7 @@ export default function AuthCallback() {
             setTimeout(() => {
               window.location.href = '/dashboard';
             }, 2000);
+            clearTimeout(timer);
             return;
           }
 
@@ -49,6 +56,7 @@ export default function AuthCallback() {
             setStatus('Please complete your profile to finish sign up.');
             setWebsite(websiteVal);
             setNiche(nicheVal);
+            clearTimeout(timer);
             return;
           }
 
@@ -69,6 +77,7 @@ export default function AuthCallback() {
           if (upsertError) {
             console.error('Database upsert error details:', upsertError)
             setStatus('Database error: ' + upsertError.message)
+            clearTimeout(timer);
             return
           }
           localStorage.setItem('linkzy_user', JSON.stringify(session.user))
@@ -79,16 +88,20 @@ export default function AuthCallback() {
             window.location.href = '/dashboard'
           }, 2000)
           login(apiKey, { id: session.user.id, email: session.user.email, website: websiteVal, niche: nicheVal, api_key: apiKey, credits: 3, plan: 'free' });
+          clearTimeout(timer);
         } else {
-          setStatus('No valid session found')
+          setStatus('No valid session found. Please sign in again.');
+          clearTimeout(timer);
         }
       } catch (err) {
         console.error('Callback error:', err)
         setStatus('Confirmation failed: ' + (err as Error).message)
+        clearTimeout(timer);
       }
     }
 
     handleAuthCallback()
+    return () => clearTimeout(timer);
   }, [])
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
@@ -205,12 +218,11 @@ export default function AuthCallback() {
             <p style={{ color: '#a3a3a3', marginBottom: 16 }}>{status}</p>
           </div>
         )}
-        <button
-          style={{ width: '100%', background: '#f97316', color: '#fff', fontWeight: 600, padding: '12px 0', borderRadius: 8, border: 'none', marginTop: 8, fontSize: 16, cursor: 'pointer' }}
-          onClick={() => (window.location.href = '/')}
-        >
-          Go to Homepage
-        </button>
+        {status && (status.includes('No valid session') || status.includes('timed out')) && (
+          <button onClick={() => window.location.href = '/sign-in'} style={{ width: '100%', background: '#f97316', color: '#fff', fontWeight: 600, padding: '12px 0', borderRadius: 8, border: 'none', fontSize: 16, cursor: 'pointer', marginTop: 12 }}>
+            Go to Sign In
+          </button>
+        )}
         <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
       </div>
     </div>
