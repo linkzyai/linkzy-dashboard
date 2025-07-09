@@ -807,6 +807,7 @@ If you're testing, try these workarounds:
 
   // Get the current auth status - used by the auth context
   async getAuthStatus() {
+    console.log('[getAuthStatus] called');
     try {
       // First, try to get current Supabase session
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
@@ -895,7 +896,7 @@ If you're testing, try these workarounds:
       console.log('[getAuthStatus] return:', { isAuthenticated: false, user: null });
       return { isAuthenticated: false, user: null };
     } catch (error) {
-      console.error('Failed to get auth status:', error);
+      console.error('[getAuthStatus] top-level error:', error);
       return { isAuthenticated: false, user: null, error };
     }
   }
