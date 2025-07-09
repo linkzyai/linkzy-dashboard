@@ -207,7 +207,6 @@ const SignIn = () => {
       <div className="flex items-center justify-center px-4 py-16">
         <div className="max-w-md w-full">
           <div className="bg-gray-900 border border-gray-700 rounded-2xl p-8">
-            <div style={{color: 'red', fontWeight: 'bold', marginBottom: 8}}>DEBUG: This is the live SignIn code! The Google button should be below.</div>
             {/* Logo and Title */}
             <div className="text-center mb-8">
               <div className="flex items-center justify-center space-x-3 mb-4">
