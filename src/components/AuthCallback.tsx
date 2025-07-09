@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { Link as LinkIcon } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function AuthCallback() {
   const [status, setStatus] = useState('Confirming your email...')
@@ -9,6 +10,7 @@ export default function AuthCallback() {
   const [website, setWebsite] = useState('');
   const [niche, setNiche] = useState('');
   const [user, setUser] = useState<any>(null);
+  const { login } = useAuth();
 
   useEffect(() => {
     const handleAuthCallback = async () => {
@@ -34,7 +36,7 @@ export default function AuthCallback() {
             setStatus('Success! Redirecting to homepage...');
             setSuccess(true);
             setTimeout(() => {
-              window.location.href = '/';
+              window.location.href = '/dashboard';
             }, 2000);
             return;
           }
@@ -74,8 +76,9 @@ export default function AuthCallback() {
           setStatus('Success! Redirecting to homepage...')
           setSuccess(true);
           setTimeout(() => {
-            window.location.href = '/'
+            window.location.href = '/dashboard'
           }, 2000)
+          login(apiKey, { id: session.user.id, email: session.user.email, website: websiteVal, niche: nicheVal, api_key: apiKey, credits: 3, plan: 'free' });
         } else {
           setStatus('No valid session found')
         }
@@ -115,8 +118,9 @@ export default function AuthCallback() {
     setSuccess(true);
     setNeedsProfile(false);
     setTimeout(() => {
-      window.location.href = '/'
+      window.location.href = '/dashboard'
     }, 2000)
+    login(apiKey, { id: user.id, email: user.email, website, niche, api_key: apiKey, credits: 3, plan: 'free' });
   };
 
   return (
