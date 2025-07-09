@@ -810,7 +810,7 @@ If you're testing, try these workarounds:
     try {
       // First, try to get current Supabase session
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      
+      console.log('[getAuthStatus] getSession result:', { sessionData, sessionError });
       if (sessionError) {
         console.error('Session error:', sessionError);
       }
@@ -840,6 +840,7 @@ If you're testing, try these workarounds:
             // Cache user data
             localStorage.setItem('linkzy_user', JSON.stringify(combinedUser));
             
+            console.log('[getAuthStatus] return:', { isAuthenticated: true, user: combinedUser });
             return { isAuthenticated: true, user: combinedUser };
           }
         } catch (dbError) {
@@ -858,6 +859,7 @@ If you're testing, try these workarounds:
         };
         
         localStorage.setItem('linkzy_user', JSON.stringify(authUser));
+        console.log('[getAuthStatus] return:', { isAuthenticated: true, user: authUser });
         return { isAuthenticated: true, user: authUser };
       }
       
@@ -869,6 +871,7 @@ If you're testing, try these workarounds:
         // Try to get user from localStorage
         const storedUser = localStorage.getItem('linkzy_user');
         if (storedUser) {
+          console.log('[getAuthStatus] return:', { isAuthenticated: true, user: JSON.parse(storedUser) });
           return { 
             isAuthenticated: true, 
             user: JSON.parse(storedUser)
@@ -885,9 +888,11 @@ If you're testing, try these workarounds:
           plan: 'free'
         };
         
+        console.log('[getAuthStatus] return:', { isAuthenticated: true, user: fallbackUser });
         return { isAuthenticated: true, user: fallbackUser };
       }
       
+      console.log('[getAuthStatus] return:', { isAuthenticated: false, user: null });
       return { isAuthenticated: false, user: null };
     } catch (error) {
       console.error('Failed to get auth status:', error);
