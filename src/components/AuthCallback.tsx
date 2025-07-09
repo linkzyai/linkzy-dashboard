@@ -137,30 +137,53 @@ export default function AuthCallback() {
                 placeholder="Your Website (e.g. https://example.com)"
                 value={website}
                 onChange={e => setWebsite(e.target.value)}
-                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #333', marginBottom: 12, fontSize: 16 }}
+                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #333', marginBottom: 12, fontSize: 16, color: '#fff', background: '#23232b' }}
                 required
               />
               <select
                 value={niche}
                 onChange={e => setNiche(e.target.value)}
-                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #333', fontSize: 16 }}
+                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #333', fontSize: 16, color: '#fff', background: '#23232b' }}
                 required
               >
                 <option value="">Select your niche</option>
-                <option value="technology">Technology</option>
-                <option value="health">Health</option>
-                <option value="finance">Finance</option>
-                <option value="education">Education</option>
-                <option value="creative-arts">Creative Arts</option>
-                <option value="marketing">Marketing</option>
+                <option value="technology">🖥️ Technology & Software</option>
+                <option value="home-services">🏠 Home Services & Contractors</option>
+                <option value="creative-arts">🎨 Creative Services & Arts</option>
+                <option value="food-restaurants">🍕 Food, Restaurants & Recipes</option>
+                <option value="health-wellness">💊 Health & Wellness</option>
+                <option value="finance-business">💰 Finance & Business</option>
+                <option value="travel-lifestyle">✈️ Travel & Lifestyle</option>
+                <option value="education">📚 Education & Learning</option>
+                <option value="ecommerce">🛒 E-commerce & Retail</option>
+                <option value="automotive">🚗 Automotive & Transportation</option>
+                <option value="real-estate">🏡 Real Estate & Property</option>
+                <option value="sports-outdoors">⚽ Sports & Outdoors</option>
+                <option value="beauty-fashion">💄 Beauty & Fashion</option>
+                <option value="pets-animals">🐕 Pets & Animals</option>
+                <option value="gaming-entertainment">🎮 Gaming & Entertainment</option>
+                <option value="parenting-family">👶 Parenting & Family</option>
+                <option value="diy-crafts">🔨 DIY & Crafts</option>
+                <option value="legal-professional">⚖️ Legal & Professional Services</option>
+                <option value="marketing-advertising">📈 Marketing & Advertising</option>
+                <option value="news-media">📰 News & Media</option>
+                <option value="spirituality-religion">🙏 Spirituality & Religion</option>
+                <option value="green-sustainability">🌱 Green Living & Sustainability</option>
+                <option value="self-improvement">🚀 Self-Improvement & Productivity</option>
+                <option value="politics-advocacy">🗳️ Politics & Advocacy</option>
+                <option value="local-community">🏘️ Local & Community</option>
                 <option value="other">Other</option>
               </select>
             </div>
+            {status && status.startsWith('Database error:') && (
+              <div style={{ color: '#ff6b6b', marginBottom: 12, fontWeight: 500 }}>{status}</div>
+            )}
             <button
               type="submit"
-              style={{ width: '100%', background: '#f97316', color: '#fff', fontWeight: 600, padding: '12px 0', borderRadius: 8, border: 'none', fontSize: 16, cursor: 'pointer' }}
+              style={{ width: '100%', background: '#f97316', color: '#fff', fontWeight: 600, padding: '12px 0', borderRadius: 8, border: 'none', fontSize: 16, cursor: 'pointer', opacity: success ? 0.7 : 1 }}
+              disabled={success || status === 'Creating your account...'}
             >
-              Finish Sign Up
+              {status === 'Creating your account...' ? 'Finishing...' : 'Finish Sign Up'}
             </button>
           </form>
         ) : success ? (
