@@ -231,7 +231,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  // User is authenticated, render the protected content
+  // If authenticated and (email verified or verification bypassed), render children
   return <>{children}</>;
 };
 

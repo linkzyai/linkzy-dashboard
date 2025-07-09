@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Link, Mail, Lock, Eye, EyeOff, CheckCircle, AlertCircle, Globe, Target } from 'lucide-react';
 import supabaseService from '../services/supabaseService';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 interface RegistrationModalProps {
   isOpen: boolean;
@@ -234,34 +235,43 @@ Having trouble? Contact hello@linkzy.ai for help.`);
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin + '/auth/callback'
+      }
+    });
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-gray-900 border border-gray-700 rounded-2xl max-w-md w-full p-6 relative max-h-[90vh] overflow-y-auto">
+    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 ${isOpen ? '' : 'hidden'}`}>
+      <div className="bg-gray-900 border border-gray-700 rounded-2xl shadow-xl max-w-md w-full p-6 relative">
         <button
-          onClick={() => setIsModalOpen(false)}
           className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+          onClick={() => setIsModalOpen(false)}
         >
-          <X className="w-5 h-5" />
+          <X className="w-6 h-6" />
         </button>
-
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
-            <Link className="w-5 h-5 text-white" />
+        <div className="text-center mb-6">
+          <div className="flex items-center justify-center mb-2">
+            <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+              <Link className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-white text-2xl font-bold ml-2">Create Your Account</span>
           </div>
-          <div>
-            <h2 className="text-2xl font-bold text-white">
-              {isSignUp ? 'Create Your Account' : 'Welcome Back'}
-            </h2>
-            <p className="text-gray-400 text-sm">
-              {isSignUp 
-                ? 'Get started with 3 free backlink credits' 
-                : 'Sign in to access your dashboard'
-              }
-            </p>
-          </div>
+          <p className="text-gray-400 text-sm">Get started with 3 free backlink credits</p>
         </div>
+        <div style={{color: 'red', fontWeight: 'bold', marginBottom: 8}}>DEBUG: This is the live RegistrationModal code! The Google button should be below.</div>
+        <button
+          onClick={handleGoogleSignIn}
+          className="w-full bg-white text-black font-semibold py-3 rounded-lg flex items-center justify-center space-x-2 border border-gray-300 hover:bg-gray-100 transition-colors mb-4"
+        >
+          <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+          <span>Sign in with Google</span>
+        </button>
 
         {/* Toggle between Sign Up and Sign In */}
         <div className="flex bg-gray-800 rounded-lg p-1 mb-6">

@@ -3,6 +3,7 @@ import { Link, Mail, Lock, Eye, EyeOff, ArrowLeft, ArrowRight, AlertCircle, Chec
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import supabaseService from '../services/supabaseService';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 const SignIn = () => {
   const navigate = useNavigate();
@@ -169,6 +170,15 @@ const SignIn = () => {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin + '/auth/callback'
+      }
+    });
+  };
+
   return (
     <div className="min-h-screen bg-black">
       {/* Header */}
@@ -197,6 +207,16 @@ const SignIn = () => {
       <div className="flex items-center justify-center px-4 py-16">
         <div className="max-w-md w-full">
           <div className="bg-gray-900 border border-gray-700 rounded-2xl p-8">
+            <div style={{color: 'red', fontWeight: 'bold', marginBottom: 8}}>DEBUG: This is the live SignIn code! The Google button should be below.</div>
+            {/* Google Sign-In Button */}
+            <button
+              onClick={handleGoogleSignIn}
+              className="w-full bg-white text-black font-semibold py-3 rounded-lg flex items-center justify-center space-x-2 border border-gray-300 hover:bg-gray-100 transition-colors mb-4"
+            >
+              <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+              <span>Sign in with Google</span>
+            </button>
+
             {/* Logo and Title */}
             <div className="text-center mb-8">
               <div className="flex items-center justify-center space-x-3 mb-4">

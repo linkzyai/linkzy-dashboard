@@ -50,12 +50,8 @@ import Confetti from 'react-confetti';
 import supabaseService from '../../services/supabaseService';
 import axios from 'axios';
 import JSZip from 'jszip';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = 'https://sljlwvrtwqmhmjunyplr.supabase.co';
-// Replace with your actual anon key or use an environment variable
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// @ts-ignore
+import { supabase } from '../../lib/supabase';
 
 const DashboardAccount = () => {
   const { user, logout } = useAuth();

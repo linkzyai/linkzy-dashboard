@@ -37,32 +37,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     let isMounted = true;
     const initAuth = async () => {
       try {
-        console.log('🔍 Initializing authentication...');
-
         // Use the new robust auth status checker
         const { isAuthenticated: authStatus, user: authUser } = await supabaseService.getAuthStatus();
         
         if (!isMounted) return;
         
         if (authStatus && authUser) {
-          console.log('✅ Found authenticated user:', authUser.email || authUser.id);
-          setIsAuthenticated(true);
-          setUser(authUser);
+          // Fetch the user's profile from Supabase users table (not auth.users)
+          const { data: profile, error } = await supabase
+            .from('users')
+            .select('id, email, is_pro, plan, credits')
+            .eq('id', authUser.id)
+            .single();
+          if (profile) {
+            setIsAuthenticated(true);
+            setUser({
+              ...authUser,
+              is_pro: profile.is_pro,
+              plan: profile.plan,
+              credits: profile.credits,
+            });
+          } else {
+            setIsAuthenticated(true);
+            setUser(authUser);
+          }
 
           // Ensure API key is set
           if (authUser.api_key) {
             supabaseService.setApiKey(authUser.api_key);
           } else if (authUser.user_metadata?.api_key) {
             supabaseService.setApiKey(authUser.user_metadata.api_key);
-            console.log('✅ API key set from user_metadata');
           }
         } else {
-          console.log('🚫 No authenticated user found');
           setIsAuthenticated(false);
           setUser(null);
         }
       } catch (error) {
-        console.log('❌ Auth initialization failed:', error);
         // Clear any invalid stored data
         supabaseService.clearApiKey();
         setIsAuthenticated(false);
@@ -83,35 +93,54 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: string, session: any) => {
-        console.log('🔄 Auth state changed:', event, 'Session:', !!session);
         try {
           if (event === 'SIGNED_IN') {
-            console.log('✅ User signed in, updating auth state');
-            // Get user directly from session instead of calling getAuthStatus
             if (session?.user) {
-              const userData = {
-                id: session.user.id,
-                email: session.user.email,
-                api_key: session.user.user_metadata?.api_key || `linkzy_${session.user.email?.replace('@', '_').replace('.', '_')}_${Date.now()}`,
-                creditsRemaining: 3,
-                plan: 'Free'
-              };
-              setIsAuthenticated(true);
-              setUser(userData);
-              supabaseService.setApiKey(userData.api_key);
-              localStorage.setItem('linkzy_user', JSON.stringify(userData));
-              console.log('✅ Auth state updated successfully');
+              // Fetch the user's profile from Supabase users table (not auth.users)
+              const { data: profile, error } = await supabase
+                .from('users')
+                .select('id, email, is_pro, plan, credits')
+                .eq('id', session.user.id)
+                .single();
+              if (profile) {
+                const userObj = {
+                  id: session.user.id,
+                  email: session.user.email,
+                  api_key: session.user.user_metadata?.api_key || `linkzy_${session.user.email?.replace('@', '_').replace('.', '_')}_${Date.now()}`,
+                  is_pro: profile.is_pro,
+                  plan: profile.plan,
+                  credits: profile.credits,
+                };
+                setIsAuthenticated(true);
+                setUser(userObj);
+                supabaseService.setApiKey(
+                  session.user.user_metadata?.api_key || `linkzy_${session.user.email?.replace('@', '_').replace('.', '_')}_${Date.now()}`
+                );
+                localStorage.setItem('linkzy_user', JSON.stringify(userObj));
+              } else {
+                setIsAuthenticated(true);
+                setUser({
+                  id: session.user.id,
+                  email: session.user.email,
+                  api_key: session.user.user_metadata?.api_key || `linkzy_${session.user.email?.replace('@', '_').replace('.', '_')}_${Date.now()}`,
+                });
+                supabaseService.setApiKey(
+                  session.user.user_metadata?.api_key || `linkzy_${session.user.email?.replace('@', '_').replace('.', '_')}_${Date.now()}`
+                );
+                localStorage.setItem('linkzy_user', JSON.stringify({
+                  id: session.user.id,
+                  email: session.user.email,
+                  api_key: session.user.user_metadata?.api_key || `linkzy_${session.user.email?.replace('@', '_').replace('.', '_')}_${Date.now()}`,
+                }));
+              }
             }
           } else if (event === 'SIGNED_OUT') {
-            console.log('🚪 User signed out');
             setIsAuthenticated(false);
             setUser(null);
             supabaseService.clearApiKey();
             localStorage.removeItem('linkzy_user');
           } else if (event === 'TOKEN_REFRESHED') {
-            console.log('🔄 Session token refreshed');
           } else if (event === 'USER_UPDATED') {
-            console.log('👤 User data updated, refreshing profile');
             // Refresh user data
             try {
               const { isAuthenticated: authStatus, user: authUser } = await supabaseService.getAuthStatus();
@@ -119,11 +148,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 setUser(authUser);
               }
             } catch (error) {
-              console.error('Error updating user data:', error);
             }
           }
         } catch (error) {
-          console.error('Error in auth state change handler:', error);
         } finally {
           setLoading(false);
         }
@@ -145,14 +172,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       try {
         setSessionRefreshing(true);
-        console.log('🔄 Refreshing session...');
         
         // Get current session and refresh if needed
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('Session refresh error:', error);
-          // If serious error, clear auth state
           if (error.message !== 'Invalid JWT token') {
             setIsAuthenticated(false);
             setUser(null);
@@ -160,9 +184,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         } else if (data.session) {
           // Session is still valid, no action needed
-          console.log('✅ Session is valid');
         } else {
-          console.log('⚠️ Session expired, attempting recovery');
           // Try to recover from storage
           const apiKey = supabaseService.getApiKey();
           if (apiKey) {
@@ -173,7 +195,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 setIsAuthenticated(true);
               }
             } catch (recoveryError) {
-              console.error('Recovery failed:', recoveryError);
               setIsAuthenticated(false);
               setUser(null);
               supabaseService.clearApiKey();
@@ -184,7 +205,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }
       } catch (e) {
-        console.error('Session refresh failed:', e);
       } finally {
         setSessionRefreshing(false);
       }
@@ -201,7 +221,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [isAuthenticated]);
 
   const login = (apiKey: string, userProfile?: any) => {
-    console.log('🔐 Logging in user:', userProfile?.email);
     supabaseService.setApiKey(apiKey);
 
     setIsAuthenticated(true);
@@ -224,13 +243,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Store user data for persistence
     localStorage.setItem('linkzy_user', JSON.stringify(standardizedUser));
     setLoading(false);
-    console.log('✅ Auth context updated, user is authenticated');
     
     return standardizedUser;
   };
 
   const logout = async () => {
-    console.log('🚪 Logging out user');
     try {
       // First clear local storage to prevent race conditions
       supabaseService.clearApiKey();
@@ -239,7 +256,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Then sign out from Supabase
       await supabaseService.signOut();
     } catch (error) {
-      console.error('Sign out error:', error);
     }
     
     // Always clear the auth state regardless of any errors
@@ -250,7 +266,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       window.location.replace('/');
     } catch (redirectError) {
-      console.error('Redirect error:', redirectError);
       // Fallback to simple href
       window.location.href = '/';
     }

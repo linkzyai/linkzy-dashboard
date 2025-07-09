@@ -25,7 +25,6 @@ import EmailVerification from './components/EmailVerification';
 import SignIn from './components/SignIn';
 import ResetPassword from './components/ResetPassword';
 import AdminTools from './components/AdminTools';
-import PasswordResetTest from './components/PasswordResetTest';
 import AuthCallback from './components/AuthCallback';
 
 const HomePage = () => (
@@ -73,7 +72,6 @@ function App() {
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/admin" element={<AdminTools />} />
-            <Route path="/password-reset-test" element={<PasswordResetTest />} />
           </Routes>
         </div>
       </Router>

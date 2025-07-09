@@ -326,7 +326,7 @@ const Dashboard = () => {
                 <BarChart3 className="w-5 h-5 text-orange-500" />
                 <h3 className="text-xl font-bold text-white">Performance Metrics</h3>
               </div>
-              <p className="text-gray-300 flex items-center space-x-2 justify-center">
+              <div className="text-gray-300 flex items-center space-x-2 justify-center">
                 <span>Integrate your website to see performance metrics</span>
                 <ContextualHelp 
                   title="Performance Metrics"
@@ -342,7 +342,7 @@ const Dashboard = () => {
                     </div>
                   }
                 />
-              </p>
+              </div>
             </div>
           )}
 

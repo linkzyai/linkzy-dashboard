@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import KeywordRankings from './KeywordRankings';
 import { useAuth } from '../../contexts/AuthContext';
+import LockedFeature from '../LockedFeature';
 
 const DashboardAnalytics = () => {
   const { data: analyticsData, loading, error, refetch } = useAnalytics();
@@ -699,217 +700,226 @@ const DashboardAnalytics = () => {
         )}
         {activeTab === 'Keywords' && (
           <>
-            <KeywordRankings domain={userDomain} apiKey={userApiKey} />
-            {/* Keyword Ranking Improvements Card - moved from Overview */}
-            <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
-              <div className="flex items-center mb-6">
-                <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center mr-3">
-                  <ArrowUp className="w-6 h-6 text-orange-500" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-white">Keyword Ranking Improvements</h2>
-                  <p className="text-gray-400 text-sm">Positive ranking changes since backlinks</p>
-                </div>
-              </div>
-              <div className="overflow-x-auto mb-6">
-                <table className="min-w-full text-sm text-gray-300">
-                  <thead>
-                    <tr className="bg-gray-800">
-                      <th className="px-4 py-2 text-left">Keyword</th>
-                      <th className="px-4 py-2 text-left">Previous</th>
-                      <th className="px-4 py-2 text-left">Current</th>
-                      <th className="px-4 py-2 text-left">Change</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* Example data, replace with real data as needed */}
-                    <tr className="border-b border-gray-700 hover:bg-gray-800">
-                      <td className="px-4 py-2 font-bold text-orange-400">business automation</td>
-                      <td className="px-4 py-2">28</td>
-                      <td className="px-4 py-2">4</td>
-                      <td className="px-4 py-2 text-green-400 font-semibold">↑ 24</td>
-                    </tr>
-                    <tr className="border-b border-gray-700 hover:bg-gray-800">
-                      <td className="px-4 py-2 font-bold text-orange-400">SEO tools 2025</td>
-                      <td className="px-4 py-2">15</td>
-                      <td className="px-4 py-2">2</td>
-                      <td className="px-4 py-2 text-green-400 font-semibold">↑ 13</td>
-                    </tr>
-                    <tr className="border-b border-gray-700 hover:bg-gray-800">
-                      <td className="px-4 py-2 font-bold text-orange-400">marketing software</td>
-                      <td className="px-4 py-2">42</td>
-                      <td className="px-4 py-2">11</td>
-                      <td className="px-4 py-2 text-green-400 font-semibold">↑ 31</td>
-                    </tr>
-                    <tr className="border-b border-gray-700 hover:bg-gray-800">
-                      <td className="px-4 py-2 font-bold text-orange-400">AI content marketing</td>
-                      <td className="px-4 py-2">22</td>
-                      <td className="px-4 py-2">7</td>
-                      <td className="px-4 py-2 text-green-400 font-semibold">↑ 15</td>
-                    </tr>
-                    <tr className="border-b border-gray-700 hover:bg-gray-800">
-                      <td className="px-4 py-2 font-bold text-orange-400">best business tools</td>
-                      <td className="px-4 py-2">9</td>
-                      <td className="px-4 py-2">3</td>
-                      <td className="px-4 py-2 text-green-400 font-semibold">↑ 6</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1 bg-gray-900 border border-green-700 rounded-lg p-4 flex flex-col items-center">
-                  <span className="text-green-400 text-3xl font-bold mb-1">92%</span>
-                  <span className="text-green-400 text-sm font-semibold">Keywords Improved</span>
-                </div>
-                <div className="flex-1 bg-gray-900 border border-gray-700 rounded-lg p-4 flex flex-col items-center">
-                  <span className="text-white text-3xl font-bold mb-1">14.8</span>
-                  <span className="text-gray-400 text-sm font-semibold">Avg. Position Gain</span>
-                </div>
-                <div className="flex-1 bg-gray-900 border border-orange-700 rounded-lg p-4 flex flex-col items-center">
-                  <span className="text-orange-400 text-3xl font-bold mb-1">3</span>
-                  <span className="text-orange-400 text-sm font-semibold">New Page 1 Rankings</span>
-                </div>
-              </div>
-            </div>
-            {/* 1. Top Keywords, Density, and Performance */}
-            <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
-              <h3 className="text-xl font-bold text-white mb-4">Top Keywords & Density</h3>
-              <div className="overflow-x-auto mb-6">
-                <table className="min-w-full text-sm text-gray-300">
-                  <thead>
-                    <tr className="bg-gray-800">
-                      <th className="px-4 py-2 text-left">Keyword</th>
-                      <th className="px-4 py-2 text-left">Frequency</th>
-                      <th className="px-4 py-2 text-left">Avg. Density (%)</th>
-                      <th className="px-4 py-2 text-left">Pages</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(keywordData as any)?.topKeywords.map((k: any, i: number) => (
-                      <tr key={k.word} className="border-b border-gray-700 hover:bg-gray-800">
-                        <td className="px-4 py-2 font-bold text-orange-400">{k.word}</td>
-                        <td className="px-4 py-2">{k.count}</td>
-                        <td className="px-4 py-2">{k.avgDensity.toFixed(2)}</td>
-                        <td className="px-4 py-2 max-w-xs truncate">
-                          {k.urls.slice(0, 3).map((url: any, idx: number) => (
-                            <a key={url + idx} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline mr-2">Page {idx + 1}</a>
-                          ))}
-                          {k.urls.length > 3 && <span className="text-gray-400">+{k.urls.length - 3} more</span>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {/* Density Cards */}
-              <div className="flex flex-wrap gap-4 mb-4">
-                {(keywordData as any)?.topKeywords.slice(0, 10).map((k: any) => (
-                  <div key={k.word} className="bg-gray-800 rounded-lg p-4 flex flex-col items-center min-w-[120px]">
-                    <span className="font-bold text-orange-400 text-lg mb-1">{k.word}</span>
-                    <span className="text-white text-2xl font-bold mb-1">{k.avgDensity.toFixed(2)}%</span>
-                    <span className="text-gray-400 text-xs">Avg. Density</span>
+            {user?.is_pro ? (
+              <>
+                <KeywordRankings domain={userDomain} apiKey={userApiKey} />
+                {/* Keyword Ranking Improvements Card - moved from Overview */}
+                <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
+                  <div className="flex items-center mb-6">
+                    <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center mr-3">
+                      <ArrowUp className="w-6 h-6 text-orange-500" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white">Keyword Ranking Improvements</h2>
+                      <p className="text-gray-400 text-sm">Positive ranking changes since backlinks</p>
+                    </div>
                   </div>
-                ))}
-              </div>
-              {/* Performance Metrics */}
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1 bg-gray-900 border border-green-700 rounded-lg p-4 flex flex-col items-center">
-                  <span className="text-green-400 text-3xl font-bold mb-1">{Math.round((keywordData as any)?.topKeywords.length / ((keywordData as any)?.totalKeywordCount / 20) * 100) || 0}%</span>
-                  <span className="text-green-400 text-sm font-semibold">Keywords Improved</span>
+                  <div className="overflow-x-auto mb-6">
+                    <table className="min-w-full text-sm text-gray-300">
+                      <thead>
+                        <tr className="bg-gray-800">
+                          <th className="px-4 py-2 text-left">Keyword</th>
+                          <th className="px-4 py-2 text-left">Previous</th>
+                          <th className="px-4 py-2 text-left">Current</th>
+                          <th className="px-4 py-2 text-left">Change</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {/* Example data, replace with real data as needed */}
+                        <tr className="border-b border-gray-700 hover:bg-gray-800">
+                          <td className="px-4 py-2 font-bold text-orange-400">business automation</td>
+                          <td className="px-4 py-2">28</td>
+                          <td className="px-4 py-2">4</td>
+                          <td className="px-4 py-2 text-green-400 font-semibold">↑ 24</td>
+                        </tr>
+                        <tr className="border-b border-gray-700 hover:bg-gray-800">
+                          <td className="px-4 py-2 font-bold text-orange-400">SEO tools 2025</td>
+                          <td className="px-4 py-2">15</td>
+                          <td className="px-4 py-2">2</td>
+                          <td className="px-4 py-2 text-green-400 font-semibold">↑ 13</td>
+                        </tr>
+                        <tr className="border-b border-gray-700 hover:bg-gray-800">
+                          <td className="px-4 py-2 font-bold text-orange-400">marketing software</td>
+                          <td className="px-4 py-2">42</td>
+                          <td className="px-4 py-2">11</td>
+                          <td className="px-4 py-2 text-green-400 font-semibold">↑ 31</td>
+                        </tr>
+                        <tr className="border-b border-gray-700 hover:bg-gray-800">
+                          <td className="px-4 py-2 font-bold text-orange-400">AI content marketing</td>
+                          <td className="px-4 py-2">22</td>
+                          <td className="px-4 py-2">7</td>
+                          <td className="px-4 py-2 text-green-400 font-semibold">↑ 15</td>
+                        </tr>
+                        <tr className="border-b border-gray-700 hover:bg-gray-800">
+                          <td className="px-4 py-2 font-bold text-orange-400">best business tools</td>
+                          <td className="px-4 py-2">9</td>
+                          <td className="px-4 py-2">3</td>
+                          <td className="px-4 py-2 text-green-400 font-semibold">↑ 6</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1 bg-gray-900 border border-green-700 rounded-lg p-4 flex flex-col items-center">
+                      <span className="text-green-400 text-3xl font-bold mb-1">92%</span>
+                      <span className="text-green-400 text-sm font-semibold">Keywords Improved</span>
+                    </div>
+                    <div className="flex-1 bg-gray-900 border border-gray-700 rounded-lg p-4 flex flex-col items-center">
+                      <span className="text-white text-3xl font-bold mb-1">14.8</span>
+                      <span className="text-gray-400 text-sm font-semibold">Avg. Position Gain</span>
+                    </div>
+                    <div className="flex-1 bg-gray-900 border border-orange-700 rounded-lg p-4 flex flex-col items-center">
+                      <span className="text-orange-400 text-3xl font-bold mb-1">3</span>
+                      <span className="text-orange-400 text-sm font-semibold">New Page 1 Rankings</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1 bg-gray-900 border border-gray-700 rounded-lg p-4 flex flex-col items-center">
-                  <span className="text-white text-3xl font-bold mb-1">{(((keywordData as any)?.topKeywords.reduce((acc: number, k: any) => acc + k.avgDensity, 0) / ((keywordData as any)?.topKeywords.length || 1)) || 0).toFixed(1)}</span>
-                  <span className="text-gray-400 text-sm font-semibold">Avg. Density</span>
-                </div>
-              </div>
-            </div>
-            {/* 2. Keyword Opportunity Suggestions */}
-            <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
-              <h3 className="text-xl font-bold text-white mb-4">Keyword Opportunity Suggestions</h3>
-              {keywordOpportunities.length === 0 ? (
-                <div className="text-gray-400">No new keyword opportunities detected. Try adding more content or targeting new keywords!</div>
-              ) : (
-                <ul className="list-disc pl-6 text-orange-400">
-                  {keywordOpportunities.map((word: string) => (
-                    <li key={word}>{word}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            {/* 3. Competitor Keyword Comparison */}
-            <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
-              <h3 className="text-xl font-bold text-white mb-4">Competitor Keyword Comparison</h3>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm text-gray-300">
-                  <thead>
-                    <tr className="bg-gray-800">
-                      <th className="px-4 py-2 text-left">Keyword</th>
-                      <th className="px-4 py-2 text-left">Your Frequency</th>
-                      {/* Mock competitor columns */}
-                      {competitors.map((domain: string) => (
-                        <th key={domain} className="px-4 py-2 text-left">{domain} Freq.</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(keywordData as any)?.topKeywords.slice(0, 10).map((k: any) => (
-                      <tr key={k.word} className="border-b border-gray-700 hover:bg-gray-800">
-                        <td className="px-4 py-2 font-bold text-orange-400">{k.word}</td>
-                        <td className="px-4 py-2">{k.count}</td>
-                        {/* Mock competitor data: random freq for now */}
-                        {competitors.map((domain: string) => (
-                          <td key={domain} className="px-4 py-2 text-blue-400">{Math.floor(Math.random() * 10)}</td>
+                {/* 1. Top Keywords, Density, and Performance */}
+                <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
+                  <h3 className="text-xl font-bold text-white mb-4">Top Keywords & Density</h3>
+                  <div className="overflow-x-auto mb-6">
+                    <table className="min-w-full text-sm text-gray-300">
+                      <thead>
+                        <tr className="bg-gray-800">
+                          <th className="px-4 py-2 text-left">Keyword</th>
+                          <th className="px-4 py-2 text-left">Frequency</th>
+                          <th className="px-4 py-2 text-left">Avg. Density (%)</th>
+                          <th className="px-4 py-2 text-left">Pages</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(keywordData as any)?.topKeywords.map((k: any, i: number) => (
+                          <tr key={k.word} className="border-b border-gray-700 hover:bg-gray-800">
+                            <td className="px-4 py-2 font-bold text-orange-400">{k.word}</td>
+                            <td className="px-4 py-2">{k.count}</td>
+                            <td className="px-4 py-2">{k.avgDensity.toFixed(2)}</td>
+                            <td className="px-4 py-2 max-w-xs truncate">
+                              {k.urls.slice(0, 3).map((url: any, idx: number) => (
+                                <a key={url + idx} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline mr-2">Page {idx + 1}</a>
+                              ))}
+                              {k.urls.length > 3 && <span className="text-gray-400">+{k.urls.length - 3} more</span>}
+                            </td>
+                          </tr>
                         ))}
-                      </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  {/* Density Cards */}
+                  <div className="flex flex-wrap gap-4 mb-4">
+                    {(keywordData as any)?.topKeywords.slice(0, 10).map((k: any) => (
+                      <div key={k.word} className="bg-gray-800 rounded-lg p-4 flex flex-col items-center min-w-[120px]">
+                        <span className="font-bold text-orange-400 text-lg mb-1">{k.word}</span>
+                        <span className="text-white text-2xl font-bold mb-1">{k.avgDensity.toFixed(2)}%</span>
+                        <span className="text-gray-400 text-xs">Avg. Density</span>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="text-gray-400 text-xs mt-2">(Competitor data is currently mock data. Real scraping and comparison coming soon!)</div>
-            </div>
-            {/* Keywords Section */}
-            <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
-              <div className="flex items-center space-x-3 mb-6">
-                <Users className="w-8 h-8 text-orange-500" />
-                <h2 className="text-2xl font-bold text-white">Competitors</h2>
-              </div>
-              <div className="mb-4 flex flex-col md:flex-row md:items-center gap-2">
-                <input
-                  type="text"
-                  className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-orange-500 w-full md:w-64"
-                  placeholder="Add competitor domain (e.g. example.com)"
-                  value={newCompetitor}
-                  onChange={(e) => setNewCompetitor(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') addCompetitor(); }}
-                />
-                <button
-                  type="button"
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold flex items-center space-x-2"
-                  onClick={addCompetitor}
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add</span>
-                </button>
-              </div>
-              {competitors.length === 0 ? (
-                <div className="text-gray-400">No competitors added yet. Add domains to compare keyword performance.</div>
-              ) : (
-                <ul className="space-y-2">
-                  {competitors.map((domain: string) => (
-                    <li key={domain} className="flex items-center justify-between bg-gray-800 rounded-lg px-4 py-2">
-                      <span className="text-white font-mono">{domain}</span>
-                      <button
-                        className="text-gray-400 hover:text-red-500 transition-colors p-1"
-                        title="Remove"
-                        onClick={() => removeCompetitor(domain)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                  </div>
+                  {/* Performance Metrics */}
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1 bg-gray-900 border border-green-700 rounded-lg p-4 flex flex-col items-center">
+                      <span className="text-green-400 text-3xl font-bold mb-1">{Math.round((keywordData as any)?.topKeywords.length / ((keywordData as any)?.totalKeywordCount / 20) * 100) || 0}%</span>
+                      <span className="text-green-400 text-sm font-semibold">Keywords Improved</span>
+                    </div>
+                    <div className="flex-1 bg-gray-900 border border-gray-700 rounded-lg p-4 flex flex-col items-center">
+                      <span className="text-white text-3xl font-bold mb-1">{(((keywordData as any)?.topKeywords.reduce((acc: number, k: any) => acc + k.avgDensity, 0) / ((keywordData as any)?.topKeywords.length || 1)) || 0).toFixed(1)}</span>
+                      <span className="text-gray-400 text-sm font-semibold">Avg. Density</span>
+                    </div>
+                  </div>
+                </div>
+                {/* 2. Keyword Opportunity Suggestions */}
+                <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
+                  <h3 className="text-xl font-bold text-white mb-4">Keyword Opportunity Suggestions</h3>
+                  {keywordOpportunities.length === 0 ? (
+                    <div className="text-gray-400">No new keyword opportunities detected. Try adding more content or targeting new keywords!</div>
+                  ) : (
+                    <ul className="list-disc pl-6 text-orange-400">
+                      {keywordOpportunities.map((word: string) => (
+                        <li key={word}>{word}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                {/* 3. Competitor Keyword Comparison */}
+                <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
+                  <h3 className="text-xl font-bold text-white mb-4">Competitor Keyword Comparison</h3>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm text-gray-300">
+                      <thead>
+                        <tr className="bg-gray-800">
+                          <th className="px-4 py-2 text-left">Keyword</th>
+                          <th className="px-4 py-2 text-left">Your Frequency</th>
+                          {/* Mock competitor columns */}
+                          {competitors.map((domain: string) => (
+                            <th key={domain} className="px-4 py-2 text-left">{domain} Freq.</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(keywordData as any)?.topKeywords.slice(0, 10).map((k: any) => (
+                          <tr key={k.word} className="border-b border-gray-700 hover:bg-gray-800">
+                            <td className="px-4 py-2 font-bold text-orange-400">{k.word}</td>
+                            <td className="px-4 py-2">{k.count}</td>
+                            {/* Mock competitor data: random freq for now */}
+                            {competitors.map((domain: string) => (
+                              <td key={domain} className="px-4 py-2 text-blue-400">{Math.floor(Math.random() * 10)}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="text-gray-400 text-xs mt-2">(Competitor data is currently mock data. Real scraping and comparison coming soon!)</div>
+                </div>
+                {/* Keywords Section */}
+                <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
+                  <div className="flex items-center space-x-3 mb-6">
+                    <Users className="w-8 h-8 text-orange-500" />
+                    <h2 className="text-2xl font-bold text-white">Competitors</h2>
+                  </div>
+                  <div className="mb-4 flex flex-col md:flex-row md:items-center gap-2">
+                    <input
+                      type="text"
+                      className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-orange-500 w-full md:w-64"
+                      placeholder="Add competitor domain (e.g. example.com)"
+                      value={newCompetitor}
+                      onChange={(e) => setNewCompetitor(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') addCompetitor(); }}
+                    />
+                    <button
+                      type="button"
+                      className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold flex items-center space-x-2"
+                      onClick={addCompetitor}
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add</span>
+                    </button>
+                  </div>
+                  {competitors.length === 0 ? (
+                    <div className="text-gray-400">No competitors added yet. Add domains to compare keyword performance.</div>
+                  ) : (
+                    <ul className="space-y-2">
+                      {competitors.map((domain: string) => (
+                        <li key={domain} className="flex items-center justify-between bg-gray-800 rounded-lg px-4 py-2">
+                          <span className="text-white font-mono">{domain}</span>
+                          <button
+                            className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                            title="Remove"
+                            onClick={() => removeCompetitor(domain)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </>
+            ) : (
+              <LockedFeature
+                featureName="Keyword Research & Competitor Analysis"
+                onUpgrade={() => {/* open your upgrade modal or redirect to pricing */}}
+              />
+            )}
           </>
         )}
         {activeTab === 'Competitors' && (

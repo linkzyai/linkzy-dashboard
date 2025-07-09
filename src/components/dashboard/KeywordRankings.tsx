@@ -1,13 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+// @ts-ignore
+import { supabase } from '../../lib/supabase';
 import LoadingSpinner from '../LoadingSpinner';
 import ErrorMessage from '../ErrorMessage';
 import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-
-const supabaseUrl = 'https://sljlwvrtwqmhmjunyplr.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Helper to group and sort rankings by keyword
 function processRankings(data) {
@@ -30,6 +27,7 @@ const KeywordRankings = ({ domain, apiKey, initialKeywords = [] }) => {
   const [triggerError, setTriggerError] = useState('');
   const [keywords, setKeywords] = useState(initialKeywords);
   const { user } = useAuth();
+  console.log('KeywordRankings user:', user);
 
   useEffect(() => {
     const fetchRankings = async () => {
