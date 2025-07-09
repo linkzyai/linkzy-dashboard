@@ -32,6 +32,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [sessionRefreshing, setSessionRefreshing] = useState(false);
 
+  // Debug: log state on every render
+  useEffect(() => {
+    console.log('[AuthProvider] Render:', { isAuthenticated, user, loading });
+  });
+
   useEffect(() => {
     // Check if user is already logged in on app start
     let isMounted = true;
@@ -39,6 +44,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         // Use the new robust auth status checker
         const { isAuthenticated: authStatus, user: authUser } = await supabaseService.getAuthStatus();
+        console.log('[AuthProvider] getAuthStatus:', { authStatus, authUser });
         
         if (!isMounted) return;
         
@@ -73,12 +79,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(null);
         }
       } catch (error) {
+        console.error('[AuthProvider] initAuth error:', error);
         // Clear any invalid stored data
         supabaseService.clearApiKey();
         setIsAuthenticated(false);
         setUser(null); 
       } finally {
         setLoading(false);
+        console.log('[AuthProvider] initAuth finished. Loading:', loading);
       }
     };
 
