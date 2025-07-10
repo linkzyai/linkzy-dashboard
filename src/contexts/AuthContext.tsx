@@ -26,15 +26,17 @@ interface AuthProviderProps {
 
 // Helper to fetch user profile from Supabase users table
 const fetchUserProfile = async (id: string) => {
+  console.log('fetchUserProfile: called with id', id);
   const { data: profile, error } = await supabase
     .from('users')
     .select('id, credits, plan')
     .eq('id', id)
     .single();
   if (error) {
-    console.error('Failed to fetch user profile:', error);
+    console.error('fetchUserProfile: error', error);
     return {};
   }
+  console.log('fetchUserProfile: got profile', profile);
   return profile || {};
 };
 
@@ -45,37 +47,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Check for session on mount
   useEffect(() => {
-    const checkSession = async () => {
-      setLoading(true);
-      const { data, error } = await supabase.auth.getSession();
-      if (data?.session && data.session.user) {
-        setIsAuthenticated(true);
-        const profile = await fetchUserProfile(data.session.user.id);
-        setUser({
-          ...data.session.user,
-          credits: profile.credits,
-          creditsRemaining: profile.credits, // for dashboard compatibility
-          plan: profile.plan || 'Free',
-        });
-        localStorage.setItem('linkzy_user', JSON.stringify({
-          ...data.session.user,
-          credits: profile.credits,
-          creditsRemaining: profile.credits,
-          plan: profile.plan || 'Free',
-        }));
-      } else {
-        setIsAuthenticated(false);
-        setUser(null);
-        localStorage.removeItem('linkzy_user');
-      }
-      setLoading(false);
-    };
+    console.log('AuthContext useEffect: running checkSession');
     checkSession();
+    // TEMP: Force loading to false after 5s for debugging
+    const timeout = setTimeout(() => {
+      console.warn('AuthContext: Forcing setLoading(false) after 5s timeout');
+      setLoading(false);
+    }, 5000);
+    return () => clearTimeout(timeout);
   }, []);
+
+  const checkSession = async () => {
+    console.log('checkSession: starting');
+    setLoading(true);
+    const data = await supabase.auth.getSession();
+    console.log('checkSession: got session', data);
+    if (data?.session && data.session.user) {
+      setIsAuthenticated(true);
+      const profile = await fetchUserProfile(data.session.user.id);
+      setUser({
+        ...data.session.user,
+        credits: profile.credits,
+        creditsRemaining: profile.credits, // for dashboard compatibility
+        plan: profile.plan || 'Free',
+      });
+      localStorage.setItem('linkzy_user', JSON.stringify({
+        ...data.session.user,
+        credits: profile.credits,
+        creditsRemaining: profile.credits,
+        plan: profile.plan || 'Free',
+      }));
+      console.log('checkSession: user set, isAuthenticated true');
+    } else {
+      setIsAuthenticated(false);
+      setUser(null);
+      localStorage.removeItem('linkzy_user');
+      console.log('checkSession: no session, isAuthenticated false');
+    }
+    setLoading(false);
+    console.log('checkSession: setLoading(false) called');
+  };
 
   // Listen for auth state changes
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
+      console.log('onAuthStateChange: event', event, 'session', session);
       if (event === 'SIGNED_IN' && session?.user) {
         setIsAuthenticated(true);
         const profile = await fetchUserProfile(session.user.id);
@@ -91,10 +107,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           creditsRemaining: profile.credits,
           plan: profile.plan || 'Free',
         }));
+        console.log('onAuthStateChange: user set, isAuthenticated true');
       } else if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
         setUser(null);
         localStorage.removeItem('linkzy_user');
+        console.log('onAuthStateChange: signed out, isAuthenticated false');
       }
     });
     return () => {
@@ -104,12 +122,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Login with email and password
   const login = async (email: string, password: string) => {
+    console.log('login: starting', email);
     setLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setLoading(false);
-      throw error;
-    }
+    console.log('login: result', data, error);
     if (data?.user) {
       setIsAuthenticated(true);
       const profile = await fetchUserProfile(data.user.id);
@@ -125,8 +141,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         creditsRemaining: profile.credits,
         plan: profile.plan || 'Free',
       }));
+      console.log('login: user set, isAuthenticated true');
     }
     setLoading(false);
+    console.log('login: setLoading(false) called');
     return data.user;
   };
 
