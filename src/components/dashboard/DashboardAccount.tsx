@@ -47,7 +47,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import Confetti from 'react-confetti';
-import supabaseService from '../../services/supabaseService';
 import axios from 'axios';
 import JSZip from 'jszip';
 // @ts-ignore
@@ -216,16 +215,24 @@ const DashboardAccount = () => {
     }
     setIsSubmitting(true);
     try {
-      const newRequest = await supabaseService.createBacklinkRequest({
-        targetUrl: requestUrl,
-        anchorText: requestKeywords,
-        niche: requestNiche,
-        notes: requestNotes,
-      });
+      const { data, error } = await supabase
+        .from('backlink_requests')
+        .insert({
+          target_url: requestUrl,
+          anchor_text: requestKeywords,
+          niche: requestNiche,
+          notes: requestNotes,
+          api_key: userApiKey,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
       setCredits((c: number) => c - 1);
       setRequests((prev) => [
         {
-          id: newRequest.id,
+          id: data.id,
           url: requestUrl,
           keywords: requestKeywords,
           status: 'pending',

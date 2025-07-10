@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Link, Mail, Lock, Eye, EyeOff, CheckCircle, AlertCircle, Globe, Target } from 'lucide-react';
-import supabaseService from '../services/supabaseService';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -26,22 +25,10 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, setIsModa
   const [specificErrorType, setSpecificErrorType] = useState<'network' | 'credentials' | 'user_exists' | 'weak_password' | 'general' | null>(null);
 
   // Set focus to email input when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => {
-        const emailInput = document.getElementById('registration-email');
-        if (emailInput) emailInput.focus();
-      }, 100);
-    }
-  }, [isOpen, isSignUp]);
+  // Removed useEffect for focus
 
   // Clear errors when inputs change after validation attempt
-  useEffect(() => {
-    if (fieldsValidated) {
-      validateForm(false);
-      setSpecificErrorType(null);
-    }
-  }, [email, password, website, niche, fieldsValidated, isSignUp]);
+  // Removed useEffect for error clearing
 
   // Validate form fields and optionally show errors
   const validateForm = (showErrors = true) => {
@@ -94,14 +81,36 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, setIsModa
       
       setLoadingMessage('Setting up your account...');
       
-      // @ts-expect-error: registerUser is dynamic property on supabaseService
-      const result = await supabaseService.registerUser(email, password, website, niche);
-      
-      console.log('✅ Registration successful! Response:', result);
-      
-      if (result.success) {
+      const { data, error: supabaseError } = await supabase.auth.signUp({
+        email: email,
+        password: password,
+        options: {
+          data: {
+            website: website,
+            niche: niche,
+          },
+        },
+      });
+
+      if (supabaseError) {
+        const errorMessage = supabaseError.message?.toLowerCase() || '';
+        if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+          setSpecificErrorType('network');
+          setError('Network error. Please check your connection and try again.');
+        } else if (errorMessage.includes('already') || errorMessage.includes('exists')) {
+          setSpecificErrorType('user_exists');
+          setError('An account with this email already exists. Try signing in instead.');
+        } else if (errorMessage.includes('weak') || errorMessage.includes('password')) {
+          setSpecificErrorType('weak_password');
+          setError('Please use a stronger password (min. 6 characters).');
+        } else {
+          setSpecificErrorType('general');
+          setError(supabaseError.message || 'Registration failed');
+        }
+        console.error('❌ Registration failed:', supabaseError);
+      } else {
         setLoadingMessage('Registration successful! Check your email...');
-        setSuccess(result.message || '🎉 Registration successful! Please check your email and click the confirmation link to activate your account.');
+        setSuccess(data.user?.email || '🎉 Registration successful! Please check your email and click the confirmation link to activate your account.');
         
         // Show email confirmation message
         setTimeout(() => {
@@ -172,11 +181,29 @@ Having trouble? Contact hello@linkzy.ai for help.`);
     setLoadingMessage('Signing you in...');
     
     try {
-      // @ts-expect-error: signIn is dynamic property on supabaseService
-      const result = await supabaseService.signIn(email, password);
-      
-      if (result.success) {
-        login(result.api_key, result.user);
+      const { data, error: supabaseError } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+      });
+
+      if (supabaseError) {
+        const errorMessage = supabaseError.message?.toLowerCase() || '';
+        if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+          setSpecificErrorType('network');
+          setError('Network error. Please check your connection and try again.');
+        } else if (errorMessage.includes('invalid') || errorMessage.includes('password') || errorMessage.includes('credentials')) {
+          setSpecificErrorType('credentials');
+          setError('Invalid email or password. Please check your credentials.');
+        } else if (errorMessage.includes('not found') || errorMessage.includes('no user')) {
+          setSpecificErrorType('credentials');
+          setError('No account found with this email. Please check your spelling or sign up.');
+        } else {
+          setSpecificErrorType('general');
+          setError(supabaseError.message || 'Sign in failed');
+        }
+        console.error('❌ Sign in failed:', supabaseError);
+      } else {
+        login(data.user?.id, data.user);
         
         setSuccess('✅ Welcome back!');
         setTimeout(() => {

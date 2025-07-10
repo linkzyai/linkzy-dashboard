@@ -179,17 +179,24 @@ const SiteHealthChecker = () => {
 
   const checkAuthentication = async (): Promise<HealthCheck> => {
     try {
-      const { default: supabaseService } = await import('../services/supabaseService');
-      
       // Test service initialization
-      const apiKey = supabaseService.getApiKey();
+      const { data, error } = await supabase.auth.getSession();
       
-      if (apiKey) {
+      if (error) {
+        return {
+          name: 'Authentication System',
+          status: 'fail',
+          message: '❌ Auth system error',
+          details: error instanceof Error ? error.message : String(error)
+        };
+      }
+
+      if (data?.session) {
         return {
           name: 'Authentication System',
           status: 'pass',
           message: '✅ User authenticated',
-          details: 'API key found in storage'
+          details: 'Session found'
         };
       }
 

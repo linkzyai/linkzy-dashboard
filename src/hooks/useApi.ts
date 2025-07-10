@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import supabaseService from '../services/supabaseService';
+import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 // Generic hook for API calls with loading and error states
 export function useApi<T>(
@@ -62,33 +62,52 @@ export function useApi<T>(
 
 // Specific hooks for common API calls
 export function useDashboardStats() {
-  return useApi(() => supabaseService.getDashboardStats());
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    // Replace with actual supabase call
+    setData(null);
+  }, []);
+  return data;
 }
 
 export function useBacklinks(page = 1, limit = 10) {
-  return useApi(() => supabaseService.getBacklinks(page, limit), [page, limit]);
+  return useApi(() => supabase.rpc('get_backlinks', {
+    params: { page, limit },
+  }), [page, limit]);
 }
 
 export function useAnalytics(timeframe = '30d') {
-  return useApi(() => supabaseService.getAnalytics?.(timeframe) || Promise.resolve({}), [timeframe]);
+  return useApi(() => supabase.rpc('get_analytics', {
+    params: { timeframe },
+  }), [timeframe]);
 }
 
 export function useDetectedPages() {
-  return useApi(() => supabaseService.getDetectedPages?.() || Promise.resolve({ pages: [], total: 0 }));
+  return useApi(() => supabase.rpc('get_detected_pages', {
+    params: {},
+  }), []);
 }
 
 export function useUserProfile() {
-  return useApi(() => supabaseService.getUserProfile());
+  return useApi(() => supabase.rpc('get_user_profile', {
+    params: {},
+  }), []);
 }
 
 export function useBillingInfo() {
-  return useApi(() => supabaseService.getBillingInfo?.() || Promise.resolve({}));
+  return useApi(() => supabase.rpc('get_billing_info', {
+    params: {},
+  }), []);
 }
 
 export function useApiUsage() {
-  return useApi(() => supabaseService.getApiUsage?.() || Promise.resolve({}));
+  return useApi(() => supabase.rpc('get_api_usage', {
+    params: {},
+  }), []);
 }
 
 export function useKeywordAnalytics() {
-  return useApi(() => supabaseService.getKeywordAnalytics(), []);
+  return useApi(() => supabase.rpc('get_keyword_analytics', {
+    params: {},
+  }), []);
 }

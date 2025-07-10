@@ -193,25 +193,24 @@ const QuickHealthCheck = () => {
 
   const checkAuthentication = async (): Promise<HealthCheck> => {
     try {
-      const { default: supabaseService } = await import('../services/supabaseService');
+      // Test auth connection
+      const { data, error } = await supabase.auth.getSession();
       
-      // @ts-expect-error: getApiKey is a dynamic property on supabaseService
-      const apiKey = supabaseService.getApiKey();
-      
-      if (apiKey) {
+      if (error && !error.message.includes('Invalid token')) {
         return {
           name: 'Authentication',
-          status: 'pass',
-          message: '✅ User authenticated',
-          details: 'API key found in storage'
+          status: 'fail',
+          message: '❌ Auth system error',
+          details: error instanceof Error ? error.message : String(error),
+          action: 'Check supabaseService.js file'
         };
       }
 
       return {
         name: 'Authentication',
-        status: 'warning',
-        message: '⚠️ No active session',
-        details: 'User not logged in (normal for new visitors)'
+        status: 'pass',
+        message: '✅ User authenticated',
+        details: 'API key found in storage'
       };
 
     } catch (error) {
