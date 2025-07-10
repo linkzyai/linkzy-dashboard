@@ -62,7 +62,11 @@ const Dashboard = () => {
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [celebrationType, setCelebrationType] = useState<'first-request' | 'first-backlink' | 'completed-onboarding'>('completed-onboarding');
   const [currentStep, setCurrentStep] = useState(0);
-  const { data: dashboardData, loading, error, refetch } = useDashboardStats();
+  const dashboardStatsResult = useDashboardStats();
+  const dashboardData = dashboardStatsResult?.data || {};
+  const loading = dashboardStatsResult?.loading;
+  const error = dashboardStatsResult?.error;
+  const refetch = dashboardStatsResult?.refetch;
   const [onboardingProgress, setOnboardingProgress] = useState(() => {
     const stored = localStorage.getItem('linkzy_onboarding_progress');
     return stored ? JSON.parse(stored) : { request: false, track: false, analytics: false };

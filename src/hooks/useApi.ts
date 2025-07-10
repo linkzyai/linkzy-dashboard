@@ -62,12 +62,26 @@ export function useApi<T>(
 
 // Specific hooks for common API calls
 export function useDashboardStats() {
+  // Use the same shape as useApi for consistency
   const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     // Replace with actual supabase call
     setData(null);
+    setLoading(false);
   }, []);
-  return data;
+
+  const refetch = async () => {
+    setLoading(true);
+    setError(null);
+    // Replace with actual supabase call
+    setData(null);
+    setLoading(false);
+  };
+
+  return { data, loading, error, refetch };
 }
 
 export function useBacklinks(page = 1, limit = 10) {
