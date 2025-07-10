@@ -20,7 +20,9 @@ export default function AuthCallback() {
     }, 10000); // 10 seconds
     const handleAuthCallback = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession()
+        const sessionRes = await supabase.auth.getSession();
+        const session = sessionRes?.data?.session;
+        const error = sessionRes?.error;
         
         if (error) {
           setStatus('Confirmation failed: ' + error.message)

@@ -26,7 +26,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     const checkEmailVerification = async () => {
       if (isAuthenticated) {
         try {
-          const { data: { user } } = await supabase.auth.getUser();
+          const userRes = await supabase.auth.getUser();
+          const user = userRes?.data?.user;
           if (user && user.email_confirmed_at) {
             setEmailVerified(true);
           } else {
