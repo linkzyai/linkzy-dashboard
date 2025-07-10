@@ -40,42 +40,57 @@ const HomePage = () => (
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="min-h-screen bg-black">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/success" element={<Success />} />
-            <Route path="/cancel" element={<Cancel />} />
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/analytics" element={
-              <ProtectedRoute>
-                <DashboardAnalytics />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/account" element={
-              <ProtectedRoute>
-                <DashboardAccount />
-              </ProtectedRoute>
-            } />
-            <Route path="/demo" element={<AnimatedDashboardDemo />} />
-            <Route path="/verify-email" element={<EmailVerification />} />
-            <Route path="/sign-in" element={<SignIn />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/admin" element={<AdminTools />} />
-          </Routes>
-        </div>
-      </Router>
-    </AuthProvider>
+    <>
+      <div style={{
+        color: 'red',
+        fontWeight: 'bold',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        zIndex: 9999,
+        background: '#fff',
+        padding: 8
+      }}>
+        SUPABASE_URL: {import.meta.env.VITE_SUPABASE_URL || 'NOT SET'}<br/>
+        SUPABASE_KEY: {import.meta.env.VITE_SUPABASE_ANON_KEY ? 'SET' : 'NOT SET'}
+      </div>
+      <AuthProvider>
+        <Router>
+          <div className="min-h-screen bg-black">
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/success" element={<Success />} />
+              <Route path="/cancel" element={<Cancel />} />
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/dashboard/analytics" element={
+                <ProtectedRoute>
+                  <DashboardAnalytics />
+                </ProtectedRoute>
+              } />
+              <Route path="/dashboard/account" element={
+                <ProtectedRoute>
+                  <DashboardAccount />
+                </ProtectedRoute>
+              } />
+              <Route path="/demo" element={<AnimatedDashboardDemo />} />
+              <Route path="/verify-email" element={<EmailVerification />} />
+              <Route path="/sign-in" element={<SignIn />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/admin" element={<AdminTools />} />
+            </Routes>
+          </div>
+        </Router>
+      </AuthProvider>
+    </>
   );
 }
 

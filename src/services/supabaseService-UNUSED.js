@@ -1,3 +1,4 @@
+!!!
 import { supabase } from '../lib/supabase'
 
 class SupabaseService {
@@ -807,11 +808,11 @@ If you're testing, try these workarounds:
 
   // Get the current auth status - used by the auth context
   async getAuthStatus() {
-    console.log('[getAuthStatus] called');
+    console.log('[supabaseService] getAuthStatus called');
     try {
       // First, try to get current Supabase session
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      console.log('[getAuthStatus] getSession result:', { sessionData, sessionError });
+      console.log('[supabaseService] getAuthStatus: about to call supabase.auth.getSession()');
       if (sessionError) {
         console.error('Session error:', sessionError);
       }
@@ -841,7 +842,7 @@ If you're testing, try these workarounds:
             // Cache user data
             localStorage.setItem('linkzy_user', JSON.stringify(combinedUser));
             
-            console.log('[getAuthStatus] return:', { isAuthenticated: true, user: combinedUser });
+            console.log('[supabaseService] getAuthStatus: returning', { isAuthenticated: true, user: combinedUser });
             return { isAuthenticated: true, user: combinedUser };
           }
         } catch (dbError) {
@@ -860,7 +861,7 @@ If you're testing, try these workarounds:
         };
         
         localStorage.setItem('linkzy_user', JSON.stringify(authUser));
-        console.log('[getAuthStatus] return:', { isAuthenticated: true, user: authUser });
+        console.log('[supabaseService] getAuthStatus: returning', { isAuthenticated: true, user: authUser });
         return { isAuthenticated: true, user: authUser };
       }
       
@@ -872,7 +873,7 @@ If you're testing, try these workarounds:
         // Try to get user from localStorage
         const storedUser = localStorage.getItem('linkzy_user');
         if (storedUser) {
-          console.log('[getAuthStatus] return:', { isAuthenticated: true, user: JSON.parse(storedUser) });
+          console.log('[supabaseService] getAuthStatus: returning', { isAuthenticated: true, user: JSON.parse(storedUser) });
           return { 
             isAuthenticated: true, 
             user: JSON.parse(storedUser)
@@ -889,14 +890,14 @@ If you're testing, try these workarounds:
           plan: 'free'
         };
         
-        console.log('[getAuthStatus] return:', { isAuthenticated: true, user: fallbackUser });
+        console.log('[supabaseService] getAuthStatus: returning', { isAuthenticated: true, user: fallbackUser });
         return { isAuthenticated: true, user: fallbackUser };
       }
       
-      console.log('[getAuthStatus] return:', { isAuthenticated: false, user: null });
+      console.log('[supabaseService] getAuthStatus: returning', { isAuthenticated: false, user: null });
       return { isAuthenticated: false, user: null };
     } catch (error) {
-      console.error('[getAuthStatus] top-level error:', error);
+      console.error('[supabaseService] top-level error:', error);
       return { isAuthenticated: false, user: null, error };
     }
   }
