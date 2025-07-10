@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
-import supabaseService from '../services/supabaseService.js';
+import { supabase } from '../lib/supabase';
 
 const EmailVerification = () => {
   const [searchParams] = useSearchParams();
@@ -22,7 +22,10 @@ const EmailVerification = () => {
 
       try {
         // @ts-expect-error: verifyEmail is a dynamic property on supabaseService
-        await supabaseService.verifyEmail(token, type);
+        await supabase.auth.verifyOtp({
+          token,
+          type,
+        });
         setStatus('success');
         setMessage('Your email has been verified successfully! You can now access all features.');
         
