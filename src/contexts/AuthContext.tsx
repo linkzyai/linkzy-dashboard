@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { Session, AuthChangeEvent } from '@supabase/supabase-js';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -23,6 +24,20 @@ interface AuthProviderProps {
   children: React.ReactNode;
 }
 
+// Helper to fetch user profile from Supabase users table
+const fetchUserProfile = async (id: string) => {
+  const { data: profile, error } = await supabase
+    .from('users')
+    .select('id, credits, plan')
+    .eq('id', id)
+    .single();
+  if (error) {
+    console.error('Failed to fetch user profile:', error);
+    return {};
+  }
+  return profile || {};
+};
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<any | null>(null);
@@ -35,8 +50,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { data, error } = await supabase.auth.getSession();
       if (data?.session && data.session.user) {
         setIsAuthenticated(true);
-        setUser(data.session.user);
-        localStorage.setItem('linkzy_user', JSON.stringify(data.session.user));
+        const profile = await fetchUserProfile(data.session.user.id);
+        setUser({
+          ...data.session.user,
+          credits: profile.credits,
+          creditsRemaining: profile.credits, // for dashboard compatibility
+          plan: profile.plan || 'Free',
+        });
+        localStorage.setItem('linkzy_user', JSON.stringify({
+          ...data.session.user,
+          credits: profile.credits,
+          creditsRemaining: profile.credits,
+          plan: profile.plan || 'Free',
+        }));
       } else {
         setIsAuthenticated(false);
         setUser(null);
@@ -49,11 +75,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Listen for auth state changes
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
       if (event === 'SIGNED_IN' && session?.user) {
         setIsAuthenticated(true);
-        setUser(session.user);
-        localStorage.setItem('linkzy_user', JSON.stringify(session.user));
+        const profile = await fetchUserProfile(session.user.id);
+        setUser({
+          ...session.user,
+          credits: profile.credits,
+          creditsRemaining: profile.credits,
+          plan: profile.plan || 'Free',
+        });
+        localStorage.setItem('linkzy_user', JSON.stringify({
+          ...session.user,
+          credits: profile.credits,
+          creditsRemaining: profile.credits,
+          plan: profile.plan || 'Free',
+        }));
       } else if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
         setUser(null);
@@ -75,8 +112,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
     if (data?.user) {
       setIsAuthenticated(true);
-      setUser(data.user);
-      localStorage.setItem('linkzy_user', JSON.stringify(data.user));
+      const profile = await fetchUserProfile(data.user.id);
+      setUser({
+        ...data.user,
+        credits: profile.credits,
+        creditsRemaining: profile.credits,
+        plan: profile.plan || 'Free',
+      });
+      localStorage.setItem('linkzy_user', JSON.stringify({
+        ...data.user,
+        credits: profile.credits,
+        creditsRemaining: profile.credits,
+        plan: profile.plan || 'Free',
+      }));
     }
     setLoading(false);
     return data.user;

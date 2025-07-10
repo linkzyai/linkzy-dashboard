@@ -42,3 +42,11 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     }
   }
 })
+
+// src/lib/supabase.js is a JS file, so we need a declaration file for TypeScript consumers.
+// Create or update src/lib/supabase.d.ts:
+
+declare module './supabase' {
+  import { SupabaseClient } from '@supabase/supabase-js';
+  export const supabase: SupabaseClient;
+}
