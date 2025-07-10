@@ -221,6 +221,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
               >
                 Create Account
               </button>
+              <button
+                onClick={() => window.location.replace('/')}
+                className="w-full mt-4 bg-gray-800 hover:bg-gray-700 text-white font-semibold py-3 rounded-lg transition-colors border border-gray-600"
+              >
+                Back to Home
+              </button>
             </div>
           </div>
         </div>
