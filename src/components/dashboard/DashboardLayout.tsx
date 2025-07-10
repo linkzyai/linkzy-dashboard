@@ -1,6 +1,6 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
   Home,
@@ -20,6 +20,7 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
@@ -110,7 +111,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
                 </span> remaining
               </div>
               <button 
-                onClick={logout}
+                onClick={() => logout(navigate)}
                 className="text-gray-400 hover:text-white transition-colors"
                 title="Logout"
               >

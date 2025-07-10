@@ -51,9 +51,11 @@ import axios from 'axios';
 import JSZip from 'jszip';
 // @ts-ignore
 import { supabase } from '../../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 
 const DashboardAccount = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [activeTab, setActiveTab] = useState('profile-billing');
   const [showApiKey, setShowApiKey] = useState(false);
@@ -356,7 +358,7 @@ const DashboardAccount = () => {
     if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
       // Add account deletion logic
       alert('Account deletion functionality would go here');
-      logout();
+      logout(navigate);
     }
   };
 
@@ -754,7 +756,7 @@ const DashboardAccount = () => {
             <span>Delete Account</span>
           </button>
         </div>
-        <button onClick={logout} className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg flex items-center space-x-2 font-semibold">
+        <button onClick={() => logout(navigate)} className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg flex items-center space-x-2 font-semibold">
           <LogOut className="w-4 h-4" />
           <span>Logout</span>
         </button>

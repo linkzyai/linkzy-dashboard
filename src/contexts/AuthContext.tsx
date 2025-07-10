@@ -5,7 +5,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   user: any | null;
   login: (email: string, password: string) => Promise<any>;
-  logout: () => Promise<void>;
+  logout: (navigate?: (path: string) => void) => Promise<void>;
   loading: boolean;
 }
 
@@ -83,13 +83,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Logout
-  const logout = async () => {
+  const logout = async (navigate?: (path: string) => void) => {
     setLoading(true);
     await supabase.auth.signOut();
     setIsAuthenticated(false);
     setUser(null);
     localStorage.removeItem('linkzy_user');
     setLoading(false);
+    if (navigate) {
+      navigate('/');
+    } else {
+      window.location.replace('/');
+    }
   };
 
   const value = {
