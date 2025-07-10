@@ -6,6 +6,7 @@ import RegistrationModal from './RegistrationModal';
 
 const Header = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'signup' | 'signin'>('signup');
 
   return (
     <>
@@ -27,12 +28,12 @@ const Header = () => {
           </nav>
           
           <div className="flex items-center space-x-4">
-            <RouterLink 
-              to="/sign-in" 
+            <button
+              onClick={() => { setModalMode('signin'); setIsModalOpen(true); }}
               className="text-gray-300 hover:text-white transition-colors"
             >
               Sign In
-            </RouterLink>
+            </button>
             <button 
               onClick={() => setIsModalOpen(true)}
               className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors"
@@ -44,7 +45,7 @@ const Header = () => {
       </div>
       </header>
       
-      <RegistrationModal isOpen={isModalOpen} setIsModalOpen={setIsModalOpen} />
+      <RegistrationModal isOpen={isModalOpen} setIsModalOpen={setIsModalOpen} mode={modalMode} setMode={setModalMode} />
     </>
   );
 };

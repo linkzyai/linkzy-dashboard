@@ -6,11 +6,22 @@ import { supabase } from '../lib/supabase';
 interface RegistrationModalProps {
   isOpen: boolean;
   setIsModalOpen: (isOpen: boolean) => void;
+  mode?: 'signup' | 'signin';
+  setMode?: (mode: 'signup' | 'signin') => void;
 }
 
-const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, setIsModalOpen }) => {
+const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, setIsModalOpen, mode, setMode }) => {
   const { login } = useAuth();
-  const [isSignUp, setIsSignUp] = useState(true);
+  const [isSignUp, setIsSignUp] = useState(mode === 'signin' ? false : true);
+  // Sync isSignUp with mode prop if provided
+  React.useEffect(() => {
+    if (mode) setIsSignUp(mode === 'signup');
+  }, [mode]);
+  // When switching tabs, update parent mode if setMode is provided
+  const handleTabSwitch = (signUp: boolean) => {
+    setIsSignUp(signUp);
+    if (setMode) setMode(signUp ? 'signup' : 'signin');
+  };
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [website, setWebsite] = useState('');
@@ -293,7 +304,7 @@ Having trouble? Contact hello@linkzy.ai for help.`);
         </div>
         <div className="flex bg-gray-800 rounded-lg p-1 mb-6">
           <button
-            onClick={() => setIsSignUp(true)}
+            onClick={() => handleTabSwitch(true)}
             className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
               isSignUp
                 ? 'bg-orange-500 text-white'
@@ -303,7 +314,7 @@ Having trouble? Contact hello@linkzy.ai for help.`);
             Sign Up
           </button>
           <button
-            onClick={() => setIsSignUp(false)}
+            onClick={() => handleTabSwitch(false)}
             className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
               !isSignUp
                 ? 'bg-orange-500 text-white'
@@ -323,7 +334,7 @@ Having trouble? Contact hello@linkzy.ai for help.`);
                 
                 {specificErrorType === 'user_exists' && (
                   <button 
-                    onClick={() => setIsSignUp(false)}
+                    onClick={() => handleTabSwitch(false)}
                     className="text-sm text-orange-400 hover:text-orange-300 mt-1"
                   >
                     Sign in instead →
