@@ -44,6 +44,7 @@ const DashboardAnalytics = () => {
     localStorage.setItem('linkzy_competitors', JSON.stringify(updated));
   };
 
+  console.log('DashboardAnalytics rendered');
   if (loading) {
     return (
       <DashboardLayout title="Analytics">
@@ -66,6 +67,9 @@ const DashboardAnalytics = () => {
       </DashboardLayout>
     );
   }
+
+  console.log('analyticsData:', analyticsData, 'loading:', loading, 'error:', error);
+  console.log('keywordData:', keywordData, 'keywordLoading:', keywordLoading, 'keywordError:', keywordError);
 
   // Use real data or fallback to defaults
   type Metric = { name: string; value: string; change: string; trend: 'up' | 'down' };

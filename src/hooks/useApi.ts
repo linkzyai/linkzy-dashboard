@@ -17,9 +17,11 @@ export function useApi<T>(
       try {
         setLoading(true);
         setError(null);
+        console.log('useApi called for', apiCall.name);
         const result = await apiCall();
         if (mounted) {
           setData(result);
+          console.log('API result for', apiCall.name, ':', result);
         }
       } catch (err) {
         if (mounted) {
