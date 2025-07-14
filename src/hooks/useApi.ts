@@ -95,7 +95,10 @@ export function useBacklinks(page = 1, limit = 10) {
 export function useAnalytics(timeframe = '30d') {
   return useApi(() => {
     console.log('Calling supabase.rpc(get_analytics)...');
-    return supabase.rpc('get_analytics', { params: { timeframe } });
+    return supabase.rpc('get_analytics', { params: { timeframe } }).then(res => {
+      console.log('Raw RPC result for get_analytics:', res);
+      return res;
+    });
   }, [timeframe]);
 }
 
@@ -126,6 +129,9 @@ export function useApiUsage() {
 export function useKeywordAnalytics() {
   return useApi(() => {
     console.log('Calling supabase.rpc(get_keyword_analytics)...');
-    return supabase.rpc('get_keyword_analytics', { params: {} });
+    return supabase.rpc('get_keyword_analytics', { params: {} }).then(res => {
+      console.log('Raw RPC result for get_keyword_analytics:', res);
+      return res;
+    });
   }, []);
 }
