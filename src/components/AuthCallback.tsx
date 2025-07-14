@@ -51,31 +51,31 @@ export default function AuthCallback() {
           }
 
           // If metadata is present, insert into users table
-          const apiKey = `linkzy_${session.user.email.replace('@', '_').replace(/\./g, '_')}_${Date.now()}`;
-          setStatus('Creating your account...');
-          const { error: insertError } = await supabase
-            .from('users')
-            .insert([{
-              id: session.user.id,
-              email: session.user.email,
-              website: websiteVal,
-              niche: nicheVal,
-              api_key: apiKey,
-              credits: 3,
-              plan: 'free'
-            }]);
-          if (insertError) {
-            console.error('Database insert error details:', insertError)
-            setStatus('Database error: ' + insertError.message)
-            return
-          }
-          localStorage.setItem('linkzy_user', JSON.stringify(session.user))
-          localStorage.setItem('linkzy_api_key', apiKey)
+          // const apiKey = `linkzy_${session.user.email.replace('@', '_').replace(/\./g, '_')}_${Date.now()}`;
+          // setStatus('Creating your account...');
+          // const { error: insertError } = await supabase
+          //   .from('users')
+          //   .insert([{
+          //     id: session.user.id,
+          //     email: session.user.email,
+          //     website: websiteVal,
+          //     niche: nicheVal,
+          //     api_key: apiKey,
+          //     credits: 3,
+          //     plan: 'free'
+          //   }]);
+          // if (insertError) {
+          //   console.error('Database insert error details:', insertError)
+          //   setStatus('Database error: ' + insertError.message)
+          //   return
+          // }
+          // localStorage.setItem('linkzy_user', JSON.stringify(session.user))
+          // localStorage.setItem('linkzy_api_key', apiKey)
           setStatus('Success! Redirecting to homepage...')
           setSuccess(true);
           setTimeout(() => {
-            window.location.href = '/'
-          }, 2000)
+            window.location.href = '/';
+          }, 2000);
         } else {
           setStatus('No valid session found')
         }
@@ -91,32 +91,14 @@ export default function AuthCallback() {
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!website || !niche || !user) return;
-    setStatus('Creating your account...');
-    const apiKey = `linkzy_${user.email.replace('@', '_').replace(/\./g, '_')}_${Date.now()}`;
-    const { error: insertError } = await supabase
-      .from('users')
-      .insert([{
-        id: user.id,
-        email: user.email,
-        website,
-        niche,
-        api_key: apiKey,
-        credits: 3,
-        plan: 'free'
-      }]);
-    if (insertError) {
-      console.error('Database insert error details:', insertError)
-      setStatus('Database error: ' + insertError.message)
-      return
-    }
-    localStorage.setItem('linkzy_user', JSON.stringify(user))
-    localStorage.setItem('linkzy_api_key', apiKey)
-    setStatus('Success! Redirecting to homepage...')
+    setStatus('Saving your profile...');
+    // Instead of inserting, update the user's metadata or just reload
+    setStatus('Success! Redirecting to homepage...');
     setSuccess(true);
     setNeedsProfile(false);
     setTimeout(() => {
-      window.location.href = '/'
-    }, 2000)
+      window.location.href = '/';
+    }, 2000);
   };
 
   return (

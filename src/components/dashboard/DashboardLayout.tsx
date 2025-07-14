@@ -106,7 +106,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-300">
                 <span className="text-orange-500 font-semibold">
-                  {user?.creditsRemaining || '0'} credits
+                  {user?.credits || '0'} credits
                 </span> remaining
               </div>
               <button 
@@ -170,7 +170,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
                     {user?.email?.split('@')[0] || 'User'}
                   </p>
                   <p className="text-xs text-gray-400 truncate">
-                    {user?.plan || 'Free'} Plan
+                    {user?.is_pro ? 'Pro' : 'Free'} Plan
                   </p>
                 </div>
               </div>

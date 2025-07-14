@@ -216,25 +216,7 @@ class SupabaseService {
       
       console.log('✅ Supabase Auth registration successful - confirmation email sent:', data);
       
-      if (data.user) {
-        const apiKey = this.generateApiKey(email);
-        const { error: dbError } = await supabase
-          .from('users')
-          .insert([{
-            id: data.user.id,
-            email,
-            api_key: apiKey,
-            website,
-            niche,
-            plan: 'free',
-            credits: 3,
-            is_pro: false
-          }]);
-        if (dbError) {
-          console.error('❌ Database insert failed:', dbError);
-          throw dbError;
-        }
-      }
+      // No manual insert to users table here!
       
       return {
         success: true,
@@ -796,25 +778,9 @@ If you're testing, try these workarounds:
         
         // If database query fails, return auth user
         const authUser = {
-          ...session.user,
-          credits: 3,
-          api_key: session.user.user_metadata?.api_key || this.getApiKey()
+          ...session.user
         };
-        localStorage.setItem('linkzy_user', JSON.stringify(authUser));
         return authUser;
-      }
-      
-      // Last resort - use the API key if available
-      const apiKey = this.getApiKey();
-      if (apiKey) {
-        const lastResortUser = {
-          id: 'local_' + Date.now(),
-          email: 'user@example.com',
-          api_key: apiKey,
-          credits: 3,
-          plan: 'free'
-        };
-        return lastResortUser;
       }
       
       throw new Error('No user found');
@@ -872,9 +838,7 @@ If you're testing, try these workarounds:
         
         const authUser = {
           ...sessionData.session.user,
-          api_key: apiKey,
-          credits: 3,
-          plan: 'free'
+          api_key: apiKey
         };
         
         localStorage.setItem('linkzy_user', JSON.stringify(authUser));
@@ -899,10 +863,7 @@ If you're testing, try these workarounds:
         // This is a fallback to maintain user experience
         const fallbackUser = {
           id: `local_${Date.now()}`,
-          email: 'user@example.com', // This will be replaced when actual data is fetched
-          api_key: apiKey,
-          credits: 3,
-          plan: 'free'
+          api_key: apiKey
         };
         
         return { isAuthenticated: true, user: fallbackUser };

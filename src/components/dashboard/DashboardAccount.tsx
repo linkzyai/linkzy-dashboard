@@ -76,7 +76,7 @@ const DashboardAccount = () => {
   const [keywordsCount, setKeywordsCount] = useState(0);
   const [notifications, setNotifications] = useState<{ type: string; message: string }[]>([]);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
-  const [credits, setCredits] = useState(user?.creditsRemaining || 3);
+  const [credits, setCredits] = useState(user?.credits || 3);
   const [requests, setRequests] = useState([
     // Example mock requests
     { id: 1, url: 'https://example.com/page1', keywords: 'seo, marketing', status: 'completed', date: '2025-07-01', details: 'Placed on high DA site.' },
@@ -108,8 +108,8 @@ const DashboardAccount = () => {
     website: user?.website || 'https://example.com',
     niche: user?.niche || 'Technology',
     apiKey: user?.api_key || 'demo_api_key_123',
-    credits: user?.creditsRemaining || 3,
-    plan: user?.plan || 'Free',
+    credits: user?.credits || 3,
+    isPro: user?.is_pro || false,
     joinDate: 'December 2024'
   };
   
@@ -547,7 +547,7 @@ const DashboardAccount = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Account Type</label>
-              <input type="text" value={userData.plan} disabled className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white" />
+              <input type="text" value={userData.isPro ? 'Pro' : 'Free'} disabled className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Member Since</label>
@@ -979,7 +979,7 @@ const DashboardAccount = () => {
         isOpen={showPurchaseModal}
         onClose={() => setShowPurchaseModal(false)}
         currentCredits={credits}
-        currentPlan={userData.plan}
+        currentPlan={userData.isPro ? 'Pro' : 'Free'}
       />
     );
   }

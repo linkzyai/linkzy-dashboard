@@ -179,7 +179,7 @@ const Dashboard = () => {
     }] : []),
     { 
       name: 'Credits Remaining', 
-      value: ((dashboardData as DashboardDataType)?.creditsRemaining || 0).toString() || '0', 
+      value: (user?.credits || 0).toString() || '0', 
       change: 'Available for use', 
       changeType: 'neutral', 
       icon: Zap,
@@ -208,8 +208,8 @@ const Dashboard = () => {
     website: user?.website || 'https://example.com',
     niche: user?.niche || 'Technology',
     apiKey: user?.api_key || 'linkzy_user_example_com_1234567890',
-    creditsRemaining: user?.creditsRemaining || 3,
-    plan: user?.plan || 'Free',
+    credits: user?.credits || 3,
+    isPro: user?.is_pro || false,
     joinDate: 'December 2024'
   };
 
@@ -427,7 +427,7 @@ const Dashboard = () => {
                       />
                     </div>
                     <p className="text-gray-300 mb-6">
-                      Your first {user?.creditsRemaining || 3} backlinks are free! Get high-quality backlinks from real niche blogs.
+                      Your first {user?.credits || 3} backlinks are free! Get high-quality backlinks from real niche blogs.
                     </p>
                     
                     <button 
@@ -664,7 +664,7 @@ const Dashboard = () => {
               setShowOnboardingModal(false);
               navigate('/dashboard/account');
             }}
-            creditsRemaining={userData?.creditsRemaining || 3}
+            creditsRemaining={userData?.credits || 3}
           />
           
           {/* Celebration Modal */}

@@ -96,6 +96,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, setIsModa
       
       // @ts-expect-error: registerUser is dynamic property on supabaseService
       const result = await supabaseService.registerUser(email, password, website, niche);
+      // No manual insert to users table, just rely on Supabase Auth and trigger
       
       console.log('✅ Registration successful! Response:', result);
       
