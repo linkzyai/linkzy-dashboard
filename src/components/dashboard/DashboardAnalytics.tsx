@@ -28,6 +28,7 @@ const DashboardAnalytics = () => {
   const [activeTab, setActiveTab] = React.useState('Overview');
 
   const { user } = useAuth();
+  console.log('DashboardAnalytics user:', user);
   const userDomain = user?.website || 'yourdomain.com';
   const userApiKey = user?.api_key || '';
 
