@@ -200,7 +200,7 @@ class SupabaseService {
         email: email,
         password: password,
         options: {
-          emailRedirectTo: 'https://linkzy.ai/auth/callback',
+          emailRedirectTo: 'https://linkzy.ai/verify-email',
           data: {
             website: website,
             niche: niche,

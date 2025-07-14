@@ -178,12 +178,9 @@ Having trouble? Contact hello@linkzy.ai for help.`);
       
       if (result.success) {
         login(result.api_key, result.user);
-        
         setSuccess('✅ Welcome back!');
-        setTimeout(() => {
-          setIsModalOpen(false);
-          window.location.href = '/dashboard';
-        }, 1000);
+        setIsModalOpen(false);
+        window.location.href = '/dashboard';
       }
       
     } catch (error: any) {

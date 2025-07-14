@@ -25,12 +25,12 @@ const EmailVerification = () => {
         await supabaseService.verifyEmail(token, type);
         setStatus('success');
         setMessage('Your email has been verified successfully! You can now access all features.');
-        
+        // Force a Supabase session refresh
+        await import('../lib/supabase').then(({ supabase }) => supabase.auth.getSession());
         // Redirect to dashboard after 3 seconds
         setTimeout(() => {
           navigate('/dashboard');
         }, 3000);
-        
       } catch (error) {
         console.error('Email verification failed:', error);
         setStatus('error');
