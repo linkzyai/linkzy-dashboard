@@ -216,6 +216,26 @@ class SupabaseService {
       
       console.log('✅ Supabase Auth registration successful - confirmation email sent:', data);
       
+      if (data.user) {
+        const apiKey = this.generateApiKey(email);
+        const { error: dbError } = await supabase
+          .from('users')
+          .insert([{
+            id: data.user.id,
+            email,
+            api_key: apiKey,
+            website,
+            niche,
+            plan: 'free',
+            credits: 3,
+            is_pro: false
+          }]);
+        if (dbError) {
+          console.error('❌ Database insert failed:', dbError);
+          throw dbError;
+        }
+      }
+      
       return {
         success: true,
         user: data.user,
