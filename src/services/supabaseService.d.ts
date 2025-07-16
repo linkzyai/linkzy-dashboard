@@ -7,6 +7,13 @@ declare class SupabaseService {
   signOut(): Promise<{ success: boolean; error?: string }>;
   getUserProfile(): Promise<any>;
   createBacklinkRequest(data: any): Promise<any>;
+  signInWithGoogle(): Promise<{ success: boolean; data?: any; error?: any }>;
+  signUpWithGoogle(website: string, niche: string): Promise<{ success: boolean; data?: any; error?: any }>;
+  resetPassword(email: string): Promise<any>;
+  resendConfirmationEmail(email: string): Promise<any>;
+  generateApiKey(email: string): string;
+  sendWelcomeEmail(email: string, apiKey: string, website: string, niche: string, verificationToken?: string): Promise<any>;
+  updateUserProfile(website: string, niche: string): Promise<{ success: boolean; error?: string }>;
   // Add other methods as needed
 }
 

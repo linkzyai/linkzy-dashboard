@@ -22,7 +22,7 @@ import DashboardSettings from './components/dashboard/DashboardSettings';
 import DashboardAccount from './components/dashboard/DashboardAccount';
 import AnimatedDashboardDemo from './components/AnimatedDashboardDemo';
 import EmailVerification from './components/EmailVerification';
-import SignIn from './components/SignIn';
+
 import ResetPassword from './components/ResetPassword';
 import AdminTools from './components/AdminTools';
 import PasswordResetTest from './components/PasswordResetTest';
@@ -69,7 +69,7 @@ function App() {
             } />
             <Route path="/demo" element={<AnimatedDashboardDemo />} />
             <Route path="/verify-email" element={<EmailVerification />} />
-            <Route path="/sign-in" element={<SignIn />} />
+
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/admin" element={<AdminTools />} />

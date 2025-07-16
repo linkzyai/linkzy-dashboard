@@ -7,6 +7,7 @@ import ErrorMessage from '../ErrorMessage';
 import { useDashboardStats } from '../../hooks/useApi';
 import { useAuth } from '../../contexts/AuthContext';
 import OnboardingTracker from '../OnboardingTracker';
+import ProfileOnboardingModal from './OnboardingModal';
 import OnboardingModal from '../OnboardingModal';
 import CelebrationModal from '../CelebrationModal';
 import ContextualHelp from '../ContextualHelp';
@@ -59,6 +60,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [showProfileOnboarding, setShowProfileOnboarding] = useState(false);
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [celebrationType, setCelebrationType] = useState<'first-request' | 'first-backlink' | 'completed-onboarding'>('completed-onboarding');
   const [currentStep, setCurrentStep] = useState(0);
@@ -101,6 +103,23 @@ const Dashboard = () => {
           setShowOnboardingModal(true);
           localStorage.setItem('linkzy_onboarding_shown', 'true');
         }, 1500);
+      }
+      
+      // Check if user needs to complete their profile
+      const needsProfileCompletion = user && (
+        !user.website || 
+        user.website === 'yourdomain.com' || 
+        !user.niche || 
+        user.niche === 'technology'
+      );
+      
+      const hasSeenProfileOnboarding = localStorage.getItem('linkzy_profile_onboarding_seen');
+      
+      if (needsProfileCompletion && !hasSeenProfileOnboarding && !showOnboardingModal) {
+        // Show profile onboarding after main onboarding
+        setTimeout(() => {
+          setShowProfileOnboarding(true);
+        }, isNewUser ? 3000 : 1000);
       }
       
       // Check if user just got their first backlink
@@ -672,6 +691,22 @@ const Dashboard = () => {
             isOpen={showCelebrationModal}
             onClose={() => setShowCelebrationModal(false)}
             achievementType={celebrationType}
+          />
+          
+          {/* Profile Onboarding Modal */}
+          <ProfileOnboardingModal 
+            isOpen={showProfileOnboarding}
+            onComplete={(website, niche) => {
+              setShowProfileOnboarding(false);
+              localStorage.setItem('linkzy_profile_onboarding_seen', 'true');
+              // Refresh dashboard data to show updated profile
+              refetch();
+            }}
+            onSkip={() => {
+              setShowProfileOnboarding(false);
+              localStorage.setItem('linkzy_profile_onboarding_seen', 'true');
+            }}
+            userEmail={user?.email || ''}
           />
         </div>
       </DashboardLayout>

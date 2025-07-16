@@ -55,7 +55,7 @@ const AdminTools = () => {
                 </p>
                 <button
                   onClick={() => {
-                    window.location.href = '/sign-in';
+                    window.location.href = '/';
                   }}
                   className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors text-sm"
                 >

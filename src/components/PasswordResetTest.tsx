@@ -413,7 +413,7 @@ const PasswordResetTest = () => {
             </button>
 
             <button
-              onClick={() => window.location.href = '/sign-in'}
+                              onClick={() => window.location.href = '/'}
               className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-lg transition-colors flex items-center justify-center space-x-2"
             >
               <ArrowRight className="w-4 h-4" />
@@ -521,7 +521,7 @@ const PasswordResetTest = () => {
               <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold text-sm">1</div>
               <div>
                 <h3 className="text-white font-medium">User requests password reset</h3>
-                <p className="text-gray-400 text-sm">User enters email on /sign-in page and clicks "Forgot Password"</p>
+                <p className="text-gray-400 text-sm">User enters email on sign in modal and clicks "Forgot Password"</p>
               </div>
             </div>
             

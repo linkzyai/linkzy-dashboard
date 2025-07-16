@@ -703,11 +703,11 @@ If you're testing, try these workarounds:
         } catch (authUpdateError) {
           console.warn('⚠️ Auth update failed, updating users table:', authUpdateError);
           
-          // Fallback to direct database update
+          // Fallback to direct database update (just touch the record)
           const { error } = await supabase
             .from('users')
             .update({ 
-              updated_at: new Date().toISOString()
+              email: email  // Touch the record to update timestamp
             })
             .eq('email', email);
           
@@ -1118,6 +1118,124 @@ If you're testing, try these workarounds:
     } catch (error) {
       console.error('Failed to get keyword analytics:', error);
       return { topKeywords: [], totalKeywordCount: 0, allKeywordStats: {}, trackedContent: [] };
+    }
+  }
+
+  // Google OAuth Sign In
+  async signInWithGoogle() {
+    try {
+      console.log('🔄 Initiating Google OAuth sign-in...');
+      
+      const { data, error } = await this.supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
+      });
+
+      if (error) {
+        console.error('❌ Google OAuth error:', error);
+        throw error;
+      }
+
+      console.log('✅ Google OAuth initiated successfully');
+      return { success: true, data };
+    } catch (error) {
+      console.error('❌ Google sign-in failed:', error);
+      throw new Error(`Google sign-in failed: ${error.message}`);
+    }
+  }
+
+  // Google OAuth Sign Up (for new users with business profile)
+  async signUpWithGoogle(website, niche) {
+    try {
+      console.log('🔄 Initiating Google OAuth sign-up with business profile...');
+      
+      // Store the business profile data temporarily for after OAuth callback
+      localStorage.setItem('pending_google_signup', JSON.stringify({
+        website,
+        niche,
+        timestamp: Date.now()
+      }));
+
+      const { data, error } = await this.supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?signup=true`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
+      });
+
+      if (error) {
+        console.error('❌ Google OAuth sign-up error:', error);
+        localStorage.removeItem('pending_google_signup');
+        throw error;
+      }
+
+      console.log('✅ Google OAuth sign-up initiated successfully');
+      return { success: true, data };
+    } catch (error) {
+      console.error('❌ Google sign-up failed:', error);
+      localStorage.removeItem('pending_google_signup');
+      throw new Error(`Google sign-up failed: ${error.message}`);
+    }
+  }
+
+  // Update user profile with website and niche
+  async updateUserProfile(website, niche) {
+    try {
+      console.log('🔄 Updating user profile...', { website, niche });
+      
+      // Get current user
+      const { data: { user } } = await this.supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Update user profile in database (let database handle updated_at automatically)
+      const { error } = await this.supabase
+        .from('users')
+        .update({ 
+          website: website,
+          niche: niche
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        console.error('❌ Profile update error:', error);
+        throw error;
+      }
+
+      console.log('✅ User profile updated successfully');
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Update user profile failed:', error);
+      
+      // Provide specific error messages based on error type
+      let errorMessage = 'Failed to update profile';
+      
+      if (error.message?.includes('schema cache')) {
+        errorMessage = 'Database schema error. Please try again or contact support.';
+      } else if (error.message?.includes('unauthorized')) {
+        errorMessage = 'Not authorized to update profile. Please sign in again.';
+      } else if (error.message?.includes('network')) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      return { 
+        success: false, 
+        error: errorMessage
+      };
     }
   }
 }
