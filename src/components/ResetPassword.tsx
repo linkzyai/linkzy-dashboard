@@ -171,7 +171,7 @@ const ResetPassword = () => {
       setTimeout(() => {
         alert('Password updated successfully! You will now be redirected to the sign-in page.');
 
-        navigate('/sign-in');
+        navigate('/');
       }, 3000);
       
     } catch (error) {
@@ -224,10 +224,10 @@ const ResetPassword = () => {
                     {(tokenStatus === 'invalid' || tokenStatus === 'expired') && (
                       <div className="mt-2">
                         <RouterLink 
-                          to="/sign-in"
+                          to="/"
                           className="text-orange-400 hover:text-orange-300 text-sm transition-colors inline-flex items-center"
                         >
-                          <span>Request a new reset link</span>
+                          <span>Go to homepage to sign in</span>
                         </RouterLink>
                       </div>
                     )}
@@ -248,10 +248,10 @@ const ResetPassword = () => {
                 </p>
                 
                 <RouterLink 
-                  to="/sign-in"
+                  to="/"
                   className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg transition-colors inline-block"
                 >
-                  Go to Sign In
+                  Go to Homepage
                 </RouterLink>
               </div>
             ) : (

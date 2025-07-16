@@ -3,9 +3,11 @@ import { useState } from 'react';
 import { Link } from 'lucide-react';
 import { Link as RouterLink } from 'react-router-dom';
 import RegistrationModal from './RegistrationModal';
+import SignInModal from './SignInModal';
 
 const Header = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
+  const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
 
   return (
     <>
@@ -27,14 +29,14 @@ const Header = () => {
           </nav>
           
           <div className="flex items-center space-x-4">
-            <RouterLink 
-              to="/sign-in" 
+            <button 
+              onClick={() => setIsSignInModalOpen(true)}
               className="text-gray-300 hover:text-white transition-colors"
             >
               Sign In
-            </RouterLink>
+            </button>
             <button 
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => setIsRegistrationModalOpen(true)}
               className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors"
             >
               Get Started
@@ -44,7 +46,8 @@ const Header = () => {
       </div>
       </header>
       
-      <RegistrationModal isOpen={isModalOpen} setIsModalOpen={setIsModalOpen} />
+      <RegistrationModal isOpen={isRegistrationModalOpen} setIsModalOpen={setIsRegistrationModalOpen} />
+      <SignInModal isOpen={isSignInModalOpen} setIsModalOpen={setIsSignInModalOpen} />
     </>
   );
 };
