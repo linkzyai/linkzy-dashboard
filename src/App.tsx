@@ -22,6 +22,7 @@ import DashboardSettings from './components/dashboard/DashboardSettings';
 import DashboardAccount from './components/dashboard/DashboardAccount';
 import AnimatedDashboardDemo from './components/AnimatedDashboardDemo';
 import EmailVerification from './components/EmailVerification';
+import AuthCallback from './components/AuthCallback';
 
 import ResetPassword from './components/ResetPassword';
 import AdminTools from './components/AdminTools';
@@ -50,6 +51,7 @@ function App() {
             <Route path="/blog" element={<Blog />} />
             <Route path="/success" element={<Success />} />
             <Route path="/cancel" element={<Cancel />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />

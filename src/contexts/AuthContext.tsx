@@ -35,8 +35,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     // Check if user is already logged in on app start
     let isMounted = true;
+    let authTimeout: NodeJS.Timeout;
+    
     const initAuth = async () => {
       try {
+        // Set a 10-second timeout for authentication check
+        authTimeout = setTimeout(() => {
+          if (isMounted && loading) {
+            console.warn('Authentication check timed out after 10 seconds');
+            setLoading(false);
+            setIsAuthenticated(false);
+            setUser(null);
+          }
+        }, 10000);
+        
         // Use the new robust auth status checker
         const { isAuthenticated: authStatus, user: authUser } = await supabaseService.getAuthStatus();
         
@@ -80,6 +92,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsAuthenticated(false);
         setUser(null); 
       } finally {
+        if (authTimeout) clearTimeout(authTimeout);
         setLoading(false);
       }
     };
@@ -88,6 +101,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     return () => {
       isMounted = false;
+      if (authTimeout) clearTimeout(authTimeout);
     };
   }, []);
 

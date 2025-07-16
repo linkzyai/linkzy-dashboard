@@ -11,6 +11,7 @@ import ProfileOnboardingModal from './OnboardingModal';
 import OnboardingModal from '../OnboardingModal';
 import CelebrationModal from '../CelebrationModal';
 import ContextualHelp from '../ContextualHelp';
+import ProfileCompletionModal from '../ProfileCompletionModal';
 import { 
   Link as LinkIcon, 
   ArrowRight,
@@ -61,6 +62,7 @@ const Dashboard = () => {
   const { user } = useAuth();
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [showProfileOnboarding, setShowProfileOnboarding] = useState(false);
+  const [showProfileCompletion, setShowProfileCompletion] = useState(false);
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [celebrationType, setCelebrationType] = useState<'first-request' | 'first-backlink' | 'completed-onboarding'>('completed-onboarding');
   const [currentStep, setCurrentStep] = useState(0);
@@ -105,7 +107,7 @@ const Dashboard = () => {
         }, 1500);
       }
       
-      // Check if user needs to complete their profile
+      // Check if user needs to complete their profile (new ProfileCompletionModal check)
       const needsProfileCompletion = user && (
         !user.website || 
         user.website === 'yourdomain.com' || 
@@ -113,13 +115,23 @@ const Dashboard = () => {
         user.niche === 'technology'
       );
       
+      const hasSeenProfileCompletion = localStorage.getItem('linkzy_profile_completion_seen');
+      
+      if (needsProfileCompletion && !hasSeenProfileCompletion && !showOnboardingModal) {
+        // Show profile completion modal after main onboarding
+        setTimeout(() => {
+          setShowProfileCompletion(true);
+        }, isNewUser ? 3000 : 1000);
+      }
+      
+      // Legacy profile onboarding check (keep existing functionality)
       const hasSeenProfileOnboarding = localStorage.getItem('linkzy_profile_onboarding_seen');
       
-      if (needsProfileCompletion && !hasSeenProfileOnboarding && !showOnboardingModal) {
-        // Show profile onboarding after main onboarding
+      if (needsProfileCompletion && !hasSeenProfileOnboarding && !showOnboardingModal && !showProfileCompletion) {
+        // Show profile onboarding after main onboarding and profile completion
         setTimeout(() => {
           setShowProfileOnboarding(true);
-        }, isNewUser ? 3000 : 1000);
+        }, isNewUser ? 4500 : 2000);
       }
       
       // Check if user just got their first backlink
@@ -686,6 +698,22 @@ const Dashboard = () => {
             creditsRemaining={userData?.credits || 3}
           />
           
+          {/* Profile Completion Modal - NEW */}
+          <ProfileCompletionModal 
+            isOpen={showProfileCompletion}
+            onClose={() => {
+              setShowProfileCompletion(false);
+              localStorage.setItem('linkzy_profile_completion_seen', 'true');
+            }}
+            onComplete={() => {
+              setShowProfileCompletion(false);
+              localStorage.setItem('linkzy_profile_completion_seen', 'true');
+              // Refresh dashboard data to show updated profile
+              refetch();
+            }}
+            user={user}
+          />
+          
           {/* Celebration Modal */}
           <CelebrationModal 
             isOpen={showCelebrationModal}
@@ -693,7 +721,7 @@ const Dashboard = () => {
             achievementType={celebrationType}
           />
           
-          {/* Profile Onboarding Modal */}
+          {/* Profile Onboarding Modal - EXISTING */}
           <ProfileOnboardingModal 
             isOpen={showProfileOnboarding}
             onComplete={(website, niche) => {

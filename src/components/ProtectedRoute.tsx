@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLocation } from 'react-router-dom';
 import { Link, Shield, AlertCircle, Mail, RefreshCw } from 'lucide-react';
 // @ts-expect-error: No type declarations for supabase.js
 import { supabase } from '../lib/supabase';
@@ -11,6 +12,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
   const [checkingEmailVerification, setCheckingEmailVerification] = useState(true);
   const [emailVerified, setEmailVerified] = useState(false);
   const [sessionError, setSessionError] = useState('');
@@ -51,17 +53,30 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     }
   }, [isAuthenticated, loading]);
 
-  // Fallback: force loading and checkingEmailVerification to false after 5 seconds
+  // Fallback: force loading and checkingEmailVerification to false after 10 seconds
+  // Also check for URL parameters that might indicate payment flow
   useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const isCanceled = urlParams.get('canceled') === 'true';
+    const isSuccess = urlParams.get('success') === 'true';
+    
+    // If we're in a payment flow, reduce timeout to prevent infinite loading
+    const timeoutDuration = (isCanceled || isSuccess) ? 5000 : 10000;
+    
     const timeout = setTimeout(() => {
       if (loading || checkingEmailVerification) {
-        console.warn('Forcing loading/checkingEmailVerification to false after timeout');
+        console.warn(`Authentication check timed out after ${timeoutDuration/1000} seconds - stopping infinite loop`);
         setCheckingEmailVerification(false);
-        // No direct setLoading here, but you can trigger a reload or show a message if needed
+        if (isCanceled) {
+          // For cancellation, don't show error - let the component handle it
+          console.log('Payment was canceled, allowing component to handle gracefully');
+        } else {
+          setSessionError('Authentication check timed out. Please refresh the page or try signing in again.');
+        }
       }
-    }, 5000);
+    }, timeoutDuration);
     return () => clearTimeout(timeout);
-  }, [loading, checkingEmailVerification]);
+  }, [loading, checkingEmailVerification, location.search]);
 
   // Retry authentication check if needed
   useEffect(() => {

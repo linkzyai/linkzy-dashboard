@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from './DashboardLayout';
 import ContextualHelp from '../ContextualHelp';
 import CelebrationModal from '../CelebrationModal';
@@ -55,7 +56,13 @@ import { supabase } from '../../lib/supabase';
 
 const DashboardAccount = () => {
   const { user, logout } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
+  
+  // Handle Stripe cancellation
+  const [showCancellationMessage, setShowCancellationMessage] = useState(false);
+  const [cancellationHandled, setCancellationHandled] = useState(false);
   const [activeTab, setActiveTab] = useState('profile-billing');
   const [showApiKey, setShowApiKey] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -475,6 +482,25 @@ const DashboardAccount = () => {
       setWpLoading(false);
     }
   };
+
+  // Handle Stripe cancellation parameter
+  useEffect(() => {
+    const canceled = searchParams.get('canceled');
+    if (canceled === 'true' && !cancellationHandled) {
+      setCancellationHandled(true);
+      setShowCancellationMessage(true);
+      
+      // Clear the canceled parameter from URL
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('canceled');
+      setSearchParams(newParams, { replace: true });
+      
+      // Auto-hide cancellation message after 10 seconds
+      setTimeout(() => {
+        setShowCancellationMessage(false);
+      }, 10000);
+    }
+  }, [searchParams, cancellationHandled, setSearchParams]);
 
   // Poll for new content every 60s when connected
   useEffect(() => {
@@ -1125,6 +1151,36 @@ const DashboardAccount = () => {
           <h1 className="text-3xl font-bold text-white mb-2">Account</h1>
           <p className="text-gray-400">Manage your profile, request backlinks, and update your settings</p>
         </div>
+
+        {/* Stripe Cancellation Message */}
+        {showCancellationMessage && (
+          <div className="mb-6 bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <AlertTriangle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h4 className="text-yellow-400 font-medium mb-2">Payment Canceled</h4>
+                <p className="text-yellow-300 text-sm mb-4">
+                  Your payment was canceled and no charges were made. You can try purchasing credits again anytime.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button 
+                    onClick={() => setShowPurchaseModal(true)}
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    <span>Try Again</span>
+                  </button>
+                  <button 
+                    onClick={() => setShowCancellationMessage(false)}
+                    className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-gray-600"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Tab Navigation */}
         <div className="mb-6 md:mb-8">
