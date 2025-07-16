@@ -46,13 +46,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Fetch the user's profile from Supabase users table (not auth.users)
           const { data: profile, error } = await supabase
             .from('users')
-            .select('id, email, is_pro, plan, credits')
+            .select('id, email, website, niche, is_pro, plan, credits')
             .eq('id', authUser.id)
             .single();
           if (profile) {
             setIsAuthenticated(true);
             setUser({
               ...authUser,
+              website: profile.website,
+              niche: profile.niche,
               is_pro: profile.is_pro,
               plan: profile.plan,
               credits: profile.credits,
@@ -99,13 +101,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               // Fetch the user's profile from Supabase users table (not auth.users)
               const { data: profile, error } = await supabase
                 .from('users')
-                .select('id, email, is_pro, plan, credits')
+                .select('id, email, website, niche, is_pro, plan, credits')
                 .eq('id', session.user.id)
                 .single();
               if (profile) {
                 const userObj = {
                   id: session.user.id,
                   email: session.user.email,
+                  website: profile.website,
+                  niche: profile.niche,
                   api_key: session.user.user_metadata?.api_key || `linkzy_${session.user.email?.replace('@', '_').replace('.', '_')}_${Date.now()}`,
                   is_pro: profile.is_pro,
                   plan: profile.plan,
