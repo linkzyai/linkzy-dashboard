@@ -1,5 +1,6 @@
 declare class SupabaseService {
   loginUser(email: string, password: string): Promise<any>;
+  registerUser(email: string, password: string, website: string, niche: string): Promise<any>;
   getAuthStatus(): Promise<{ isAuthenticated: boolean; user: any; error?: any }>;
   setApiKey(key: string): void;
   getApiKey(): string | null;
