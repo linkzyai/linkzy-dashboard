@@ -18,9 +18,9 @@ export function useApi<T>(
         setLoading(true);
         setError(null);
         
-        // Add 10-second timeout to API calls
+        // Add 60-second timeout to API calls
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('API call timed out after 10 seconds')), 10000);
+          setTimeout(() => reject(new Error('API call timed out after 60 seconds')), 60000);
         });
         
         const result = await Promise.race([apiCall(), timeoutPromise]);

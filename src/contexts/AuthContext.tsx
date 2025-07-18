@@ -109,14 +109,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             supabaseService.setApiKey(authUser.user_metadata.api_key);
           }
         } else {
+          // Supabase auth failed, try localStorage fallback
+          console.log('Supabase auth failed, attempting localStorage fallback...');
+          const localUser = localStorage.getItem('linkzy_user');
+          const localApiKey = localStorage.getItem('linkzy_api_key');
+          
+          if (localUser && localApiKey) {
+            try {
+              const userData = JSON.parse(localUser);
+              console.log('Successfully restored user from localStorage');
+              setIsAuthenticated(true);
+              setUser(userData);
+              supabaseService.setApiKey(localApiKey);
+            } catch (e) {
+              console.error('Failed to parse localStorage user data:', e);
+              setIsAuthenticated(false);
+              setUser(null);
+            }
+          } else {
+            setIsAuthenticated(false);
+            setUser(null);
+          }
+        }
+      } catch (error) {
+        console.error('Authentication error:', error);
+        
+        // Try localStorage fallback before giving up
+        const localUser = localStorage.getItem('linkzy_user');
+        const localApiKey = localStorage.getItem('linkzy_api_key');
+        
+        if (localUser && localApiKey) {
+          try {
+            const userData = JSON.parse(localUser);
+            console.log('Auth error - falling back to localStorage user data');
+            setIsAuthenticated(true);
+            setUser(userData);
+            supabaseService.setApiKey(localApiKey);
+          } catch (e) {
+            console.error('Failed to parse localStorage user data:', e);
+            // Clear any invalid stored data
+            localStorage.removeItem('linkzy_user');
+            localStorage.removeItem('linkzy_api_key');
+            supabaseService.clearApiKey();
+            setIsAuthenticated(false);
+            setUser(null);
+          }
+        } else {
+          // Clear any invalid stored data
+          supabaseService.clearApiKey();
           setIsAuthenticated(false);
           setUser(null);
         }
-      } catch (error) {
-        // Clear any invalid stored data
-        supabaseService.clearApiKey();
-        setIsAuthenticated(false);
-        setUser(null); 
       } finally {
         if (authTimeout) clearTimeout(authTimeout);
         setLoading(false);
