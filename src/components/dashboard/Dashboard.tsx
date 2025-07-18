@@ -67,6 +67,7 @@ const Dashboard = () => {
   const [celebrationType, setCelebrationType] = useState<'first-request' | 'first-backlink' | 'completed-onboarding'>('completed-onboarding');
   const [currentStep, setCurrentStep] = useState(0);
   const { data: dashboardData, loading, error, refetch } = useDashboardStats();
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
   const [onboardingProgress, setOnboardingProgress] = useState(() => {
     const stored = localStorage.getItem('linkzy_onboarding_progress');
     return stored ? JSON.parse(stored) : { request: false, track: false, analytics: false };
@@ -148,6 +149,53 @@ const Dashboard = () => {
       }
     }
   }, [loading, error, dashboardData]);
+
+  // Add timeout for loading state to prevent infinite loading
+  useEffect(() => {
+    if (loading && !loadingTimeout) {
+      const timeout = setTimeout(() => {
+        console.warn('⏰ Dashboard loading timeout after 8 seconds - forcing error state');
+        setLoadingTimeout(true);
+      }, 8000); // 8 second timeout
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [loading, loadingTimeout]);
+
+  // If loading times out, show error with retry option
+  if (loadingTimeout) {
+    return (
+      <DashboardLayout title="Dashboard">
+        <div className="p-6">
+          <div className="text-center max-w-md mx-auto">
+            <div className="bg-gray-900 border border-gray-700 rounded-2xl p-8">
+              <h2 className="text-xl font-bold text-white mb-4">Loading Timeout</h2>
+              <p className="text-gray-300 mb-6">
+                Dashboard is taking longer than expected to load. This might be due to a connection issue.
+              </p>
+              <div className="space-y-3">
+                <button 
+                  onClick={() => {
+                    setLoadingTimeout(false);
+                    refetch();
+                  }}
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 px-4 rounded-lg font-semibold transition-colors"
+                >
+                  Try Again
+                </button>
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="w-full bg-gray-800 hover:bg-gray-700 text-white py-3 px-4 rounded-lg transition-colors border border-gray-600"
+                >
+                  Refresh Page
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   if (loading) {
     return (

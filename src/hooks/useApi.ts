@@ -17,9 +17,15 @@ export function useApi<T>(
       try {
         setLoading(true);
         setError(null);
-        const result = await apiCall();
+        
+        // Add 10-second timeout to API calls
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('API call timed out after 10 seconds')), 10000);
+        });
+        
+        const result = await Promise.race([apiCall(), timeoutPromise]);
         if (mounted) {
-          setData(result);
+          setData(result as T);
         }
       } catch (err) {
         if (mounted) {
