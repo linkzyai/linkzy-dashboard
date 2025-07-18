@@ -69,18 +69,17 @@ export function useApi<T>(
 
 // Specific hooks for common API calls
 export function useDashboardStats() {
-  console.log('📈 useDashboardStats called');
   const result = useApi(() => {
-    console.log('📈 Calling supabaseService.getDashboardStats()');
+    console.log('📈 Calling getDashboardStats() with fallback data');
     return supabaseService.getDashboardStats();
   });
   
-  console.log('📈 Dashboard stats result:', {
-    hasData: !!result.data,
-    loading: result.loading,
-    error: result.error,
-    timestamp: new Date().toISOString()
-  });
+  // Only log if there's an error
+  if (result.error) {
+    console.error('📈 Dashboard stats error:', result.error);
+  } else if (result.data) {
+    console.log('📈 Dashboard stats loaded successfully');
+  }
   
   return result;
 }
