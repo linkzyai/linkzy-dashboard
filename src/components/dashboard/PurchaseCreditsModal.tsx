@@ -80,18 +80,24 @@ const PurchaseCreditsModal: React.FC<PurchaseCreditsModalProps> = ({
 
       console.log('Stripe initialized successfully, redirecting to checkout...');
 
-      // Redirect to checkout
-      const { error } = await stripe.redirectToCheckout({
-        mode: isSubscription ? 'subscription' : 'payment',
-        lineItems: [{ price: priceId, quantity: 1 }],
-        successUrl: window.location.origin + '/dashboard/account?success=true',
-        cancelUrl: window.location.origin + '/dashboard/account?canceled=true'
-      });
+      // Close modal before redirect to improve UX
+      onClose();
 
-      if (error) {
-        console.error('Stripe checkout error:', error);
-        setError('Payment error: ' + error.message);
-      }
+      // Small delay to let modal close animation complete
+      setTimeout(async () => {
+        // Redirect to checkout in same tab (but with better UX)
+        const { error } = await stripe.redirectToCheckout({
+          mode: isSubscription ? 'subscription' : 'payment',
+          lineItems: [{ price: priceId, quantity: 1 }],
+          successUrl: window.location.origin + '/dashboard/account?success=true',
+          cancelUrl: window.location.origin + '/dashboard/account?canceled=true'
+        });
+
+        if (error) {
+          console.error('Stripe checkout error:', error);
+          setError('Payment error: ' + error.message);
+        }
+      }, 200);
     } catch (err: unknown) {
       console.error('Checkout error:', err);
       setError('Something went wrong. Please try again.');
@@ -244,7 +250,7 @@ const PurchaseCreditsModal: React.FC<PurchaseCreditsModalProps> = ({
             ) : (
               <>
                 <CreditCard className="w-4 h-4" />
-                <span>Purchase Credits</span>
+                <span>Continue to Stripe Checkout</span>
               </>
             )}
           </button>
