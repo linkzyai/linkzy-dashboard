@@ -34,6 +34,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authInitialized, setAuthInitialized] = useState(false);
 
   useEffect(() => {
+    console.log('🔐 AuthContext useEffect triggered:', {
+      authInitialized,
+      loading,
+      isAuthenticated,
+      userExists: !!user,
+      timestamp: new Date().toISOString()
+    });
+    
     // Check if user is already logged in on app start
     let isMounted = true;
     let authTimeout: NodeJS.Timeout;

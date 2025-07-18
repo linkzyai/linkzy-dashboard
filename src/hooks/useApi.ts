@@ -11,6 +11,7 @@ export function useApi<T>(
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('🔄 useApi useEffect triggered with dependencies:', dependencies);
     let mounted = true;
 
     const fetchData = async () => {
@@ -68,7 +69,20 @@ export function useApi<T>(
 
 // Specific hooks for common API calls
 export function useDashboardStats() {
-  return useApi(() => supabaseService.getDashboardStats());
+  console.log('📈 useDashboardStats called');
+  const result = useApi(() => {
+    console.log('📈 Calling supabaseService.getDashboardStats()');
+    return supabaseService.getDashboardStats();
+  });
+  
+  console.log('📈 Dashboard stats result:', {
+    hasData: !!result.data,
+    loading: result.loading,
+    error: result.error,
+    timestamp: new Date().toISOString()
+  });
+  
+  return result;
 }
 
 export function useBacklinks(page = 1, limit = 10) {

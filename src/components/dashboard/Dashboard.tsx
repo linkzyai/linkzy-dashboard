@@ -58,6 +58,8 @@ export type DashboardDataType = {
 };
 
 const Dashboard = () => {
+  console.log('🚀 Dashboard mounting...');
+  
   const navigate = useNavigate();
   const { user } = useAuth();
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
@@ -67,6 +69,15 @@ const Dashboard = () => {
   const [celebrationType, setCelebrationType] = useState<'first-request' | 'first-backlink' | 'completed-onboarding'>('completed-onboarding');
   const [currentStep, setCurrentStep] = useState(0);
   const { data: dashboardData, loading, error, refetch } = useDashboardStats();
+
+  // Debug logging for dashboard state
+  console.log('📊 Dashboard State Debug:', {
+    user: user ? { id: user.id, email: user.email } : null,
+    hasData: !!dashboardData,
+    loading,
+    error: error ? error.toString() : null,
+    timestamp: new Date().toISOString()
+  });
 
   const [onboardingProgress, setOnboardingProgress] = useState(() => {
     const stored = localStorage.getItem('linkzy_onboarding_progress');
@@ -81,13 +92,22 @@ const Dashboard = () => {
 
   // Enhanced dashboard loading with fallback logic
   useEffect(() => {
+    console.log('🔄 Dashboard fallback useEffect triggered:', {
+      hasData: !!dashboardData,
+      loading,
+      error: error ? error.toString() : null
+    });
+    
     const loadDashboard = async () => {
       // If we already have data or are still loading normally, don't interfere
-      if (dashboardData || loading) return;
+      if (dashboardData || loading) {
+        console.log('⏩ Skipping fallback - data exists or still loading');
+        return;
+      }
       
       // If there's an error loading dashboard data, check auth state
       if (error) {
-        console.log('Dashboard loading error detected, checking authentication...');
+        console.log('❌ Dashboard loading error detected, checking authentication...', error);
         
         try {
           // Try Supabase auth first
@@ -123,7 +143,7 @@ const Dashboard = () => {
     const fallbackTimer = setTimeout(loadDashboard, 2000);
     
     return () => clearTimeout(fallbackTimer);
-  }, [error, dashboardData, loading, navigate]);
+  }, [error, navigate]); // Removed dashboardData and loading to prevent infinite loops
 
   useEffect(() => {
     if (!onboardingProgress.track) {
@@ -194,7 +214,7 @@ const Dashboard = () => {
         localStorage.setItem('linkzy_had_no_backlinks', 'true');
       }
     }
-  }, [loading, error, dashboardData]);
+  }, [dashboardData, user, showOnboardingModal, showProfileCompletion]); // Only depend on stable values
 
 
 

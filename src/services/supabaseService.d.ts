@@ -15,6 +15,13 @@ declare class SupabaseService {
   generateApiKey(email: string): string;
   sendWelcomeEmail(email: string, apiKey: string, website: string, niche: string, verificationToken?: string): Promise<any>;
   updateUserProfile(website: string, niche: string): Promise<{ success: boolean; error?: string }>;
+  getDashboardStats(): Promise<any>;
+  getBacklinks(page?: number, limit?: number): Promise<any>;
+  getAnalytics?(timeframe?: string): Promise<any>;
+  getDetectedPages?(): Promise<any>;
+  getBillingInfo?(): Promise<any>;
+  getApiUsage?(): Promise<any>;
+  getKeywordAnalytics(): Promise<any>;
   // Add other methods as needed
 }
 

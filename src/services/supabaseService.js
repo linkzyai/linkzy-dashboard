@@ -741,13 +741,17 @@ If you're testing, try these workarounds:
 
   // Get user profile with improved fallbacks
   async getUserProfile() {
+    console.log('👤 getUserProfile called');
     try {
       // First try localStorage for cached data
       const storedUser = localStorage.getItem('linkzy_user');
       if (storedUser) {
+        console.log('👤 Found stored user in localStorage');
         const userData = JSON.parse(storedUser);
         return userData;
       }
+      
+      console.log('👤 No stored user, checking Supabase session...');
       
       // Then try to get current session from Supabase Auth
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -943,8 +947,11 @@ If you're testing, try these workarounds:
 
   // Get dashboard stats
   async getDashboardStats() {
+    console.log('📊 getDashboardStats called');
     try {
+      console.log('👤 Getting user profile for dashboard stats...');
       const user = await this.getUserProfile();
+      console.log('👤 User profile retrieved:', user ? { id: user.id, email: user.email } : null);
       
       // Get backlinks for this user
       const { data: backlinks, error } = await supabase
