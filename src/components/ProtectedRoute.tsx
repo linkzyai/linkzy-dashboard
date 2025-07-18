@@ -55,8 +55,47 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     }
   }, [isAuthenticated, loading]);
 
-  // SIMPLE APPROACH: Remove complex timeout logic since we use 3-second redirect
-  // The loading screen itself handles the redirect now
+  // 10-SECOND TIMEOUT: Force authentication check to complete and redirect to dashboard
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const isCanceled = urlParams.get('canceled') === 'true';
+    const isSuccess = urlParams.get('success') === 'true';
+    
+    // 10-second timeout for authentication checks
+    const timeoutDuration = 10000; // 10 seconds
+    
+    const timeout = setTimeout(() => {
+      console.warn(`🚨 Authentication check timed out after ${timeoutDuration/1000} seconds - redirecting to dashboard`);
+      
+      // FORCE everything to complete
+      setCheckingEmailVerification(false);
+      setForceComplete(true);
+      
+      // If still loading after timeout, try to recover auth or redirect
+      if (loading || checkingEmailVerification) {
+        const existingUser = localStorage.getItem('linkzy_user');
+        const existingApiKey = localStorage.getItem('linkzy_api_key');
+        
+        if (existingUser && existingApiKey) {
+          console.log('🔧 Found existing auth in localStorage - redirecting to dashboard');
+          try {
+            // Assume user is authenticated and redirect to dashboard
+            navigate('/dashboard', { replace: true });
+          } catch (e) {
+            console.error('Failed to navigate to dashboard:', e);
+            // Hard reload as fallback
+            window.location.href = '/dashboard';
+          }
+        } else {
+          console.log('🔄 No stored auth found - redirecting to dashboard to check');
+          // Redirect to dashboard anyway - let dashboard handle authentication
+          navigate('/dashboard', { replace: true });
+        }
+      }
+    }, timeoutDuration);
+    
+    return () => clearTimeout(timeout);
+  }, [loading, checkingEmailVerification, location.search, navigate]);
 
   // Retry authentication check if needed
   useEffect(() => {
@@ -90,29 +129,37 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   // Show loading spinner while checking authentication (unless forced to complete)
   if ((loading || checkingEmailVerification) && !forceComplete) {
-    // SIMPLE SOLUTION: Just redirect to dashboard after 3 seconds
-    setTimeout(() => {
-      console.log('🚀 3-second timeout reached - redirecting to dashboard');
-      window.location.href = '/dashboard';
-    }, 3000);
-
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center max-w-md px-4">
           <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white mb-4">Loading dashboard...</p>
+          <p className="text-white mb-4">{loading ? 'Checking authentication...' : 'Verifying email status...'}</p>
           <p className="text-gray-400 text-sm mb-4">
-            Redirecting in 3 seconds...
+            This should only take a few seconds. Automatic redirect in 10 seconds.
           </p>
           <button 
             onClick={() => {
-              console.log('🚀 User clicked - redirecting to dashboard immediately');
-              window.location.href = '/dashboard';
+              console.log('🔄 User manually forcing dashboard redirect');
+              setForceComplete(true);
+              setCheckingEmailVerification(false);
+              // Navigate directly to dashboard
+              navigate('/dashboard', { replace: true });
             }}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors mb-2"
           >
             Go to Dashboard Now
           </button>
+          <div className="text-center">
+            <button 
+              onClick={() => {
+                console.log('🔄 User manually reloading page');
+                window.location.reload();
+              }}
+              className="text-orange-400 hover:text-orange-300 text-sm underline"
+            >
+              Or refresh page
+            </button>
+          </div>
         </div>
       </div>
     );
