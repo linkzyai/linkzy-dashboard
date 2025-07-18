@@ -483,36 +483,37 @@ const DashboardAccount = () => {
     }
   };
 
-  // Handle Stripe payment parameters - PRESERVE AUTHENTICATION
+  // Handle ALL navigation back to account page - PRESERVE AUTHENTICATION
   useEffect(() => {
+    // ALWAYS check authentication when component mounts or URL changes
+    // This handles cases where user navigates back from Stripe without URL parameters
+    console.log('🔄 DashboardAccount loaded - checking authentication state');
+    
+    const existingUser = localStorage.getItem('linkzy_user');
+    const existingApiKey = localStorage.getItem('linkzy_api_key');
+    
+    // If we have stored auth but user appears unauthenticated, restore it
+    if (existingUser && existingApiKey && (!user || !isAuthenticated)) {
+      console.log('🔧 Restoring authentication - user returned to dashboard');
+      try {
+        const userData = JSON.parse(existingUser);
+        login(existingApiKey, userData);
+      } catch (e) {
+        console.error('Failed to restore auth on dashboard return:', e);
+      }
+    }
+    
+    // Handle URL parameters (canceled/success)
     const canceled = searchParams.get('canceled');
     const success = searchParams.get('success');
     
     // Handle payment cancellation
     if (canceled === 'true' && !cancellationHandled) {
-      console.log('🔄 Stripe payment cancellation detected - preserving authentication state');
-      
+      console.log('🔄 Stripe payment cancellation detected via URL parameter');
       setCancellationHandled(true);
       setShowCancellationMessage(true);
       
-      // CRITICAL: Ensure user authentication is preserved
-      // Check if auth data exists in localStorage and restore if needed
-      const existingUser = localStorage.getItem('linkzy_user');
-      const existingApiKey = localStorage.getItem('linkzy_api_key');
-      
-      if (existingUser && existingApiKey && (!user || !isAuthenticated)) {
-        console.log('🔧 Restoring authentication after payment cancellation');
-        try {
-          const userData = JSON.parse(existingUser);
-          // Re-authenticate if somehow lost during payment flow
-          login(existingApiKey, userData);
-        } catch (e) {
-          console.error('Failed to restore auth after payment cancellation:', e);
-        }
-      }
-      
-      // Clear the canceled parameter from URL after a short delay
-      // to allow authentication to stabilize
+      // Clear the canceled parameter from URL
       setTimeout(() => {
         const newParams = new URLSearchParams(searchParams);
         newParams.delete('canceled');
@@ -525,23 +526,9 @@ const DashboardAccount = () => {
       }, 10000);
     }
     
-    // Handle payment success - also preserve authentication
+    // Handle payment success
     if (success === 'true') {
-      console.log('✅ Stripe payment success detected - preserving authentication state');
-      
-      // CRITICAL: Ensure user authentication is preserved after successful payment
-      const existingUser = localStorage.getItem('linkzy_user');
-      const existingApiKey = localStorage.getItem('linkzy_api_key');
-      
-      if (existingUser && existingApiKey && (!user || !isAuthenticated)) {
-        console.log('🔧 Restoring authentication after successful payment');
-        try {
-          const userData = JSON.parse(existingUser);
-          login(existingApiKey, userData);
-        } catch (e) {
-          console.error('Failed to restore auth after successful payment:', e);
-        }
-      }
+      console.log('✅ Stripe payment success detected via URL parameter');
       
       // Clear the success parameter from URL
       setTimeout(() => {
@@ -551,6 +538,55 @@ const DashboardAccount = () => {
       }, 1000);
     }
   }, [searchParams, cancellationHandled, setSearchParams, user, isAuthenticated, login]);
+
+  // Handle page visibility changes (user returning from external sites like Stripe)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('🔄 Page became visible - user returned, checking authentication');
+        
+        // When user returns to the page, check if authentication needs restoration
+        const existingUser = localStorage.getItem('linkzy_user');
+        const existingApiKey = localStorage.getItem('linkzy_api_key');
+        
+        if (existingUser && existingApiKey && (!user || !isAuthenticated)) {
+          console.log('🔧 Restoring authentication after page return');
+          try {
+            const userData = JSON.parse(existingUser);
+            login(existingApiKey, userData);
+          } catch (e) {
+            console.error('Failed to restore auth after page return:', e);
+          }
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Also handle window focus for additional coverage
+    const handleFocus = () => {
+      console.log('🔄 Window focused - checking authentication');
+      const existingUser = localStorage.getItem('linkzy_user');
+      const existingApiKey = localStorage.getItem('linkzy_api_key');
+      
+      if (existingUser && existingApiKey && (!user || !isAuthenticated)) {
+        console.log('🔧 Restoring authentication on window focus');
+        try {
+          const userData = JSON.parse(existingUser);
+          login(existingApiKey, userData);
+        } catch (e) {
+          console.error('Failed to restore auth on focus:', e);
+        }
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user, isAuthenticated, login]);
 
   // Poll for new content every 60s when connected
   useEffect(() => {
