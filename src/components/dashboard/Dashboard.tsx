@@ -58,8 +58,6 @@ export type DashboardDataType = {
 };
 
 const Dashboard = () => {
-  console.log('🚀 Dashboard mounting...');
-  
   const navigate = useNavigate();
   const { user } = useAuth();
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
@@ -69,15 +67,6 @@ const Dashboard = () => {
   const [celebrationType, setCelebrationType] = useState<'first-request' | 'first-backlink' | 'completed-onboarding'>('completed-onboarding');
   const [currentStep, setCurrentStep] = useState(0);
   const { data: dashboardData, loading, error, refetch } = useDashboardStats();
-
-  // Debug logging for dashboard state
-  console.log('📊 Dashboard State Debug:', {
-    user: user ? { id: user.id, email: user.email } : null,
-    hasData: !!dashboardData,
-    loading,
-    error: error ? error.toString() : null,
-    timestamp: new Date().toISOString()
-  });
 
   const [onboardingProgress, setOnboardingProgress] = useState(() => {
     const stored = localStorage.getItem('linkzy_onboarding_progress');
@@ -92,50 +81,34 @@ const Dashboard = () => {
 
   // Enhanced dashboard loading with fallback logic
   useEffect(() => {
-    console.log('🔄 Dashboard fallback useEffect triggered:', {
-      hasData: !!dashboardData,
-      loading,
-      error: error ? error.toString() : null
-    });
-    
     const loadDashboard = async () => {
       // If we already have data or are still loading normally, don't interfere
-      if (dashboardData || loading) {
-        console.log('⏩ Skipping fallback - data exists or still loading');
-        return;
-      }
+      if (dashboardData || loading) return;
       
       // If there's an error loading dashboard data, check auth state
       if (error) {
-        console.log('❌ Dashboard loading error detected, checking authentication...', error);
         
-        try {
-          // Try Supabase auth first
-          const { data: session } = await supabase.auth.getSession();
-          if (session?.user) {
-            console.log('Supabase session found, user is authenticated');
-            return;
+                  try {
+            // Try Supabase auth first
+            const { data: session } = await supabase.auth.getSession();
+            if (session?.user) return;
+            
+            // Fallback to localStorage
+            const localUser = localStorage.getItem('linkzy_user');
+            const localApiKey = localStorage.getItem('linkzy_api_key');
+            
+            if (localUser && localApiKey) {
+              // We have auth data, the error might be temporary - let normal retry handle it
+              return;
+            }
+            
+            // If nothing works, redirect to login instead of showing error
+            navigate('/');
+            
+          } catch (authError) {
+            // Don't show timeout modal, just redirect to login
+            navigate('/');
           }
-          
-          // Fallback to localStorage
-          const localUser = localStorage.getItem('linkzy_user');
-          const localApiKey = localStorage.getItem('linkzy_api_key');
-          
-          if (localUser && localApiKey) {
-            console.log('Using localStorage auth fallback');
-            // We have auth data, the error might be temporary - let normal retry handle it
-            return;
-          }
-          
-          // If nothing works, redirect to login instead of showing error
-          console.log('No valid authentication found, redirecting to login');
-          navigate('/');
-          
-        } catch (authError) {
-          console.error('Auth check failed:', authError);
-          // Don't show timeout modal, just redirect to login
-          navigate('/');
-        }
       }
     };
 

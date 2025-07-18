@@ -943,14 +943,10 @@ If you're testing, try these workarounds:
 
   // Get dashboard stats - FIXED: Using fallback data to prevent timeout
   async getDashboardStats() {
-    console.log('📊 getDashboardStats called');
     try {
-      console.log('👤 Getting user profile for dashboard stats...');
       const user = await this.getUserProfile();
-      console.log('👤 User profile retrieved:', user ? { id: user.id, email: user.email } : null);
       
       // IMMEDIATE FIX: Skip problematic backlinks query, use fallback data
-      console.log('📊 Using fallback data to prevent timeout');
       
       return {
         totalBacklinks: 0,

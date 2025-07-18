@@ -11,7 +11,6 @@ export function useApi<T>(
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('🔄 useApi useEffect triggered with dependencies:', dependencies);
     let mounted = true;
 
     const fetchData = async () => {
@@ -69,19 +68,7 @@ export function useApi<T>(
 
 // Specific hooks for common API calls
 export function useDashboardStats() {
-  const result = useApi(() => {
-    console.log('📈 Calling getDashboardStats() with fallback data');
-    return supabaseService.getDashboardStats();
-  });
-  
-  // Only log if there's an error
-  if (result.error) {
-    console.error('📈 Dashboard stats error:', result.error);
-  } else if (result.data) {
-    console.log('📈 Dashboard stats loaded successfully');
-  }
-  
-  return result;
+  return useApi(() => supabaseService.getDashboardStats(), []);
 }
 
 export function useBacklinks(page = 1, limit = 10) {

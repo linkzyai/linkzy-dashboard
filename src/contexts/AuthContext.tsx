@@ -34,14 +34,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authInitialized, setAuthInitialized] = useState(false);
 
   useEffect(() => {
-    console.log('🔐 AuthContext useEffect triggered:', {
-      authInitialized,
-      loading,
-      isAuthenticated,
-      userExists: !!user,
-      timestamp: new Date().toISOString()
-    });
-    
     // Check if user is already logged in on app start
     let isMounted = true;
     let authTimeout: NodeJS.Timeout;
@@ -347,6 +339,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async () => {
+    console.log('🚪 Logout function called');
     try {
       // First clear local storage to prevent race conditions
       supabaseService.clearApiKey();
@@ -354,7 +347,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Then sign out from Supabase
       await supabaseService.signOut();
+      console.log('✅ Logout successful, redirecting...');
     } catch (error) {
+      console.error('❌ Logout error:', error);
     }
     
     // Always clear the auth state regardless of any errors
