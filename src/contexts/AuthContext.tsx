@@ -31,6 +31,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionRefreshing, setSessionRefreshing] = useState(false);
+  const [authInitialized, setAuthInitialized] = useState(false);
 
   useEffect(() => {
     // Check if user is already logged in on app start
@@ -119,16 +120,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } finally {
         if (authTimeout) clearTimeout(authTimeout);
         setLoading(false);
+        setAuthInitialized(true);
       }
     };
 
-    initAuth();
+    // Only run once
+    if (!authInitialized) {
+      initAuth();
+    }
     
     return () => {
       isMounted = false;
       if (authTimeout) clearTimeout(authTimeout);
     };
-  }, []);
+  }, [authInitialized]);
 
   // Set up auth state change listener
   useEffect(() => {

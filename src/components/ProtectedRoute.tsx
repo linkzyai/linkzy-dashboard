@@ -18,6 +18,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const [sessionError, setSessionError] = useState('');
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [forceComplete, setForceComplete] = useState(false);
   const MAX_RETRIES = 3;
 
   // Debug logs for auth state
@@ -53,25 +54,38 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     }
   }, [isAuthenticated, loading]);
 
-  // Fallback: force loading and checkingEmailVerification to false after 10 seconds
-  // DO NOT interfere with authentication during payment flows
+  // AGGRESSIVE: Force complete authentication check after reasonable time
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const isCanceled = urlParams.get('canceled') === 'true';
     const isSuccess = urlParams.get('success') === 'true';
     
-    // For payment flows, we want to be MORE patient, not less patient
-    // because Stripe redirects can take time and we don't want to break auth
-    const timeoutDuration = (isCanceled || isSuccess) ? 15000 : 10000;
+    // Much shorter timeout - if auth takes longer than this, something is broken
+    const timeoutDuration = 5000; // 5 seconds for ANY scenario
     
     const timeout = setTimeout(() => {
-      if (loading || checkingEmailVerification) {
-        console.warn(`Authentication check timed out after ${timeoutDuration/1000} seconds - stopping infinite loop`);
-        setCheckingEmailVerification(false);
-        if (isCanceled || isSuccess) {
-          // For payment flows, DO NOT set session error - preserve authentication
-          console.log('Payment flow detected, preserving authentication state');
-        } else {
+      console.warn(`🚨 FORCING authentication check to complete after ${timeoutDuration/1000} seconds`);
+      
+      // FORCE everything to complete
+      setCheckingEmailVerification(false);
+      setForceComplete(true);
+      
+      // If still loading after this timeout, check localStorage for existing auth
+      if (loading) {
+        const existingUser = localStorage.getItem('linkzy_user');
+        const existingApiKey = localStorage.getItem('linkzy_api_key');
+        
+        if (existingUser && existingApiKey) {
+          console.log('🔧 Found existing auth in localStorage - forcing authentication');
+          try {
+            const userData = JSON.parse(existingUser);
+            // Force authentication using stored data
+            window.location.reload(); // Hard reload to reset auth state
+          } catch (e) {
+            console.error('Failed to parse stored user data:', e);
+            setSessionError('Session expired. Please sign in again.');
+          }
+        } else if (!isCanceled && !isSuccess) {
           setSessionError('Authentication check timed out. Please refresh the page or try signing in again.');
         }
       }
@@ -109,13 +123,28 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     }
   };
 
-  // Show loading spinner while checking authentication
-  if (loading || checkingEmailVerification) {
+  // Show loading spinner while checking authentication (unless forced to complete)
+  if ((loading || checkingEmailVerification) && !forceComplete) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center max-w-md px-4">
           <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white">{loading ? 'Checking authentication...' : 'Verifying email status...'}</p>
+          <p className="text-white mb-4">{loading ? 'Checking authentication...' : 'Verifying email status...'}</p>
+          <button 
+            onClick={() => {
+              console.log('🔄 User manually forcing authentication completion');
+              setForceComplete(true);
+              setCheckingEmailVerification(false);
+              // Try to use existing auth if available
+              const existingUser = localStorage.getItem('linkzy_user');
+              if (existingUser) {
+                window.location.reload();
+              }
+            }}
+            className="text-orange-400 hover:text-orange-300 text-sm underline"
+          >
+            Taking too long? Click here to continue
+          </button>
         </div>
       </div>
     );
