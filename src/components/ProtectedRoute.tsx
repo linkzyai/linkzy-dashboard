@@ -54,22 +54,23 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }, [isAuthenticated, loading]);
 
   // Fallback: force loading and checkingEmailVerification to false after 10 seconds
-  // Also check for URL parameters that might indicate payment flow
+  // DO NOT interfere with authentication during payment flows
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const isCanceled = urlParams.get('canceled') === 'true';
     const isSuccess = urlParams.get('success') === 'true';
     
-    // If we're in a payment flow, reduce timeout to prevent infinite loading
-    const timeoutDuration = (isCanceled || isSuccess) ? 5000 : 10000;
+    // For payment flows, we want to be MORE patient, not less patient
+    // because Stripe redirects can take time and we don't want to break auth
+    const timeoutDuration = (isCanceled || isSuccess) ? 15000 : 10000;
     
     const timeout = setTimeout(() => {
       if (loading || checkingEmailVerification) {
         console.warn(`Authentication check timed out after ${timeoutDuration/1000} seconds - stopping infinite loop`);
         setCheckingEmailVerification(false);
-        if (isCanceled) {
-          // For cancellation, don't show error - let the component handle it
-          console.log('Payment was canceled, allowing component to handle gracefully');
+        if (isCanceled || isSuccess) {
+          // For payment flows, DO NOT set session error - preserve authentication
+          console.log('Payment flow detected, preserving authentication state');
         } else {
           setSessionError('Authentication check timed out. Please refresh the page or try signing in again.');
         }

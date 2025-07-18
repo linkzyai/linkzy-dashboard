@@ -55,7 +55,7 @@ import JSZip from 'jszip';
 import { supabase } from '../../lib/supabase';
 
 const DashboardAccount = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated, login } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
@@ -483,24 +483,74 @@ const DashboardAccount = () => {
     }
   };
 
-  // Handle Stripe cancellation parameter
+  // Handle Stripe payment parameters - PRESERVE AUTHENTICATION
   useEffect(() => {
     const canceled = searchParams.get('canceled');
+    const success = searchParams.get('success');
+    
+    // Handle payment cancellation
     if (canceled === 'true' && !cancellationHandled) {
+      console.log('🔄 Stripe payment cancellation detected - preserving authentication state');
+      
       setCancellationHandled(true);
       setShowCancellationMessage(true);
       
-      // Clear the canceled parameter from URL
-      const newParams = new URLSearchParams(searchParams);
-      newParams.delete('canceled');
-      setSearchParams(newParams, { replace: true });
+      // CRITICAL: Ensure user authentication is preserved
+      // Check if auth data exists in localStorage and restore if needed
+      const existingUser = localStorage.getItem('linkzy_user');
+      const existingApiKey = localStorage.getItem('linkzy_api_key');
+      
+      if (existingUser && existingApiKey && (!user || !isAuthenticated)) {
+        console.log('🔧 Restoring authentication after payment cancellation');
+        try {
+          const userData = JSON.parse(existingUser);
+          // Re-authenticate if somehow lost during payment flow
+          login(existingApiKey, userData);
+        } catch (e) {
+          console.error('Failed to restore auth after payment cancellation:', e);
+        }
+      }
+      
+      // Clear the canceled parameter from URL after a short delay
+      // to allow authentication to stabilize
+      setTimeout(() => {
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('canceled');
+        setSearchParams(newParams, { replace: true });
+      }, 1000);
       
       // Auto-hide cancellation message after 10 seconds
       setTimeout(() => {
         setShowCancellationMessage(false);
       }, 10000);
     }
-  }, [searchParams, cancellationHandled, setSearchParams]);
+    
+    // Handle payment success - also preserve authentication
+    if (success === 'true') {
+      console.log('✅ Stripe payment success detected - preserving authentication state');
+      
+      // CRITICAL: Ensure user authentication is preserved after successful payment
+      const existingUser = localStorage.getItem('linkzy_user');
+      const existingApiKey = localStorage.getItem('linkzy_api_key');
+      
+      if (existingUser && existingApiKey && (!user || !isAuthenticated)) {
+        console.log('🔧 Restoring authentication after successful payment');
+        try {
+          const userData = JSON.parse(existingUser);
+          login(existingApiKey, userData);
+        } catch (e) {
+          console.error('Failed to restore auth after successful payment:', e);
+        }
+      }
+      
+      // Clear the success parameter from URL
+      setTimeout(() => {
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('success');
+        setSearchParams(newParams, { replace: true });
+      }, 1000);
+    }
+  }, [searchParams, cancellationHandled, setSearchParams, user, isAuthenticated, login]);
 
   // Poll for new content every 60s when connected
   useEffect(() => {

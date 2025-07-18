@@ -39,15 +39,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     const initAuth = async () => {
       try {
-        // Set a 10-second timeout for authentication check
+        // Check if we're in a payment flow - if so, be more patient with auth checks
+        const urlParams = new URLSearchParams(window.location.search);
+        const isPaymentFlow = urlParams.get('canceled') === 'true' || urlParams.get('success') === 'true';
+        const timeoutDuration = isPaymentFlow ? 15000 : 10000;
+        
+        // Set timeout for authentication check
         authTimeout = setTimeout(() => {
           if (isMounted && loading) {
-            console.warn('Authentication check timed out after 10 seconds');
+            console.warn(`Authentication check timed out after ${timeoutDuration/1000} seconds`);
+            
+            // For payment flows, try to preserve existing auth state from localStorage
+            if (isPaymentFlow) {
+              const existingUser = localStorage.getItem('linkzy_user');
+              const existingApiKey = localStorage.getItem('linkzy_api_key');
+              
+              if (existingUser && existingApiKey) {
+                console.log('Payment flow detected - preserving existing authentication');
+                try {
+                  const userData = JSON.parse(existingUser);
+                  setIsAuthenticated(true);
+                  setUser(userData);
+                  setLoading(false);
+                  return;
+                } catch (e) {
+                  console.error('Failed to restore auth from localStorage:', e);
+                }
+              }
+            }
+            
             setLoading(false);
             setIsAuthenticated(false);
             setUser(null);
           }
-        }, 10000);
+        }, timeoutDuration);
         
         // Use the new robust auth status checker
         const { isAuthenticated: authStatus, user: authUser } = await supabaseService.getAuthStatus();
