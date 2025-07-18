@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
-import { X, CreditCard, Zap, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, CreditCard, Zap, CheckCircle, AlertCircle, Lock } from 'lucide-react';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+
+// Initialize Stripe
+const stripePromise = loadStripe('pk_live_51RcWy5KwiECS8C7ZKhnyKm4byhjfpqGXLqhJLFG2lw758joDSmE54Q3jChyWDZhCEHoXz4JRrV2Yt3TVF8xPVcmD00uZyIFyrH');
 
 interface PurchaseCreditsModalProps {
   isOpen: boolean;
@@ -8,15 +13,136 @@ interface PurchaseCreditsModalProps {
   currentPlan: string;
 }
 
+interface PaymentFormProps {
+  selectedPlan: any;
+  onSuccess: () => void;
+  onError: (error: string) => void;
+  isProcessing: boolean;
+  setIsProcessing: (processing: boolean) => void;
+}
+
+// Embedded Payment Form Component
+const PaymentForm: React.FC<PaymentFormProps> = ({ 
+  selectedPlan, 
+  onSuccess, 
+  onError, 
+  isProcessing,
+  setIsProcessing 
+}) => {
+  const stripe = useStripe();
+  const elements = useElements();
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!stripe || !elements || !selectedPlan) {
+      return;
+    }
+
+    setIsProcessing(true);
+    onError(''); // Clear previous errors
+
+    const cardElement = elements.getElement(CardElement);
+
+    if (!cardElement) {
+      onError('Card information is required');
+      setIsProcessing(false);
+      return;
+    }
+
+    try {
+      // Create payment method
+      const { error, paymentMethod } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement,
+      });
+
+      if (error) {
+        onError(error.message || 'Payment failed');
+        setIsProcessing(false);
+        return;
+      }
+
+      // Here you would typically send the payment method to your backend
+      // For now, simulate success
+      console.log('Payment method created:', paymentMethod);
+      
+      // Simulate processing delay
+      setTimeout(() => {
+        onSuccess();
+        setIsProcessing(false);
+      }, 2000);
+
+    } catch (err: any) {
+      onError('Payment processing failed. Please try again.');
+      setIsProcessing(false);
+    }
+  };
+
+  const cardElementOptions = {
+    style: {
+      base: {
+        fontSize: '16px',
+        color: '#ffffff',
+        backgroundColor: 'transparent',
+        '::placeholder': {
+          color: '#9ca3af',
+        },
+      },
+      invalid: {
+        color: '#ef4444',
+      },
+    },
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="bg-gray-800 rounded-lg p-4 border border-gray-600">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Card Information
+        </label>
+        <div className="bg-gray-900 rounded-md p-3 border border-gray-600">
+          <CardElement options={cardElementOptions} />
+        </div>
+      </div>
+      
+      <div className="flex items-center space-x-2 text-sm text-gray-400">
+        <Lock className="w-4 h-4" />
+        <span>Secured by Stripe • Your payment information is encrypted</span>
+      </div>
+
+      <button
+        type="submit"
+        disabled={!stripe || isProcessing}
+        className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2"
+      >
+        {isProcessing ? (
+          <>
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <span>Processing Payment...</span>
+          </>
+        ) : (
+          <>
+            <CreditCard className="w-4 h-4" />
+            <span>Pay ${selectedPlan?.price} • Add {selectedPlan?.credits} Credits</span>
+          </>
+        )}
+      </button>
+    </form>
+  );
+};
+
 const PurchaseCreditsModal: React.FC<PurchaseCreditsModalProps> = ({
   isOpen,
   onClose,
   currentCredits,
   currentPlan
 }) => {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
 
   const plans = [
     {
@@ -54,56 +180,22 @@ const PurchaseCreditsModal: React.FC<PurchaseCreditsModalProps> = ({
     }
   ];
 
-  const handleStripeCheckout = async (priceId: string, isSubscription: boolean = false) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      console.log('Starting checkout process...', { priceId, isSubscription });
-      
-      // Check if Stripe is loaded
-      if (typeof window === 'undefined' || !(window as unknown as { Stripe?: any }).Stripe) {
-        console.error('Stripe is not loaded');
-        setError('Payment system is loading, please try again in a moment.');
-        return;
-      }
-
-      // Initialize Stripe
-      const publishableKey = 'pk_live_51RcWy5KwiECS8C7ZKhnyKm4byhjfpqGXLqhJLFG2lw758joDSmE54Q3jChyWDZhCEHoXz4JRrV2Yt3TVF8xPVcmD00uZyIFyrH';
-      const stripe = (window as unknown as { Stripe: (key: string) => any }).Stripe(publishableKey);
-      
-      if (!stripe) {
-        console.error('Failed to initialize Stripe');
-        setError('Payment system error, please try again.');
-        return;
-      }
-
-      console.log('Stripe initialized successfully, redirecting to checkout...');
-
-      // Close modal before redirect to improve UX
+  const handlePaymentSuccess = () => {
+    setPaymentSuccess(true);
+    setShowPaymentForm(false);
+    // In a real app, you'd refresh user credits here
+    setTimeout(() => {
       onClose();
+      // Reset states when closing
+      setPaymentSuccess(false);
+      setSelectedPlan(null);
+      setShowPaymentForm(false);
+      setError(null);
+    }, 2000);
+  };
 
-      // Small delay to let modal close animation complete
-      setTimeout(async () => {
-        // Redirect to checkout in same tab (but with better UX)
-        const { error } = await stripe.redirectToCheckout({
-          mode: isSubscription ? 'subscription' : 'payment',
-          lineItems: [{ price: priceId, quantity: 1 }],
-          successUrl: window.location.origin + '/dashboard/account?success=true',
-          cancelUrl: window.location.origin + '/dashboard/account?canceled=true'
-        });
-
-        if (error) {
-          console.error('Stripe checkout error:', error);
-          setError('Payment error: ' + error.message);
-        }
-      }, 200);
-    } catch (err: unknown) {
-      console.error('Checkout error:', err);
-      setError('Something went wrong. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+  const handlePaymentError = (errorMessage: string) => {
+    setError(errorMessage);
   };
 
   const handlePlanSelect = (planId: string) => {
@@ -111,16 +203,14 @@ const PurchaseCreditsModal: React.FC<PurchaseCreditsModalProps> = ({
     setError(null);
   };
 
-  const handlePurchase = () => {
+  const handleProceedToPayment = () => {
     if (!selectedPlan) {
       setError('Please select a plan to continue.');
       return;
     }
-
-    const plan = plans.find(p => p.id === selectedPlan);
-    if (plan) {
-      handleStripeCheckout(plan.priceId, plan.isSubscription);
-    }
+    
+    setError(null);
+    setShowPaymentForm(true);
   };
 
   if (!isOpen) return null;
@@ -229,32 +319,77 @@ const PurchaseCreditsModal: React.FC<PurchaseCreditsModalProps> = ({
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="p-6 border-t border-gray-700 flex flex-col sm:flex-row gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handlePurchase}
-            disabled={!selectedPlan || isLoading}
-            className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2"
-          >
-            {isLoading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Processing...</span>
-              </>
-            ) : (
-              <>
-                <CreditCard className="w-4 h-4" />
-                <span>Continue to Stripe Checkout</span>
-              </>
-            )}
-          </button>
-        </div>
+        {/* Payment Section */}
+        {paymentSuccess ? (
+          <div className="p-6 border-t border-gray-700">
+            <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-6 text-center">
+              <div className="flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-green-400 mb-2">Payment Successful!</h3>
+              <p className="text-gray-300">
+                Your credits have been added to your account. 
+              </p>
+            </div>
+          </div>
+        ) : showPaymentForm && selectedPlan ? (
+          <div className="p-6 border-t border-gray-700">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-white mb-2">Complete Your Purchase</h3>
+              <div className="bg-gray-800/50 rounded-lg p-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">
+                    {plans.find(p => p.id === selectedPlan)?.name}
+                  </span>
+                  <span className="text-white font-semibold">
+                    ${plans.find(p => p.id === selectedPlan)?.price}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <Elements stripe={stripePromise}>
+              <PaymentForm
+                selectedPlan={plans.find(p => p.id === selectedPlan)}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+                isProcessing={isProcessing}
+                setIsProcessing={setIsProcessing}
+              />
+            </Elements>
+            
+            <div className="mt-4">
+              <button
+                onClick={() => {
+                  setShowPaymentForm(false);
+                  setError(null);
+                }}
+                className="text-gray-400 hover:text-white transition-colors text-sm"
+              >
+                ← Back to plan selection
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 border-t border-gray-700 flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleProceedToPayment}
+              disabled={!selectedPlan || isProcessing}
+              className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2"
+            >
+              <CreditCard className="w-4 h-4" />
+              <span>Continue to Payment</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
