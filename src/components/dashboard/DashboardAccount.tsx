@@ -133,6 +133,36 @@ const DashboardAccount = () => {
         if (authStatus.user?.credits !== undefined) {
           setCredits(authStatus.user.credits);
           console.log('✅ Loaded credits from database:', authStatus.user.credits);
+          
+          // Check if user has 30+ credits but is_pro is false - auto-upgrade
+          if (authStatus.user.credits >= 30 && !authStatus.user.is_pro) {
+            console.log('🔄 Auto-upgrading user to Pro status...');
+            try {
+              const result = await supabaseService.updateUserCredits(
+                authStatus.user.id,
+                0, // No credits to add
+                {
+                  sessionId: 'auto_upgrade_' + Date.now(),
+                  amount: 0,
+                  description: 'Auto Pro Status Upgrade'
+                }
+              );
+              console.log('✅ Auto-upgrade successful:', result);
+              
+              // Refresh auth context
+              window.dispatchEvent(new CustomEvent('creditsUpdated', { 
+                detail: { 
+                  newCredits: authStatus.user.credits,
+                  oldCredits: authStatus.user.credits,
+                  creditsAdded: 0,
+                  verificationPassed: true
+                } 
+              }));
+              
+            } catch (upgradeError) {
+              console.error('❌ Auto-upgrade failed:', upgradeError);
+            }
+          }
         }
         
         // Load billing history
