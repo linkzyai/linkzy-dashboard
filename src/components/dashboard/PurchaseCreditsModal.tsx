@@ -63,8 +63,59 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       console.log('Payment method created successfully');
       
       // Simulate successful payment completion
-      setTimeout(() => {
+      setTimeout(async () => {
         console.log('Payment completed successfully');
+        
+        // IMPORTANT: Trigger real credit update after simulation
+        try {
+          console.log('🚀 Triggering credit update from dashboard modal...');
+          
+          // Import the credit update function
+          const { default: supabaseService } = await import('../../services/supabaseService');
+          const { useAuth } = await import('../../contexts/AuthContext');
+          
+          // Get current user (we need to access this from context)
+          const storedUser = JSON.parse(localStorage.getItem('linkzy_user') || '{}');
+          
+          if (storedUser.id) {
+            const paymentDetails = {
+              sessionId: 'dashboard_simulation_' + Date.now(),
+              amount: selectedPlan?.price || 10,
+              description: `${selectedPlan?.name || 'Starter Pack'} - ${selectedPlan?.credits || 3} Credits`
+            };
+            
+            console.log('💳 Dashboard modal credit update:', { 
+              userId: storedUser.id, 
+              creditsToAdd: selectedPlan?.credits || 3,
+              paymentDetails 
+            });
+            
+            const result = await supabaseService.updateUserCredits(
+              storedUser.id,
+              selectedPlan?.credits || 3,
+              paymentDetails
+            );
+            
+            console.log('✅ Dashboard modal credit update result:', result);
+            
+            // Trigger UI update
+            window.dispatchEvent(new CustomEvent('creditsUpdated', { 
+              detail: { 
+                newCredits: result.newCredits,
+                oldCredits: result.oldCredits,
+                creditsAdded: result.creditsAdded,
+                verificationPassed: result.verificationPassed
+              } 
+            }));
+            
+          } else {
+            console.error('❌ No user found in localStorage for credit update');
+          }
+          
+        } catch (creditError) {
+          console.error('❌ Credit update failed in dashboard modal:', creditError);
+        }
+        
         onSuccess();
         setIsProcessing(false);
       }, 2000);
