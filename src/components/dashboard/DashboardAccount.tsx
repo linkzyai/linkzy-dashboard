@@ -614,6 +614,13 @@ const DashboardAccount = () => {
 
   useEffect(() => {
     const fetchTrackedContent = async () => {
+      // TEMPORARY: Disable tracked content API for testing
+      console.log('🧪 SIMULATION: Would fetch tracked content for API key:', userApiKey);
+      setTrackedLoading(false);
+      setTrackedContent([]); // Empty array for now
+      return;
+
+      /* ORIGINAL CODE - TEMPORARILY DISABLED
       setTrackedLoading(true);
       setTrackedError('');
       try {
@@ -629,6 +636,7 @@ const DashboardAccount = () => {
       } finally {
         setTrackedLoading(false);
       }
+      */
     };
     if (userApiKey) fetchTrackedContent();
   }, [userApiKey]);

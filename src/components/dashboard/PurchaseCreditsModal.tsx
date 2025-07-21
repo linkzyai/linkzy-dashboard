@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { X, CreditCard, Zap, CheckCircle, AlertCircle, Lock } from 'lucide-react';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
-// Initialize Stripe
-const stripePromise = loadStripe('pk_live_51RcWy5KwiECS8C7ZKhnyKm4byhjfpqGXLqhJLFG2lw758joDSmE54Q3jChyWDZhCEHoXz4JRrV2Yt3TVF8xPVcmD00uZyIFyrH');
+// PURE SIMULATION MODE - No Stripe imports for testing
+// import { loadStripe } from '@stripe/stripe-js';
+// import { Elements, useStripe, useElements } from '@stripe/react-stripe-js';
+
+// const stripePromise = loadStripe('pk_test_51RcWy5KwiECS8C7ZPPzXHrxYJzcuDOr3un8pbDcDmQPz3MCaB8ghot0x1zg4WK0zofOC589J120xPaGtUHH4hvDj00nmAd7Jln');
 
 interface PurchaseCreditsModalProps {
   isOpen: boolean;
@@ -21,7 +22,7 @@ interface PaymentFormProps {
   setIsProcessing: (processing: boolean) => void;
 }
 
-// Embedded Payment Form Component
+// Pure Simulation Payment Form Component
 const PaymentForm: React.FC<PaymentFormProps> = ({ 
   selectedPlan, 
   onSuccess, 
@@ -29,46 +30,23 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   isProcessing,
   setIsProcessing 
 }) => {
-  const stripe = useStripe();
-  const elements = useElements();
-
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!stripe || !elements || !selectedPlan) {
+    if (!selectedPlan) {
       return;
     }
 
     setIsProcessing(true);
     onError(''); // Clear previous errors
 
-    const cardElement = elements.getElement(CardElement);
-
-    if (!cardElement) {
-      onError('Card information is required');
-      setIsProcessing(false);
-      return;
-    }
-
     try {
-      // Create payment method
-      const { error, paymentMethod } = await stripe.createPaymentMethod({
-        type: 'card',
-        card: cardElement,
-      });
-
-      if (error) {
-        onError(error.message || 'Payment failed');
-        setIsProcessing(false);
-        return;
-      }
-
-      // Here you would typically send the payment method to your backend
-      // For now, simulate success
-      console.log('Payment method created:', paymentMethod);
+      // PURE SIMULATION MODE - No Stripe API calls
+      console.log('🧪 SIMULATION MODE: Processing payment for', selectedPlan.name);
       
       // Simulate processing delay
       setTimeout(() => {
+        console.log('✅ SIMULATION: Payment successful!');
         onSuccess();
         setIsProcessing(false);
       }, 2000);
@@ -79,52 +57,71 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     }
   };
 
-  const cardElementOptions = {
-    style: {
-      base: {
-        fontSize: '16px',
-        color: '#ffffff',
-        backgroundColor: 'transparent',
-        '::placeholder': {
-          color: '#9ca3af',
-        },
-      },
-      invalid: {
-        color: '#ef4444',
-      },
-    },
-  };
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* HUGE SIMULATION BANNER */}
+      <div className="bg-green-800 border border-green-600 rounded-lg p-4 text-center">
+        <div className="text-green-300 font-bold text-lg mb-2">🧪 SIMULATION MODE ACTIVE</div>
+        <div className="text-green-400 text-sm">This is a test environment - no real payments will be processed</div>
+      </div>
+
       <div className="bg-gray-800 rounded-lg p-4 border border-gray-600">
         <label className="block text-sm font-medium text-gray-300 mb-2">
-          Card Information
+          💻 SIMULATION MODE - Test Payment Form
         </label>
-        <div className="bg-gray-900 rounded-md p-3 border border-gray-600">
-          <CardElement options={cardElementOptions} />
+        <div className="bg-gray-900 rounded-md p-3 border border-gray-600 space-y-3">
+          <input
+            type="text"
+            placeholder="1234 5678 9012 3456"
+            className="w-full bg-transparent text-white border-none outline-none placeholder-gray-400"
+            defaultValue="4242 4242 4242 4242"
+            readOnly
+          />
+          <div className="flex space-x-3">
+            <input
+              type="text"
+              placeholder="MM/YY"
+              className="flex-1 bg-transparent text-white border-none outline-none placeholder-gray-400"
+              defaultValue="12/34"
+              readOnly
+            />
+            <input
+              type="text"
+              placeholder="CVC"
+              className="flex-1 bg-transparent text-white border-none outline-none placeholder-gray-400"
+              defaultValue="123"
+              readOnly
+            />
+            <input
+              type="text"
+              placeholder="12345"
+              className="flex-1 bg-transparent text-white border-none outline-none placeholder-gray-400"
+              defaultValue="12345"
+              readOnly
+            />
+          </div>
         </div>
       </div>
-      
-      <div className="flex items-center space-x-2 text-sm text-gray-400">
+
+      <div className="flex items-center justify-center space-x-2 text-sm text-gray-400 mb-4">
         <Lock className="w-4 h-4" />
-        <span>Secured by Stripe • Your payment information is encrypted</span>
+        <span>🧪 Secured by Simulation • No real payment processing</span>
       </div>
 
       <button
         type="submit"
-        disabled={!stripe || isProcessing}
-        className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2"
+        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center space-x-2"
+        disabled={isProcessing}
       >
         {isProcessing ? (
           <>
-            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            <span>Processing Payment...</span>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            <span>🧪 Simulating Payment...</span>
           </>
         ) : (
           <>
             <CreditCard className="w-4 h-4" />
-            <span>Pay ${selectedPlan?.price} • Add {selectedPlan?.credits} Credits</span>
+            <span>🧪 SIMULATE: Pay ${selectedPlan?.price} • Add {selectedPlan?.credits} Credits</span>
           </>
         )}
       </button>
@@ -350,15 +347,13 @@ const PurchaseCreditsModal: React.FC<PurchaseCreditsModalProps> = ({
               </div>
             </div>
             
-            <Elements stripe={stripePromise}>
-              <PaymentForm
-                selectedPlan={plans.find(p => p.id === selectedPlan)}
-                onSuccess={handlePaymentSuccess}
-                onError={handlePaymentError}
-                isProcessing={isProcessing}
-                setIsProcessing={setIsProcessing}
-              />
-            </Elements>
+            <PaymentForm
+              selectedPlan={plans.find(p => p.id === selectedPlan)}
+              onSuccess={handlePaymentSuccess}
+              onError={handlePaymentError}
+              isProcessing={isProcessing}
+              setIsProcessing={setIsProcessing}
+            />
             
             <div className="mt-4">
               <button

@@ -6,6 +6,12 @@ const Pricing = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleStripeCheckout = async (priceId: string, isSubscription: boolean = false) => {
+    // TEMPORARY: Disable Stripe for testing - show modal instead
+    console.log('🧪 SIMULATION: Would start checkout for', priceId);
+    alert('💻 SIMULATION MODE\n\nIn production, this would redirect to Stripe checkout.\n\nPrice ID: ' + priceId + '\nType: ' + (isSubscription ? 'subscription' : 'one-time'));
+    return;
+
+    /* ORIGINAL STRIPE CODE - TEMPORARILY DISABLED
     try {
       console.log('Starting checkout process...', { priceId });
       
@@ -44,6 +50,7 @@ const Pricing = () => {
       console.error('Checkout error:', err);
       alert('Something went wrong. Please try again.\n\nError details: ' + (err instanceof Error ? err.message : String(err)) + '\n\nCheck browser console for more info.');
     }
+    */
   };
 
   return (

@@ -245,6 +245,15 @@ const SiteHealthChecker = () => {
   };
 
   const checkStripe = async (): Promise<HealthCheck> => {
+    // TEMPORARY: Disable Stripe health check for testing
+    return {
+      name: 'Stripe Integration',
+      status: 'warning',
+      message: '⚠️ Stripe disabled for testing',
+      details: 'Running in simulation mode'
+    };
+
+    /* ORIGINAL CODE - TEMPORARILY DISABLED
     try {
       // Check if Stripe is loaded
       if (typeof window !== 'undefined' && (window as any).Stripe) {
@@ -283,6 +292,7 @@ const SiteHealthChecker = () => {
         details: error instanceof Error ? error.message : String(error)
       };
     }
+    */
   };
 
   const checkApiEndpoints = async (): Promise<HealthCheck> => {
