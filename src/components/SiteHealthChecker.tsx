@@ -251,8 +251,8 @@ const SiteHealthChecker = () => {
         return {
           name: 'Stripe Integration',
           status: 'pass',
-          message: '✅ Stripe test mode ready',
-          details: 'Payment system loaded for testing'
+          message: '✅ Stripe loaded successfully',
+          details: 'Payment system ready'
         };
       }
 

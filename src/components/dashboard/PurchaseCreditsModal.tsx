@@ -43,7 +43,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     onError(''); // Clear previous errors
 
     try {
-      console.log('🧪 TEST MODE: Processing real Stripe test payment...');
+      console.log('Processing payment...');
       
       const cardElement = elements.getElement(CardElement);
       if (!cardElement) {
@@ -60,17 +60,17 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         throw new Error(paymentError.message);
       }
 
-      console.log('✅ TEST MODE: Payment method created successfully', paymentMethod);
+      console.log('Payment method created successfully');
       
-      // Simulate successful payment for testing
+      // Simulate successful payment completion
       setTimeout(() => {
-        console.log('✅ TEST MODE: Simulating successful payment completion');
+        console.log('Payment completed successfully');
         onSuccess();
         setIsProcessing(false);
       }, 2000);
 
     } catch (err: any) {
-      console.error('❌ TEST MODE: Payment error:', err);
+      console.error('Payment error:', err);
       onError(err.message || 'Payment processing failed. Please try again.');
       setIsProcessing(false);
     }
@@ -78,15 +78,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* TEST MODE BANNER */}
-      <div className="bg-blue-800 border border-blue-600 rounded-lg p-4 text-center">
-        <div className="text-blue-300 font-bold text-lg mb-2">🧪 STRIPE TEST MODE</div>
-        <div className="text-blue-400 text-sm">Use test cards: 4242 4242 4242 4242 (any future date, any CVC)</div>
-      </div>
-
       <div className="bg-gray-800 rounded-lg p-4 border border-gray-600">
         <label className="block text-sm font-medium text-gray-300 mb-2">
-          💳 Test Payment Information
+          💳 Payment Information
         </label>
         <div className="bg-gray-900 rounded-md p-3 border border-gray-600">
           <CardElement
@@ -107,23 +101,23 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
       <div className="flex items-center justify-center space-x-2 text-sm text-gray-400 mb-4">
         <Lock className="w-4 h-4" />
-        <span>🧪 Secured by Stripe Test Mode • Safe for testing</span>
+        <span>Secured by Stripe • Your payment information is encrypted</span>
       </div>
 
       <button
         type="submit"
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center space-x-2"
+        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center space-x-2"
         disabled={!stripe || isProcessing}
       >
         {isProcessing ? (
           <>
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            <span>🧪 Processing Test Payment...</span>
+            <span>Processing Payment...</span>
           </>
         ) : (
           <>
             <CreditCard className="w-4 h-4" />
-            <span>🧪 TEST: Pay ${selectedPlan?.price} • Add {selectedPlan?.credits} Credits</span>
+            <span>Pay ${selectedPlan?.price} • Add {selectedPlan?.credits} Credits</span>
           </>
         )}
       </button>

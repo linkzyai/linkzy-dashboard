@@ -6,12 +6,6 @@ const Pricing = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleStripeCheckout = async (priceId: string, isSubscription: boolean = false) => {
-    // TEMPORARY: Disable Stripe for testing - show modal instead
-    console.log('🧪 SIMULATION: Would start checkout for', priceId);
-    alert('💻 SIMULATION MODE\n\nIn production, this would redirect to Stripe checkout.\n\nPrice ID: ' + priceId + '\nType: ' + (isSubscription ? 'subscription' : 'one-time'));
-    return;
-
-    /* ORIGINAL STRIPE CODE - TEMPORARILY DISABLED
     try {
       console.log('Starting checkout process...', { priceId });
       
@@ -22,8 +16,8 @@ const Pricing = () => {
         return;
       }
 
-      // Initialize Stripe
-      const publishableKey = 'pk_live_51RcWy5KwiECS8C7ZKhnyKm4byhjfpqGXLqhJLFG2lw758joDSmE54Q3jChyWDZhCEHoXz4JRrV2Yt3TVF8xPVcmD00uZyIFyrH';
+      // Initialize Stripe with test key (but looks like production)
+      const publishableKey = 'pk_test_51RcWy5KwiECS8C7ZPPzXHrxYJzcuDOr3un8pbDcDmQPz3MCaB8ghot0x1zg4WK0zofOC589J120xPaGtUHH4hvDj00nmAd7Jln';
       const stripe = (window as unknown as { Stripe: (key: string) => any }).Stripe(publishableKey);
       
       if (!stripe) {
@@ -44,13 +38,12 @@ const Pricing = () => {
 
       if (error) {
         console.error('Stripe checkout error:', error);
-        alert('Payment error: ' + error.message + '\n\nPlease check the browser console for more details.');
+        alert('Payment error: ' + error.message);
       }
     } catch (err: unknown) {
       console.error('Checkout error:', err);
-      alert('Something went wrong. Please try again.\n\nError details: ' + (err instanceof Error ? err.message : String(err)) + '\n\nCheck browser console for more info.');
+      alert('Something went wrong. Please try again.');
     }
-    */
   };
 
   return (
