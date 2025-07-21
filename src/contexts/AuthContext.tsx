@@ -10,6 +10,7 @@ interface AuthContextType {
   login: (apiKey: string, userProfile?: any) => void;
   logout: () => void;
   loading: boolean;
+  refreshUserData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -365,12 +366,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Add a function to refresh user data from database
+  const refreshUserData = async () => {
+    try {
+      if (!user) return;
+      
+      console.log('🔄 Refreshing user data from database...');
+      const authStatus = await supabaseService.getAuthStatus();
+      
+      if (authStatus.user) {
+        setUser(authStatus.user);
+        localStorage.setItem('linkzy_user', JSON.stringify(authStatus.user));
+        console.log('✅ User data refreshed:', { 
+          email: authStatus.user.email, 
+          credits: authStatus.user.credits 
+        });
+      }
+    } catch (error) {
+      console.error('❌ Failed to refresh user data:', error);
+    }
+  };
+
+  // Listen for credit updates to refresh user data
+  useEffect(() => {
+    const handleCreditsUpdate = (event: Event) => {
+      console.log('🔄 Credits updated - refreshing user data...');
+      refreshUserData();
+    };
+
+    window.addEventListener('creditsUpdated', handleCreditsUpdate);
+    
+    return () => {
+      window.removeEventListener('creditsUpdated', handleCreditsUpdate);
+    };
+  }, [user]);
+
   const value = {
-    isAuthenticated,
     user,
+    isAuthenticated,
+    loading,
     login,
     logout,
-    loading: loading || sessionRefreshing
+    refreshUserData // Export the refresh function
   };
 
   return (

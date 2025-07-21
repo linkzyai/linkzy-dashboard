@@ -67,6 +67,28 @@ const Dashboard = () => {
   const [celebrationType, setCelebrationType] = useState<'first-request' | 'first-backlink' | 'completed-onboarding'>('completed-onboarding');
   const [currentStep, setCurrentStep] = useState(0);
   const { data: dashboardData, loading, error, refetch } = useDashboardStats();
+  const [currentCredits, setCurrentCredits] = useState(user?.credits || 0);
+
+  // Listen for credit updates
+  useEffect(() => {
+    const handleCreditsUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { newCredits } = customEvent.detail;
+      setCurrentCredits(newCredits);
+      console.log('✅ Main dashboard credits updated:', newCredits);
+    };
+
+    window.addEventListener('creditsUpdated', handleCreditsUpdate);
+    
+    return () => {
+      window.removeEventListener('creditsUpdated', handleCreditsUpdate);
+    };
+  }, []);
+
+  // Update credits when user changes
+  useEffect(() => {
+    setCurrentCredits(user?.credits || 0);
+  }, [user?.credits]);
 
   const [onboardingProgress, setOnboardingProgress] = useState(() => {
     const stored = localStorage.getItem('linkzy_onboarding_progress');
@@ -252,7 +274,7 @@ const Dashboard = () => {
     }] : []),
     { 
       name: 'Credits Remaining', 
-      value: (user?.credits || 0).toString() || '0', 
+      value: currentCredits.toString() || '0', 
       change: 'Available for use', 
       changeType: 'neutral', 
       icon: Zap,

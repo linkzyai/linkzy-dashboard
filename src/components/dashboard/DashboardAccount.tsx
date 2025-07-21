@@ -84,6 +84,7 @@ const DashboardAccount = () => {
   const [notifications, setNotifications] = useState<{ type: string; message: string }[]>([]);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [credits, setCredits] = useState(user?.credits || 3);
+  const [billingHistory, setBillingHistory] = useState<any[]>([]);
 
   // Listen for credit updates from success page
   useEffect(() => {
@@ -97,14 +98,22 @@ const DashboardAccount = () => {
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 5000);
       
-      // Optionally refresh user data from database to ensure sync
-      try {
-        const authStatus = await supabaseService.getAuthStatus();
-        if (authStatus.user) {
-          setCredits(authStatus.user.credits || newCredits);
+      // Refresh user data in auth context
+      if (typeof window !== 'undefined' && user?.id) {
+        try {
+          const authStatus = await supabaseService.getAuthStatus();
+          if (authStatus.user) {
+            setCredits(authStatus.user.credits || newCredits);
+          }
+          
+          // Refresh billing history
+          const billing = await supabaseService.getBillingHistory(user.id);
+          setBillingHistory(billing);
+          console.log('✅ Billing history refreshed:', billing);
+          
+        } catch (error) {
+          console.error('Error refreshing data:', error);
         }
-      } catch (error) {
-        console.error('Error refreshing user data:', error);
       }
     };
 
@@ -113,30 +122,39 @@ const DashboardAccount = () => {
     return () => {
       window.removeEventListener('creditsUpdated', handleCreditsUpdate);
     };
-  }, []);
+  }, [user?.id]);
 
-  // Also check database on component mount for credits
+  // Load initial user credits and billing history from database
   useEffect(() => {
-    const loadUserCredits = async () => {
+    const loadUserData = async () => {
       try {
-        // First check localStorage for immediate display
+        // Get fresh data from database
+        const authStatus = await supabaseService.getAuthStatus();
+        if (authStatus.user?.credits !== undefined) {
+          setCredits(authStatus.user.credits);
+          console.log('✅ Loaded credits from database:', authStatus.user.credits);
+        }
+        
+        // Load billing history
+        if (user?.id) {
+          const billing = await supabaseService.getBillingHistory(user.id);
+          setBillingHistory(billing);
+          console.log('✅ Loaded billing history:', billing);
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+        // Fallback to localStorage
         const storedCredits = localStorage.getItem('userCredits');
         if (storedCredits) {
           setCredits(parseInt(storedCredits));
         }
-        
-        // Then get fresh data from database
-        const authStatus = await supabaseService.getAuthStatus();
-        if (authStatus.user?.credits !== undefined) {
-          setCredits(authStatus.user.credits);
-        }
-      } catch (error) {
-        console.error('Error loading user credits:', error);
       }
     };
     
-    loadUserCredits();
-  }, []);
+    if (user?.id) {
+      loadUserData();
+    }
+  }, [user?.id]);
 
   const [requests, setRequests] = useState([
     // Example mock requests
@@ -794,13 +812,22 @@ const DashboardAccount = () => {
                 </tr>
               </thead>
               <tbody>
-                {/* Example row, replace with real data */}
-                <tr>
-                  <td className="py-2">Jul 1, 2025</td>
-                  <td className="py-2">Credit Purchase</td>
-                  <td className="py-2">$25</td>
-                  <td className="py-2"><span className="bg-green-500/20 text-green-400 px-2 py-1 rounded-full text-xs">Paid</span></td>
-                </tr>
+                {billingHistory.map((item, index) => (
+                  <tr key={item.id || index}>
+                    <td className="py-2">{item.created_at ? new Date(item.created_at).toLocaleDateString() : 'N/A'}</td>
+                    <td className="py-2">{item.description}</td>
+                    <td className="py-2">${item.amount}</td>
+                    <td className="py-2">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        item.status === 'paid' ? 'bg-green-500/20 text-green-400' :
+                        item.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                        'bg-red-500/20 text-red-400'
+                      }`}>
+                        {item.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
