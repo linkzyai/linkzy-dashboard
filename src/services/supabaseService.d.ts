@@ -22,6 +22,8 @@ declare class SupabaseService {
   getBillingInfo?(): Promise<any>;
   getApiUsage?(): Promise<any>;
   getKeywordAnalytics(): Promise<any>;
+  updateUserCredits(userId: string, creditsToAdd: number, paymentDetails: { sessionId: string; amount: number; description: string }): Promise<{ success: boolean; oldCredits: number; newCredits: number; creditsAdded: number }>;
+  getBillingHistory(userId: string): Promise<any[]>;
   // Add other methods as needed
 }
 

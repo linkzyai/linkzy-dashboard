@@ -1,44 +1,88 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle, ArrowRight } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import supabaseService from '../services/supabaseService';
 
 const Success = () => {
   const [creditsUpdated, setCreditsUpdated] = useState(false);
+  const [updateError, setUpdateError] = useState('');
+  const [creditsAdded, setCreditsAdded] = useState(0);
+  const { user } = useAuth();
 
   useEffect(() => {
-    // Simple credit update for testing - in production this would be handled by webhook
-    const updateCredits = () => {
+    const updateCreditsInDatabase = async () => {
       try {
-        // Get current credits from localStorage or default to 3
-        const currentCredits = parseInt(localStorage.getItem('userCredits') || '3');
-        
-        // Determine credits to add based on URL parameters (Stripe passes session info)
+        if (!user?.id) {
+          console.error('No user found for credit update');
+          setUpdateError('User not found');
+          return;
+        }
+
+        // Get session ID from URL (Stripe passes this)
         const urlParams = new URLSearchParams(window.location.search);
         const sessionId = urlParams.get('session_id');
         
+        if (!sessionId) {
+          console.error('No Stripe session ID found');
+          setUpdateError('Payment session not found');
+          return;
+        }
+
+        // Determine credits to add based on URL or default to Starter Pack
         let creditsToAdd = 3; // Default for Starter Pack
-        
-        // In a real app, you'd look up the session to get exact credits
-        // For now, we'll assume Starter Pack (3 credits) for testing
-        
-        const newCredits = currentCredits + creditsToAdd;
-        localStorage.setItem('userCredits', newCredits.toString());
-        
-        console.log(`Credits updated: ${currentCredits} → ${newCredits} (+${creditsToAdd})`);
-        setCreditsUpdated(true);
-        
-        // Trigger a custom event to update the header credits display
-        window.dispatchEvent(new CustomEvent('creditsUpdated', { detail: { newCredits } }));
-        
+        let amount = 10; // Default amount
+        let description = 'Starter Pack - 3 Credits';
+
+        // In a real implementation, you'd look up the session from Stripe
+        // For now, we'll use defaults but log the session ID
+        console.log('Processing payment for session:', sessionId);
+
+        const paymentDetails = {
+          sessionId: sessionId,
+          amount: amount,
+          description: description
+        };
+
+        // Update credits in database
+        const result = await supabaseService.updateUserCredits(
+          user.id,
+          creditsToAdd,
+          paymentDetails
+        );
+
+        if (result.success) {
+          setCreditsAdded(creditsToAdd);
+          setCreditsUpdated(true);
+          
+          // Trigger a custom event to update the UI
+          window.dispatchEvent(new CustomEvent('creditsUpdated', { 
+            detail: { 
+              newCredits: result.newCredits,
+              oldCredits: result.oldCredits,
+              creditsAdded: result.creditsAdded
+            } 
+          }));
+          
+          console.log('✅ Database credits updated successfully:', result);
+        }
+
       } catch (error) {
-        console.error('Error updating credits:', error);
+        console.error('❌ Error updating credits in database:', error);
+        setUpdateError('Failed to update credits. Please contact support.');
+        
+        // Fallback to localStorage for now
+        const currentCredits = parseInt(localStorage.getItem('userCredits') || '3');
+        const newCredits = currentCredits + 3;
+        localStorage.setItem('userCredits', newCredits.toString());
+        window.dispatchEvent(new CustomEvent('creditsUpdated', { detail: { newCredits } }));
       }
     };
 
     // Only update credits once when component mounts
-    if (!creditsUpdated) {
-      updateCredits();
+    if (!creditsUpdated && user) {
+      updateCreditsInDatabase();
     }
-  }, [creditsUpdated]);
+  }, [creditsUpdated, user]);
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-4">
@@ -54,11 +98,19 @@ const Success = () => {
             Thank you for your purchase! Your backlink credits have been added to your account.
           </p>
 
+          {updateError && (
+            <div className="bg-red-900 border border-red-600 rounded-lg p-4 mb-6">
+              <p className="text-red-300 font-semibold mb-2">⚠️ Update Error</p>
+              <p className="text-red-400 text-sm">{updateError}</p>
+            </div>
+          )}
+
           {creditsUpdated && (
             <div className="bg-green-900 border border-green-600 rounded-lg p-4 mb-6">
-              <p className="text-green-300 font-semibold mb-2">✅ Credits Added!</p>
+              <p className="text-green-300 font-semibold mb-2">✅ Credits Added to Database!</p>
               <p className="text-green-400 text-sm">
-                3 credits have been added to your account. Check your dashboard to see the updated balance.
+                {creditsAdded} credits have been added to your account and saved to the database. 
+                Your updated balance will persist across sessions.
               </p>
             </div>
           )}
@@ -66,7 +118,7 @@ const Success = () => {
           <div className="bg-gray-800 rounded-lg p-4 mb-6">
             <p className="text-white font-semibold mb-2">What's Next?</p>
             <ul className="text-gray-300 text-sm space-y-1 text-left">
-              <li>• Check your email for onboarding instructions</li>
+              <li>• Your credits are now saved in your account</li>
               <li>• Access your dashboard with your new credits</li>
               <li>• Start submitting backlink requests</li>
               <li>• Track your results in real-time</li>

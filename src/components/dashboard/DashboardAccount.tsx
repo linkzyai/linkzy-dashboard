@@ -47,8 +47,8 @@ import {
   User
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import Confetti from 'react-confetti';
 import supabaseService from '../../services/supabaseService';
+import Confetti from 'react-confetti';
 import axios from 'axios';
 import JSZip from 'jszip';
 // @ts-ignore
@@ -87,29 +87,55 @@ const DashboardAccount = () => {
 
   // Listen for credit updates from success page
   useEffect(() => {
-    const handleCreditsUpdate = (event: CustomEvent) => {
-      const { newCredits } = event.detail;
+    const handleCreditsUpdate = async (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { newCredits, oldCredits, creditsAdded } = customEvent.detail;
       setCredits(newCredits);
-      console.log('Credits updated in dashboard:', newCredits);
+      console.log('Credits updated in dashboard:', { oldCredits, newCredits, creditsAdded });
       
       // Show celebration for successful purchase
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 5000);
+      
+      // Optionally refresh user data from database to ensure sync
+      try {
+        const authStatus = await supabaseService.getAuthStatus();
+        if (authStatus.user) {
+          setCredits(authStatus.user.credits || newCredits);
+        }
+      } catch (error) {
+        console.error('Error refreshing user data:', error);
+      }
     };
 
-    window.addEventListener('creditsUpdated', handleCreditsUpdate as EventListener);
+    window.addEventListener('creditsUpdated', handleCreditsUpdate);
     
     return () => {
-      window.removeEventListener('creditsUpdated', handleCreditsUpdate as EventListener);
+      window.removeEventListener('creditsUpdated', handleCreditsUpdate);
     };
   }, []);
 
-  // Also check localStorage on component mount for credits
+  // Also check database on component mount for credits
   useEffect(() => {
-    const storedCredits = localStorage.getItem('userCredits');
-    if (storedCredits) {
-      setCredits(parseInt(storedCredits));
-    }
+    const loadUserCredits = async () => {
+      try {
+        // First check localStorage for immediate display
+        const storedCredits = localStorage.getItem('userCredits');
+        if (storedCredits) {
+          setCredits(parseInt(storedCredits));
+        }
+        
+        // Then get fresh data from database
+        const authStatus = await supabaseService.getAuthStatus();
+        if (authStatus.user?.credits !== undefined) {
+          setCredits(authStatus.user.credits);
+        }
+      } catch (error) {
+        console.error('Error loading user credits:', error);
+      }
+    };
+    
+    loadUserCredits();
   }, []);
 
   const [requests, setRequests] = useState([

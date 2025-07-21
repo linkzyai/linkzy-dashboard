@@ -1216,6 +1216,92 @@ If you're testing, try these workarounds:
       };
     }
   }
+
+  // Update user credits after successful payment
+  async updateUserCredits(userId, creditsToAdd, paymentDetails) {
+    try {
+      console.log('💳 Updating user credits after payment...', { userId, creditsToAdd, paymentDetails });
+      
+      // Get current user data
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (userError) throw userError;
+      
+      const currentCredits = user.credits || 0;
+      const newCredits = currentCredits + creditsToAdd;
+      
+      // Update user credits in database
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ credits: newCredits })
+        .eq('id', userId);
+      
+      if (updateError) throw updateError;
+      
+      // Create billing history entry
+      const { error: billingError } = await supabase
+        .from('billing_history')
+        .insert([
+          {
+            user_id: userId,
+            type: 'credit_purchase',
+            amount: paymentDetails.amount,
+            credits_added: creditsToAdd,
+            description: paymentDetails.description,
+            stripe_session_id: paymentDetails.sessionId,
+            status: 'completed',
+            created_at: new Date().toISOString()
+          }
+        ]);
+      
+      if (billingError) {
+        console.warn('⚠️ Failed to create billing history (table may not exist):', billingError);
+        // Don't throw error - credits were updated successfully
+      }
+      
+      // Update localStorage
+      const updatedUser = { ...user, credits: newCredits };
+      localStorage.setItem('linkzy_user', JSON.stringify(updatedUser));
+      
+      console.log('✅ Credits updated successfully:', { currentCredits, newCredits, creditsToAdd });
+      
+      return {
+        success: true,
+        oldCredits: currentCredits,
+        newCredits: newCredits,
+        creditsAdded: creditsToAdd
+      };
+      
+    } catch (error) {
+      console.error('❌ Failed to update user credits:', error);
+      throw error;
+    }
+  }
+
+  // Get billing history for user
+  async getBillingHistory(userId) {
+    try {
+      const { data, error } = await supabase
+        .from('billing_history')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      
+      if (error && !error.message.includes('does not exist')) {
+        throw error;
+      }
+      
+      return data || [];
+      
+    } catch (error) {
+      console.error('Failed to get billing history:', error);
+      return [];
+    }
+  }
 }
 
 // Create singleton instance
