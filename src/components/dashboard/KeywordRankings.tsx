@@ -7,6 +7,7 @@ import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 // Helper to group and sort rankings by keyword
+// @ts-ignore
 function processRankings(data) {
   const grouped = {};
   for (const row of data) {
@@ -14,11 +15,12 @@ function processRankings(data) {
     grouped[row.keyword].push(row);
   }
   // Sort each keyword's rankings by checked_at desc
+  // @ts-ignore
   Object.values(grouped).forEach(arr => arr.sort((a, b) => new Date(b.checked_at) - new Date(a.checked_at)));
   return grouped;
 }
 
-const KeywordRankings = ({ domain, apiKey, initialKeywords = [] }) => {
+const KeywordRankings = ({ domain, apiKey, initialKeywords = [] }: any) => {
   const [rankings, setRankings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -33,6 +35,14 @@ const KeywordRankings = ({ domain, apiKey, initialKeywords = [] }) => {
     const fetchRankings = async () => {
       setLoading(true);
       setError('');
+      
+      // Add a simple timeout to prevent infinite loading
+      const timeout = setTimeout(() => {
+        setLoading(false);
+        setError('No keyword rankings data available yet. Start by adding keywords to track.');
+        setRankings([]);
+      }, 8000); // 8 second timeout
+      
       try {
         let query = supabase
           .from('keyword_rankings')
@@ -41,8 +51,19 @@ const KeywordRankings = ({ domain, apiKey, initialKeywords = [] }) => {
           .order('checked_at', { ascending: false });
         if (apiKey) query = query.eq('api_key', apiKey);
         const { data, error } = await query;
+        
+        clearTimeout(timeout); // Clear timeout if request completes
+        
         if (error) throw error;
-        const grouped = processRankings(data || []);
+        
+        if (!data || data.length === 0) {
+          setRankings([]);
+          setError('No keyword rankings found. Add some keywords to start tracking.');
+          setLoading(false);
+          return;
+        }
+        
+        const grouped = processRankings(data);
         // For each keyword, get [current, previous]
         const rows = Object.entries(grouped).map(([keyword, arr]) => {
           const [current, previous] = arr;

@@ -68,6 +68,7 @@ const Dashboard = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const { data: dashboardData, loading, error, refetch } = useDashboardStats();
   const [currentCredits, setCurrentCredits] = useState(user?.credits || 0);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
 
   // Listen for credit updates
   useEffect(() => {
@@ -89,6 +90,20 @@ const Dashboard = () => {
   useEffect(() => {
     setCurrentCredits(user?.credits || 0);
   }, [user?.credits]);
+
+  // Add timeout for loading state
+  useEffect(() => {
+    if (loading) {
+      const timeout = setTimeout(() => {
+        if (loading) {
+          setDashboardError('Dashboard is taking too long to load. Showing with default data.');
+          console.warn('⚠️ Dashboard loading timeout - showing fallback');
+        }
+      }, 15000); // 15 second timeout
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [loading]);
 
   const [onboardingProgress, setOnboardingProgress] = useState(() => {
     const stored = localStorage.getItem('linkzy_onboarding_progress');

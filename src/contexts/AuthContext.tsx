@@ -341,29 +341,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     console.log('🚪 Logout function called');
-    try {
-      // First clear local storage to prevent race conditions
-      supabaseService.clearApiKey();
-      localStorage.removeItem('linkzy_user');
-      
-      // Then sign out from Supabase
-      await supabaseService.signOut();
-      console.log('✅ Logout successful, redirecting...');
-    } catch (error) {
-      console.error('❌ Logout error:', error);
-    }
     
-    // Always clear the auth state regardless of any errors
+    // Immediately clear auth state to prevent UI hanging
     setIsAuthenticated(false);
     setUser(null);
+    setLoading(false);
     
-    // Use a more reliable redirect method
     try {
-      window.location.replace('/');
-    } catch (redirectError) {
-      // Fallback to simple href
-      window.location.href = '/';
+      // Clear local storage first
+      supabaseService.clearApiKey();
+      localStorage.removeItem('linkzy_user');
+      localStorage.clear(); // Clear all local storage
+      
+      // Sign out from Supabase with timeout
+      const logoutPromise = supabaseService.signOut();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Logout timeout')), 5000)
+      );
+      
+      await Promise.race([logoutPromise, timeoutPromise]);
+      console.log('✅ Logout successful');
+      
+    } catch (error) {
+      console.error('❌ Logout error (non-critical):', error);
+      // Don't throw - logout should always succeed from UI perspective
     }
+    
+    // Force redirect regardless of any errors
+    setTimeout(() => {
+      try {
+        window.location.replace('/');
+      } catch (redirectError) {
+        window.location.href = '/';
+      }
+    }, 100); // Small delay to ensure state is cleared
   };
 
   // Add a function to refresh user data from database
