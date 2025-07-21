@@ -1220,64 +1220,140 @@ If you're testing, try these workarounds:
   // Update user credits after successful payment
   async updateUserCredits(userId, creditsToAdd, paymentDetails) {
     try {
-      console.log('💳 Updating user credits after payment...', { userId, creditsToAdd, paymentDetails });
+      console.log('💳 Starting credit update process...', { 
+        userId, 
+        creditsToAdd, 
+        paymentDetails,
+        userIdType: typeof userId,
+        userIdValue: userId
+      });
       
-      // Get current user data
+      // Get current user data with detailed logging
+      console.log('🔍 Fetching user data from database...');
       const { data: user, error: userError } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .single();
       
-      if (userError) throw userError;
+      console.log('📊 Database fetch result:', { 
+        user: user ? { id: user.id, email: user.email, credits: user.credits } : null, 
+        userError,
+        foundUser: !!user
+      });
+      
+      if (userError) {
+        console.error('❌ Failed to fetch user:', userError);
+        throw new Error(`Failed to fetch user: ${userError.message}`);
+      }
+      
+      if (!user) {
+        console.error('❌ No user found with ID:', userId);
+        throw new Error(`No user found with ID: ${userId}`);
+      }
       
       const currentCredits = user.credits || 0;
       const newCredits = currentCredits + creditsToAdd;
       
-      // Update user credits in database
-      const { error: updateError } = await supabase
+      console.log('🧮 Credit calculation:', { 
+        currentCredits, 
+        creditsToAdd, 
+        newCredits,
+        userIdForUpdate: user.id
+      });
+      
+      // Update user credits in database with detailed logging
+      console.log('💾 Attempting database update...');
+      const { data: updateData, error: updateError } = await supabase
         .from('users')
         .update({ credits: newCredits })
-        .eq('id', userId);
+        .eq('id', userId)
+        .select(); // Add select to see what was actually updated
       
-      if (updateError) throw updateError;
+      console.log('📝 Database update result:', { 
+        updateData, 
+        updateError,
+        rowsAffected: updateData ? updateData.length : 0
+      });
       
-      // Create billing history entry
-      const { error: billingError } = await supabase
-        .from('billing_history')
-        .insert([
-          {
-            user_id: userId,
-            type: 'credit_purchase',
-            amount: paymentDetails.amount,
-            credits_added: creditsToAdd,
-            description: paymentDetails.description,
-            stripe_session_id: paymentDetails.sessionId,
-            status: 'completed',
-            created_at: new Date().toISOString()
-          }
-        ]);
-      
-      if (billingError) {
-        console.warn('⚠️ Failed to create billing history (table may not exist):', billingError);
-        // Don't throw error - credits were updated successfully
+      if (updateError) {
+        console.error('❌ Database update failed:', updateError);
+        throw new Error(`Database update failed: ${updateError.message}`);
       }
       
-      // Update localStorage
-      const updatedUser = { ...user, credits: newCredits };
+      if (!updateData || updateData.length === 0) {
+        console.error('❌ No rows updated - user may not exist or permission denied');
+        throw new Error('No rows updated - check user ID and permissions');
+      }
+      
+      console.log('✅ Database update successful:', updateData[0]);
+      
+      // Verify the update by fetching the user again
+      console.log('🔍 Verifying update by re-fetching user...');
+      const { data: verifyUser, error: verifyError } = await supabase
+        .from('users')
+        .select('id, email, credits')
+        .eq('id', userId)
+        .single();
+      
+      console.log('🔍 Verification result:', { 
+        verifyUser, 
+        verifyError,
+        creditsNow: verifyUser?.credits,
+        updateWorked: verifyUser?.credits === newCredits
+      });
+      
+      // Create billing history entry (non-blocking)
+      try {
+        console.log('📊 Creating billing history...');
+        const { data: billingData, error: billingError } = await supabase
+          .from('billing_history')
+          .insert([
+            {
+              user_id: userId,
+              type: 'credit_purchase',
+              amount: paymentDetails.amount,
+              credits_added: creditsToAdd,
+              description: paymentDetails.description,
+              stripe_session_id: paymentDetails.sessionId,
+              status: 'completed',
+              created_at: new Date().toISOString()
+            }
+          ])
+          .select();
+          
+        console.log('📊 Billing history result:', { billingData, billingError });
+        
+        if (billingError) {
+          console.warn('⚠️ Failed to create billing history:', billingError);
+        }
+      } catch (billingErr) {
+        console.warn('⚠️ Billing history creation failed:', billingErr);
+      }
+      
+      // Update localStorage with verified data
+      const updatedUser = { ...user, credits: verifyUser?.credits || newCredits };
       localStorage.setItem('linkzy_user', JSON.stringify(updatedUser));
       
-      console.log('✅ Credits updated successfully:', { currentCredits, newCredits, creditsToAdd });
+      console.log('✅ Credit update process completed successfully');
       
       return {
         success: true,
         oldCredits: currentCredits,
-        newCredits: newCredits,
-        creditsAdded: creditsToAdd
+        newCredits: verifyUser?.credits || newCredits,
+        creditsAdded: creditsToAdd,
+        verificationPassed: verifyUser?.credits === newCredits
       };
       
     } catch (error) {
-      console.error('❌ Failed to update user credits:', error);
+      console.error('❌ Credit update process failed:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack,
+        userId,
+        creditsToAdd,
+        paymentDetails
+      });
       throw error;
     }
   }

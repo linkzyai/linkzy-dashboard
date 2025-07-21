@@ -12,9 +12,22 @@ const Success = () => {
   useEffect(() => {
     const updateCreditsInDatabase = async () => {
       try {
+        console.log('🚀 Starting success page credit update...');
+        console.log('👤 Current user data:', { 
+          user: user ? {
+            id: user.id,
+            email: user.email,
+            credits: user.credits,
+            userObject: user
+          } : null,
+          userExists: !!user,
+          authContextLoaded: true
+        });
+
         if (!user?.id) {
-          console.error('No user found for credit update');
-          setUpdateError('User not found');
+          console.error('❌ No user found for credit update');
+          console.error('❌ Auth context details:', { user, hasUser: !!user });
+          setUpdateError('User not found - please ensure you are logged in');
           return;
         }
 
@@ -22,9 +35,15 @@ const Success = () => {
         const urlParams = new URLSearchParams(window.location.search);
         const sessionId = urlParams.get('session_id');
         
+        console.log('🔗 URL parameters:', { 
+          sessionId, 
+          fullUrl: window.location.href,
+          searchParams: Object.fromEntries(urlParams.entries())
+        });
+        
         if (!sessionId) {
-          console.error('No Stripe session ID found');
-          setUpdateError('Payment session not found');
+          console.error('❌ No Stripe session ID found in URL');
+          setUpdateError('Payment session not found - invalid URL');
           return;
         }
 
@@ -35,7 +54,12 @@ const Success = () => {
 
         // In a real implementation, you'd look up the session from Stripe
         // For now, we'll use defaults but log the session ID
-        console.log('Processing payment for session:', sessionId);
+        console.log('💰 Payment details:', {
+          sessionId,
+          creditsToAdd,
+          amount,
+          description
+        });
 
         const paymentDetails = {
           sessionId: sessionId,
@@ -43,12 +67,16 @@ const Success = () => {
           description: description
         };
 
+        console.log('📞 Calling supabaseService.updateUserCredits...');
+        
         // Update credits in database
         const result = await supabaseService.updateUserCredits(
           user.id,
           creditsToAdd,
           paymentDetails
         );
+
+        console.log('📊 Service call result:', result);
 
         if (result.success) {
           setCreditsAdded(creditsToAdd);
@@ -59,26 +87,49 @@ const Success = () => {
             detail: { 
               newCredits: result.newCredits,
               oldCredits: result.oldCredits,
-              creditsAdded: result.creditsAdded
+              creditsAdded: result.creditsAdded,
+              verificationPassed: result.verificationPassed
             } 
           }));
           
-          console.log('✅ Database credits updated successfully:', result);
+          console.log('✅ Credit update completed:', result);
+          
+          if (!result.verificationPassed) {
+            console.warn('⚠️ Database verification failed - credits may not have been saved properly');
+            setUpdateError('Credits updated but verification failed. Please check your account.');
+          }
+        } else {
+          throw new Error('Service returned success: false');
         }
 
       } catch (error) {
-        console.error('❌ Error updating credits in database:', error);
-        setUpdateError('Failed to update credits. Please contact support.');
+        console.error('❌ Success page credit update failed:', error);
         
-        // Fallback to localStorage for now
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorStack = error instanceof Error ? error.stack : undefined;
+        const errorName = error instanceof Error ? error.name : 'Unknown';
+        
+        console.error('❌ Full error details:', {
+          message: errorMessage,
+          stack: errorStack,
+          name: errorName,
+          originalError: error
+        });
+        
+        setUpdateError(`Failed to update credits: ${errorMessage}`);
+        
+        // Fallback to localStorage for immediate UI feedback
+        console.log('🔄 Falling back to localStorage update...');
         const currentCredits = parseInt(localStorage.getItem('userCredits') || '3');
         const newCredits = currentCredits + 3;
         localStorage.setItem('userCredits', newCredits.toString());
         window.dispatchEvent(new CustomEvent('creditsUpdated', { detail: { newCredits } }));
+        
+        console.log('📱 localStorage fallback completed:', { currentCredits, newCredits });
       }
     };
 
-    // Only update credits once when component mounts
+    // Only update credits once when component mounts and user is available
     if (!creditsUpdated && user) {
       updateCreditsInDatabase();
     }
