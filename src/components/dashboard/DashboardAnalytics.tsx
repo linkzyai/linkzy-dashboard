@@ -705,6 +705,164 @@ const DashboardAnalytics = () => {
           <>
             {hasProAccess ? (
               <>
+                {/* Keyword Research Tool - NEW SECTION */}
+                <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
+                  <div className="flex items-center mb-6">
+                    <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center mr-3">
+                      <BarChart className="w-6 h-6 text-blue-500" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white">Keyword Research Tool</h2>
+                      <p className="text-gray-400 text-sm">Discover high-opportunity keywords for your niche</p>
+                    </div>
+                  </div>
+                  
+                  {/* Keyword Search Input */}
+                  <div className="mb-6">
+                    <div className="flex flex-col md:flex-row gap-4">
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                          placeholder="Enter seed keyword (e.g., 'digital marketing', 'SEO tools')"
+                          value={keywordFilter}
+                          onChange={(e) => setKeywordFilter(e.target.value)}
+                        />
+                      </div>
+                      <button
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold flex items-center space-x-2 transition-colors"
+                        onClick={() => {
+                          // TODO: Implement keyword research API call
+                          console.log('🔍 Researching keywords for:', keywordFilter);
+                        }}
+                      >
+                        <BarChart className="w-4 h-4" />
+                        <span>Research Keywords</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Keyword Suggestions Table */}
+                  <div className="overflow-x-auto mb-6">
+                    <h4 className="text-lg font-semibold text-white mb-4">Keyword Opportunities</h4>
+                    <table className="min-w-full text-sm text-gray-300">
+                      <thead>
+                        <tr className="bg-gray-800">
+                          <th className="px-4 py-2 text-left">Keyword</th>
+                          <th className="px-4 py-2 text-left">Search Volume</th>
+                          <th className="px-4 py-2 text-left">Difficulty</th>
+                          <th className="px-4 py-2 text-left">CPC</th>
+                          <th className="px-4 py-2 text-left">Opportunity</th>
+                          <th className="px-4 py-2 text-left">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {/* Example keyword research data */}
+                        <tr className="border-b border-gray-700 hover:bg-gray-800">
+                          <td className="px-4 py-2 font-bold text-blue-400">best SEO tools 2025</td>
+                          <td className="px-4 py-2">12,000</td>
+                          <td className="px-4 py-2">
+                            <span className="bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded text-xs">Medium</span>
+                          </td>
+                          <td className="px-4 py-2">$3.20</td>
+                          <td className="px-4 py-2">
+                            <span className="bg-green-500/20 text-green-400 px-2 py-1 rounded text-xs">High</span>
+                          </td>
+                          <td className="px-4 py-2">
+                            <button className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-xs">
+                              Target
+                            </button>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-700 hover:bg-gray-800">
+                          <td className="px-4 py-2 font-bold text-blue-400">SEO software comparison</td>
+                          <td className="px-4 py-2">8,500</td>
+                          <td className="px-4 py-2">
+                            <span className="bg-green-500/20 text-green-400 px-2 py-1 rounded text-xs">Low</span>
+                          </td>
+                          <td className="px-4 py-2">$2.80</td>
+                          <td className="px-4 py-2">
+                            <span className="bg-green-500/20 text-green-400 px-2 py-1 rounded text-xs">High</span>
+                          </td>
+                          <td className="px-4 py-2">
+                            <button className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-xs">
+                              Target
+                            </button>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-700 hover:bg-gray-800">
+                          <td className="px-4 py-2 font-bold text-blue-400">affordable SEO tools</td>
+                          <td className="px-4 py-2">5,200</td>
+                          <td className="px-4 py-2">
+                            <span className="bg-green-500/20 text-green-400 px-2 py-1 rounded text-xs">Low</span>
+                          </td>
+                          <td className="px-4 py-2">$1.90</td>
+                          <td className="px-4 py-2">
+                            <span className="bg-green-500/20 text-green-400 px-2 py-1 rounded text-xs">High</span>
+                          </td>
+                          <td className="px-4 py-2">
+                            <button className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-xs">
+                              Target
+                            </button>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-700 hover:bg-gray-800">
+                          <td className="px-4 py-2 font-bold text-blue-400">enterprise SEO platform</td>
+                          <td className="px-4 py-2">3,100</td>
+                          <td className="px-4 py-2">
+                            <span className="bg-red-500/20 text-red-400 px-2 py-1 rounded text-xs">High</span>
+                          </td>
+                          <td className="px-4 py-2">$8.50</td>
+                          <td className="px-4 py-2">
+                            <span className="bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded text-xs">Medium</span>
+                          </td>
+                          <td className="px-4 py-2">
+                            <button className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-xs">
+                              Monitor
+                            </button>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-700 hover:bg-gray-800">
+                          <td className="px-4 py-2 font-bold text-blue-400">SEO tools for small business</td>
+                          <td className="px-4 py-2">4,800</td>
+                          <td className="px-4 py-2">
+                            <span className="bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded text-xs">Medium</span>
+                          </td>
+                          <td className="px-4 py-2">$2.10</td>
+                          <td className="px-4 py-2">
+                            <span className="bg-green-500/20 text-green-400 px-2 py-1 rounded text-xs">High</span>
+                          </td>
+                          <td className="px-4 py-2">
+                            <button className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-xs">
+                              Target
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Keyword Research Insights */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-gray-800 rounded-lg p-4 text-center">
+                      <div className="text-2xl font-bold text-blue-400">127</div>
+                      <div className="text-sm text-gray-400">Keywords Found</div>
+                    </div>
+                    <div className="bg-gray-800 rounded-lg p-4 text-center">
+                      <div className="text-2xl font-bold text-green-400">23</div>
+                      <div className="text-sm text-gray-400">Low Competition</div>
+                    </div>
+                    <div className="bg-gray-800 rounded-lg p-4 text-center">
+                      <div className="text-2xl font-bold text-orange-400">$3.45</div>
+                      <div className="text-sm text-gray-400">Avg. CPC</div>
+                    </div>
+                    <div className="bg-gray-800 rounded-lg p-4 text-center">
+                      <div className="text-2xl font-bold text-purple-400">8.2K</div>
+                      <div className="text-sm text-gray-400">Avg. Volume</div>
+                    </div>
+                  </div>
+                </div>
+
                 <KeywordRankings domain={userDomain} apiKey={userApiKey} />
                 {/* Keyword Ranking Improvements Card - moved from Overview */}
                 <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
