@@ -1256,7 +1256,7 @@ If you're testing, try these workarounds:
       const newCredits = currentCredits + creditsToAdd;
       
       // Check if this purchase should grant Pro status (30+ credits = Pro Monthly plan)
-      const shouldGrantPro = creditsToAdd >= 30;
+      const shouldGrantPro = creditsToAdd >= 30 || newCredits >= 30; // Check both added credits AND total credits
       const isProUpdate = shouldGrantPro ? { is_pro: true, plan: 'Pro Monthly' } : {};
       
       console.log('🧮 Credit calculation:', { 
