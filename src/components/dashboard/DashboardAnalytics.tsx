@@ -6,7 +6,6 @@ import { useAnalytics, useKeywordAnalytics } from '../../hooks/useApi';
 import { 
   Gauge, BarChart, Users, Calendar, Download, Filter, ArrowUp, ArrowDown, Shield, Plus, Trash2, CheckCircle, DollarSign, TrendingUp, ArrowRight, ChevronUp, Award 
 } from 'lucide-react';
-import KeywordRankings from './KeywordRankings';
 import { useAuth } from '../../contexts/AuthContext';
 import LockedFeature from '../LockedFeature';
 
@@ -863,7 +862,6 @@ const DashboardAnalytics = () => {
                   </div>
                 </div>
 
-                <KeywordRankings domain={userDomain} apiKey={userApiKey} />
                 {/* Keyword Ranking Improvements Card - moved from Overview */}
                 <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
                   <div className="flex items-center mb-6">
