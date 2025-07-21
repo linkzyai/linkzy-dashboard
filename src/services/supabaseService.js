@@ -1255,18 +1255,27 @@ If you're testing, try these workarounds:
       const currentCredits = user.credits || 0;
       const newCredits = currentCredits + creditsToAdd;
       
+      // Check if this purchase should grant Pro status (30+ credits = Pro Monthly plan)
+      const shouldGrantPro = creditsToAdd >= 30;
+      const isProUpdate = shouldGrantPro ? { is_pro: true, plan: 'Pro Monthly' } : {};
+      
       console.log('🧮 Credit calculation:', { 
         currentCredits, 
         creditsToAdd, 
         newCredits,
-        userIdForUpdate: user.id
+        userIdForUpdate: user.id,
+        shouldGrantPro,
+        isProUpdate
       });
       
-      // Update user credits in database with detailed logging
+      // Update user credits and potentially Pro status in database with detailed logging
       console.log('💾 Attempting database update...');
       const { data: updateData, error: updateError } = await supabase
         .from('users')
-        .update({ credits: newCredits })
+        .update({ 
+          credits: newCredits,
+          ...isProUpdate
+        })
         .eq('id', userId)
         .select(); // Add select to see what was actually updated
       
@@ -1332,7 +1341,11 @@ If you're testing, try these workarounds:
       }
       
       // Update localStorage with verified data
-      const updatedUser = { ...user, credits: verifyUser?.credits || newCredits };
+      const updatedUser = { 
+        ...user, 
+        credits: verifyUser?.credits || newCredits,
+        ...isProUpdate
+      };
       localStorage.setItem('linkzy_user', JSON.stringify(updatedUser));
       
       console.log('✅ Credit update process completed successfully');

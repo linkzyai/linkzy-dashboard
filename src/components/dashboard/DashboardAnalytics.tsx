@@ -30,6 +30,9 @@ const DashboardAnalytics = () => {
   const { user } = useAuth();
   const userDomain = user?.website || 'yourdomain.com';
   const userApiKey = user?.api_key || '';
+  
+  // Check if user has Pro access (either is_pro flag OR has 30+ credits from Pro Monthly purchase)
+  const hasProAccess = user?.is_pro || (user?.credits && user.credits >= 30);
 
   const addCompetitor = () => {
     if (!newCompetitor.trim() || competitors.includes(newCompetitor.trim())) return;
@@ -700,7 +703,7 @@ const DashboardAnalytics = () => {
         )}
         {activeTab === 'Keywords' && (
           <>
-            {user?.is_pro ? (
+            {hasProAccess ? (
               <>
                 <KeywordRankings domain={userDomain} apiKey={userApiKey} />
                 {/* Keyword Ranking Improvements Card - moved from Overview */}
