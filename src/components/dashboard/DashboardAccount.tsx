@@ -84,6 +84,34 @@ const DashboardAccount = () => {
   const [notifications, setNotifications] = useState<{ type: string; message: string }[]>([]);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [credits, setCredits] = useState(user?.credits || 3);
+
+  // Listen for credit updates from success page
+  useEffect(() => {
+    const handleCreditsUpdate = (event: CustomEvent) => {
+      const { newCredits } = event.detail;
+      setCredits(newCredits);
+      console.log('Credits updated in dashboard:', newCredits);
+      
+      // Show celebration for successful purchase
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 5000);
+    };
+
+    window.addEventListener('creditsUpdated', handleCreditsUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('creditsUpdated', handleCreditsUpdate as EventListener);
+    };
+  }, []);
+
+  // Also check localStorage on component mount for credits
+  useEffect(() => {
+    const storedCredits = localStorage.getItem('userCredits');
+    if (storedCredits) {
+      setCredits(parseInt(storedCredits));
+    }
+  }, []);
+
   const [requests, setRequests] = useState([
     // Example mock requests
     { id: 1, url: 'https://example.com/page1', keywords: 'seo, marketing', status: 'completed', date: '2025-07-01', details: 'Placed on high DA site.' },
