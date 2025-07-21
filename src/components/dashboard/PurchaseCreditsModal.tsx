@@ -43,24 +43,11 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     onError(''); // Clear previous errors
 
     try {
-      console.log('Processing payment...');
+      console.log('Processing payment simulation...');
+      console.log('Selected plan:', selectedPlan);
       
-      const cardElement = elements.getElement(CardElement);
-      if (!cardElement) {
-        throw new Error('Card element not found');
-      }
-
-      // Create payment method
-      const { error: paymentError, paymentMethod } = await stripe.createPaymentMethod({
-        type: 'card',
-        card: cardElement,
-      });
-
-      if (paymentError) {
-        throw new Error(paymentError.message);
-      }
-
-      console.log('Payment method created successfully');
+      // Skip real Stripe API calls for testing - just simulate payment
+      console.log('Payment method simulation started');
       
       // Simulate successful payment completion
       setTimeout(async () => {
@@ -69,10 +56,15 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         // IMPORTANT: Trigger real credit update after simulation
         try {
           console.log('🚀 Triggering credit update from dashboard modal...');
+          console.log('Plan details:', { 
+            name: selectedPlan?.name, 
+            credits: selectedPlan?.credits, 
+            price: selectedPlan?.price,
+            isSubscription: selectedPlan?.isSubscription 
+          });
           
           // Import the credit update function
           const { default: supabaseService } = await import('../../services/supabaseService');
-          const { useAuth } = await import('../../contexts/AuthContext');
           
           // Get current user (we need to access this from context)
           const storedUser = JSON.parse(localStorage.getItem('linkzy_user') || '{}');
