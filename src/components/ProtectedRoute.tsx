@@ -61,10 +61,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     const isCanceled = urlParams.get('canceled') === 'true';
     const isSuccess = urlParams.get('success') === 'true';
     
-    // 10-second timeout for authentication checks
+    // Check if payment is in progress to avoid interrupting payment flow
+    const isPaymentInProgress = sessionStorage.getItem('linkzy_payment_processing') === 'true';
+    
+    // 10-second timeout for authentication checks (but skip during payment)
     const timeoutDuration = 10000; // 10 seconds
     
     const timeout = setTimeout(() => {
+      // Don't timeout during payment processing
+      if (isPaymentInProgress) {
+        console.log('⏳ Skipping auth timeout - payment in progress');
+        return;
+      }
+      
       console.warn(`🚨 Authentication check timed out after ${timeoutDuration/1000} seconds - redirecting to dashboard`);
       
       // FORCE everything to complete

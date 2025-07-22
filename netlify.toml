@@ -9,15 +9,15 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    # CORS headers
+    # CORS headers for Stripe and Supabase
     Access-Control-Allow-Origin = "*"
-    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
-    Access-Control-Allow-Headers = "Content-Type, Authorization, Accept, X-Requested-With"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+    Access-Control-Allow-Headers = "Content-Type, Authorization, Accept, X-Requested-With, Stripe-Version, Stripe-Account"
     Access-Control-Allow-Credentials = "true"
     Access-Control-Max-Age = "86400"
     
-    # Updated CSP to allow Supabase and Stripe
-    Content-Security-Policy = "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src 'self' https://*.supabase.co https://sljlwvrtwqmhmjunyplr.supabase.co https://*.manus.space https://js.stripe.com https://api.stripe.com https://checkout.stripe.com https://api.resend.com https://*.resend.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; frame-src https://js.stripe.com https://checkout.stripe.com;"
+    # Updated CSP to allow all Stripe domains and payment processing
+    Content-Security-Policy = "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src 'self' https://*.supabase.co https://sljlwvrtwqmhmjunyplr.supabase.co https://*.manus.space https://js.stripe.com https://api.stripe.com https://checkout.stripe.com https://q.stripe.com https://m.stripe.com https://hooks.stripe.com https://*.stripe.com https://api.resend.com https://*.resend.com wss://*.supabase.co; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.stripe.com; style-src 'self' 'unsafe-inline' https://*.stripe.com; img-src 'self' data: https: https://*.stripe.com; font-src 'self' data: https://*.stripe.com; frame-src https://js.stripe.com https://checkout.stripe.com https://*.stripe.com; form-action 'self' https://*.stripe.com;"
 
 # Legacy API proxy (keeping for fallback)
 [[redirects]]

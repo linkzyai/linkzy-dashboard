@@ -3,8 +3,8 @@
 
 /*
   Access-Control-Allow-Origin: *
-  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
-  Access-Control-Allow-Headers: Content-Type, Authorization, Accept, X-Requested-With
+  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS, PATCH
+  Access-Control-Allow-Headers: Content-Type, Authorization, Accept, X-Requested-With, Stripe-Version, Stripe-Account
   Access-Control-Allow-Credentials: true
   Access-Control-Max-Age: 86400
   X-Frame-Options: SAMEORIGIN
@@ -14,13 +14,17 @@
   Content-Security-Policy: default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src 'self' https://*.supabase.co https://sljlwvrtwqmhmjunyplr.supabase.co https://*.manus.space https://js.stripe.com https://api.stripe.com https://checkout.stripe.com https://api.resend.com https://*.resend.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;
 
 /api/*
-  Access-Control-Allow-Origin: *
-  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
-  Access-Control-Allow-Headers: Content-Type, Authorization, Accept, X-Requested-With
-  Access-Control-Allow-Credentials: true
+  Access-Control-Allow-Origin: https://api.stripe.com
+  Access-Control-Allow-Methods: POST, GET, OPTIONS
+  Access-Control-Allow-Headers: Content-Type, Authorization, Stripe-Version
 
 /proxy/*
   Access-Control-Allow-Origin: *
   Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
   Access-Control-Allow-Headers: Content-Type, Authorization, Accept, X-Requested-With
   Access-Control-Allow-Credentials: true
+
+# Stripe JS files
+/*.js
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=31536000

@@ -43,6 +43,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     onError(''); // Clear previous errors
 
     try {
+      // Set payment processing flag to prevent auth timeouts
+      sessionStorage.setItem('linkzy_payment_processing', 'true');
+      
       console.log('Processing payment simulation...');
       console.log('Selected plan:', selectedPlan);
       
@@ -110,12 +113,16 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         
         onSuccess();
         setIsProcessing(false);
+        // Clear payment processing flag
+        sessionStorage.removeItem('linkzy_payment_processing');
       }, 2000);
 
     } catch (err: any) {
       console.error('Payment error:', err);
       onError(err.message || 'Payment processing failed. Please try again.');
       setIsProcessing(false);
+      // Clear payment processing flag on error
+      sessionStorage.removeItem('linkzy_payment_processing');
     }
   };
 
