@@ -1230,11 +1230,83 @@ If you're testing, try these workarounds:
       
       // Get current user data with detailed logging
       console.log('🔍 Fetching user data from database...');
-      const { data: user, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      
+      // Validate Supabase connection first
+      if (!supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+      
+      // Check if user ID is valid
+      if (!userId || typeof userId !== 'string') {
+        throw new Error(`Invalid user ID: ${userId} (type: ${typeof userId})`);
+      }
+      
+      // Check Supabase session state
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('🔐 Supabase session state:', { 
+        hasSession: !!session, 
+        sessionUser: session?.user?.id,
+        targetUserId: userId,
+        sessionError
+      });
+      
+      // If no session, try to restore from localStorage
+      if (!session) {
+        console.log('⚠️ No active session - checking localStorage...');
+        const storedSession = localStorage.getItem('supabase.auth.token');
+        if (storedSession) {
+          console.log('🔄 Attempting to restore session from localStorage...');
+          try {
+            const { error: setError } = await supabase.auth.setSession(JSON.parse(storedSession));
+            if (setError) {
+              console.error('❌ Failed to restore session:', setError);
+            } else {
+              console.log('✅ Session restored successfully');
+            }
+          } catch (e) {
+            console.error('❌ Error parsing stored session:', e);
+          }
+        }
+      }
+      
+      let user = null;
+      let userError = null;
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      while (attempts < maxAttempts && !user && !userError) {
+        attempts++;
+        console.log(`🔄 Database query attempt ${attempts}/${maxAttempts}`);
+        
+        try {
+          // Add timeout to prevent hanging
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error(`Database query timeout after 10 seconds (attempt ${attempts})`)), 10000);
+          });
+          
+          const queryPromise = supabase
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .single();
+          
+          const result = await Promise.race([queryPromise, timeoutPromise]);
+          user = result.data;
+          userError = result.error;
+          
+          if (userError && attempts < maxAttempts) {
+            console.log(`⚠️ Query failed on attempt ${attempts}, retrying...`, userError);
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // Exponential backoff
+          }
+        } catch (error) {
+          console.error(`❌ Query error on attempt ${attempts}:`, error);
+          if (attempts === maxAttempts) {
+            userError = error;
+          } else {
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // Wait before retry
+          }
+        }
+      }
       
       console.log('📊 Database fetch result:', { 
         user: user ? { id: user.id, email: user.email, credits: user.credits } : null, 
