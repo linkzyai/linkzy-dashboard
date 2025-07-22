@@ -405,10 +405,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       refreshUserData();
     };
 
+    const handleProfileUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { user: updatedUser } = customEvent.detail;
+      console.log('🔄 Profile updated - refreshing user data...', updatedUser);
+      setUser(updatedUser);
+    };
+
     window.addEventListener('creditsUpdated', handleCreditsUpdate);
+    window.addEventListener('profileUpdated', handleProfileUpdate);
     
     return () => {
       window.removeEventListener('creditsUpdated', handleCreditsUpdate);
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
     };
   }, [user]);
 

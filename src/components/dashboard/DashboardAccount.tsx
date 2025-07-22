@@ -117,10 +117,23 @@ const DashboardAccount = () => {
       }
     };
 
+    const handleProfileUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { website, niche } = customEvent.detail;
+      console.log('✅ Profile updated in account page:', { website, niche });
+      
+      // Force a page refresh to show updated data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    };
+
     window.addEventListener('creditsUpdated', handleCreditsUpdate);
+    window.addEventListener('profileUpdated', handleProfileUpdate);
     
     return () => {
       window.removeEventListener('creditsUpdated', handleCreditsUpdate);
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
     };
   }, [user?.id]);
 

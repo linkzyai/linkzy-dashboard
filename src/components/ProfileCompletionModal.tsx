@@ -45,6 +45,21 @@ const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
         throw updateError;
       }
       
+      // Update localStorage with new profile data
+      const updatedUser = { ...user, website: website, niche: niche };
+      localStorage.setItem('linkzy_user', JSON.stringify(updatedUser));
+      
+      // Dispatch profile update event for other components to listen
+      window.dispatchEvent(new CustomEvent('profileUpdated', { 
+        detail: { 
+          website: website, 
+          niche: niche,
+          user: updatedUser
+        } 
+      }));
+      
+      console.log('✅ Profile updated successfully:', { website, niche });
+      
       onComplete();
     } catch (err: any) {
       console.error('Profile update error:', err);

@@ -184,31 +184,26 @@ const Dashboard = () => {
         }, 1500);
       }
       
-      // Check if user needs to complete their profile (new ProfileCompletionModal check)
+      // Check if user needs to complete their profile
       const needsProfileCompletion = user && (
         !user.website || 
         user.website === 'yourdomain.com' || 
+        user.website === 'https://example.com' ||
         !user.niche || 
-        user.niche === 'technology'
+        user.niche === 'technology' ||
+        user.niche === 'Technology'
       );
       
       const hasSeenProfileCompletion = localStorage.getItem('linkzy_profile_completion_seen');
-      
-      if (needsProfileCompletion && !hasSeenProfileCompletion && !showOnboardingModal) {
-        // Show profile completion modal after main onboarding
-        setTimeout(() => {
-          setShowProfileCompletion(true);
-        }, isNewUser ? 3000 : 1000);
-      }
-      
-      // Legacy profile onboarding check (keep existing functionality)
       const hasSeenProfileOnboarding = localStorage.getItem('linkzy_profile_onboarding_seen');
       
-      if (needsProfileCompletion && !hasSeenProfileOnboarding && !showOnboardingModal && !showProfileCompletion) {
-        // Show profile onboarding after main onboarding and profile completion
+      // Only show ONE profile completion modal - prioritize the newer ProfileCompletionModal
+      if (needsProfileCompletion && !hasSeenProfileCompletion && !showOnboardingModal && !showProfileCompletion && !showProfileOnboarding) {
+        console.log('🔄 Showing ProfileCompletionModal for user:', user);
         setTimeout(() => {
-          setShowProfileOnboarding(true);
-        }, isNewUser ? 4500 : 2000);
+          setShowProfileCompletion(true);
+          localStorage.setItem('linkzy_profile_completion_seen', 'true');
+        }, isNewUser ? 3000 : 1000);
       }
       
       // Check if user just got their first backlink
