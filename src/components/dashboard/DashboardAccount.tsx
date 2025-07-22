@@ -990,6 +990,16 @@ const DashboardAccount = () => {
             <Trash2 className="w-4 h-4" />
             <span>Delete Account</span>
           </button>
+          <button 
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg flex items-center space-x-2 text-sm"
+            onClick={() => {
+              localStorage.removeItem('linkzy_profile_completion_seen');
+              localStorage.removeItem('linkzy_profile_onboarding_seen');
+              alert('Profile completion flags reset. Go to Dashboard to test profile modal.');
+            }}
+          >
+            🧪 Reset Profile Modal
+          </button>
         </div>
         <button onClick={logout} className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg flex items-center space-x-2 font-semibold">
           <LogOut className="w-4 h-4" />

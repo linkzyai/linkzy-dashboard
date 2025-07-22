@@ -60,6 +60,9 @@ const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
       
       console.log('✅ Profile updated successfully:', { website, niche });
       
+      // Mark profile completion as seen
+      localStorage.setItem('linkzy_profile_completion_seen', 'true');
+      
       onComplete();
     } catch (err: any) {
       console.error('Profile update error:', err);

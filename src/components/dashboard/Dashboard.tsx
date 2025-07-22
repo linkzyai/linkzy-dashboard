@@ -197,12 +197,23 @@ const Dashboard = () => {
       const hasSeenProfileCompletion = localStorage.getItem('linkzy_profile_completion_seen');
       const hasSeenProfileOnboarding = localStorage.getItem('linkzy_profile_onboarding_seen');
       
+      // Debug logging
+      console.log('🔍 Profile completion check:', {
+        needsProfileCompletion,
+        hasSeenProfileCompletion,
+        showOnboardingModal,
+        showProfileCompletion,
+        showProfileOnboarding,
+        userWebsite: user?.website,
+        userNiche: user?.niche
+      });
+      
       // Only show ONE profile completion modal - prioritize the newer ProfileCompletionModal
       if (needsProfileCompletion && !hasSeenProfileCompletion && !showOnboardingModal && !showProfileCompletion && !showProfileOnboarding) {
         console.log('🔄 Showing ProfileCompletionModal for user:', user);
         setTimeout(() => {
           setShowProfileCompletion(true);
-          localStorage.setItem('linkzy_profile_completion_seen', 'true');
+          // Don't set completion flag here - wait for actual completion
         }, isNewUser ? 3000 : 1000);
       }
       
