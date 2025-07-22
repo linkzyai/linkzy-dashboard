@@ -85,10 +85,10 @@ const Pricing = () => {
             <div className="text-3xl font-bold mb-4 text-white">$10</div>
             <p className="text-gray-300 mb-6 flex-grow">Perfect for testing – includes 3 high-quality backlinks to get you started</p>
             <button 
-              onClick={() => handleStripeCheckout('price_1RnN7qKwiECS8C7ZNpK2BEO2', false)}
+              onClick={() => setIsModalOpen(true)}
               className="w-full py-3 orange-gradient text-white rounded-lg font-semibold hover:opacity-90 transition-opacity mt-auto"
             >
-              Buy Now
+              Get Started
             </button>
           </div>
           
@@ -99,10 +99,10 @@ const Pricing = () => {
             <div className="text-3xl font-bold mb-4 text-white">$25</div>
             <p className="text-gray-300 mb-6 flex-grow">Great value – includes 10 backlinks with bulk savings</p>
             <button 
-              onClick={() => handleStripeCheckout('price_1RnN8BKwiECS8C7ZKxP0bK9E', false)}
+              onClick={() => setIsModalOpen(true)}
               className="w-full py-3 orange-gradient text-white rounded-lg font-semibold hover:opacity-90 transition-opacity mt-auto"
             >
-              Buy Now
+              Choose Growth
             </button>
           </div>
           
@@ -120,10 +120,10 @@ const Pricing = () => {
             </div>
             <p className="text-gray-300 mb-6 flex-grow">For SEO professionals and agencies – 30 backlinks every month</p>
             <button 
-              onClick={() => handleStripeCheckout('price_1RnN8YKwiECS8C7ZhXN5uG85', true)}
+              onClick={() => setIsModalOpen(true)}
               className="w-full py-3 orange-gradient text-white rounded-lg font-semibold hover:opacity-90 transition-opacity mt-auto"
             >
-              Buy Now
+              Go Pro
             </button>
           </div>
         </div>
