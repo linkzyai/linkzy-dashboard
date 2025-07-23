@@ -13,25 +13,217 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// Simple stopwords for keyword extraction
+// Comprehensive stopwords for keyword extraction
 const STOPWORDS = new Set([
-  'the', 'and', 'for', 'are', 'but', 'not', 'you', 'with', 'this', 'that', 'from', 'have', 'was', 'your', 'all', 'can', 'will', 'has', 'our', 'they', 'their', 'what', 'when', 'where', 'which', 'who', 'how', 'why', 'about', 'into', 'more', 'than', 'then', 'them', 'out', 'use', 'any', 'had', 'his', 'her', 'its', 'one', 'two', 'three', 'on', 'in', 'at', 'by', 'to', 'of', 'a', 'an', 'is', 'it', 'as', 'be', 'or', 'if', 'so', 'do', 'we', 'he', 'she', 'i', 'my', 'me', 'no', 'yes', 'up', 'down', 'over', 'under', 'again', 'new', 'just', 'now', 'only', 'very', 'also', 'after', 'before', 'such', 'each', 'other', 'some', 'most', 'many', 'much', 'like', 'see', 'get', 'got', 'make', 'made', 'back', 'off', 'own', 'too', 'should', 'could', 'would', 'may', 'might', 'must', 'shall', 'did', 'does', 'done', 'being', 'were', 'been', 'because', 'while', 'during', 'between', 'among', 'within', 'without', 'across', 'through', 'upon', 'against', 'toward', 'towards', 'around', 'beside', 'besides', 'behind', 'ahead', 'along', 'alongside', 'amid', 'amidst', 'beyond', 'despite', 'except', 'inside', 'outside', 'since', 'though', 'unless', 'until', 'versus', 'via', 'whether', 'yet', 'etc'
+  // Basic stopwords
+  'the', 'and', 'for', 'are', 'but', 'not', 'you', 'with', 'this', 'that', 'from', 'have', 'was', 'your', 'all', 'can', 'will', 'has', 'our', 'they', 'their', 'what', 'when', 'where', 'which', 'who', 'how', 'why', 'about', 'into', 'more', 'than', 'then', 'them', 'out', 'use', 'any', 'had', 'his', 'her', 'its', 'one', 'two', 'three', 'on', 'in', 'at', 'by', 'to', 'of', 'a', 'an', 'is', 'it', 'as', 'be', 'or', 'if', 'so', 'do', 'we', 'he', 'she', 'i', 'my', 'me', 'no', 'yes', 'up', 'down', 'over', 'under', 'again', 'new', 'just', 'now', 'only', 'very', 'also', 'after', 'before', 'such', 'each', 'other', 'some', 'most', 'many', 'much', 'like', 'see', 'get', 'got', 'make', 'made', 'back', 'off', 'own', 'too', 'should', 'could', 'would', 'may', 'might', 'must', 'shall', 'did', 'does', 'done', 'being', 'were', 'been', 'because', 'while', 'during', 'between', 'among', 'within', 'without', 'across', 'through', 'upon', 'against', 'toward', 'towards', 'around', 'beside', 'besides', 'behind', 'ahead', 'along', 'alongside', 'amid', 'amidst', 'beyond', 'despite', 'except', 'inside', 'outside', 'since', 'though', 'unless', 'until', 'versus', 'via', 'whether', 'yet', 'etc',
+  
+  // Website noise words
+  'com', 'net', 'org', 'www', 'http', 'https', 'html', 'php', 'asp', 'jsp', 'css', 'js', 'min',
+  'home', 'page', 'site', 'web', 'website', 'blog', 'post', 'article', 'content', 'text',
+  'click', 'here', 'link', 'read', 'view', 'share', 'email', 'mail', 'contact', 'form',
+  'menu', 'nav', 'navigation', 'header', 'footer', 'sidebar', 'main', 'section',
+  'div', 'span', 'img', 'image', 'alt', 'title', 'meta', 'tag', 'class', 'style',
+  
+  // Generic terms
+  'login', 'signup', 'register', 'account', 'profile', 'dashboard', 'admin', 'user',
+  'search', 'find', 'submit', 'button', 'form', 'field', 'input', 'select', 'option',
+  'privacy', 'terms', 'policy', 'legal', 'cookie', 'cookies', 'consent',
+  'subscribe', 'newsletter', 'updates', 'follow', 'social', 'media',
+  
+  // Time/date related
+  'today', 'yesterday', 'tomorrow', 'week', 'month', 'year', 'date', 'time',
+  'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+  'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december',
+  
+  // Numbers and common technical terms
+  'first', 'second', 'third', 'last', 'next', 'previous', 'prev', 'continue',
+  'loading', 'error', 'success', 'warning', 'info', 'message', 'alert',
+  'please', 'thank', 'thanks', 'welcome', 'hello', 'hi', 'hey', 'okay', 'ok'
 ]);
 
-// Extract keywords from text
-function extractKeywords(text, limit = 20) {
+// Email pattern to filter out email addresses
+const EMAIL_PATTERN = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
+
+// Year pattern to filter out years
+const YEAR_PATTERN = /\b(19|20)\d{2}\b/g;
+
+// Extract meaningful keywords from content with enhanced filtering
+function extractKeywords(htmlContent, title = '', limit = 15) {
+  if (!htmlContent && !title) return [];
+  
+  try {
+    // Parse HTML content to extract structured text
+    const $ = require('cheerio').load(htmlContent);
+    
+    // Extract text from different content sections with weights
+    const titleText = (title || $('title').text() || $('h1').first().text()).toLowerCase();
+    const headingText = $('h1, h2, h3, h4, h5, h6').map((i, el) => $(el).text()).get().join(' ').toLowerCase();
+    const paragraphText = $('p').map((i, el) => $(el).text()).get().join(' ').toLowerCase();
+    const mainContent = $('article, main, .content, .post, .entry').text().toLowerCase();
+    
+    // Combine all text sources with emphasis on titles and headings
+    const combinedText = [
+      titleText.repeat(3), // Give title words 3x weight
+      headingText.repeat(2), // Give heading words 2x weight
+      paragraphText,
+      mainContent
+    ].join(' ');
+    
+    // Clean text and remove noise
+    let cleanText = combinedText
+      .replace(EMAIL_PATTERN, '') // Remove email addresses
+      .replace(YEAR_PATTERN, '') // Remove years
+      .replace(/\b\d+\b/g, '') // Remove standalone numbers
+      .replace(/[^\w\s]/g, ' ') // Remove special characters except word boundaries
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
+    
+    // Extract potential keywords (2-4 character words, avoiding very short ones)
+    const words = cleanText
+      .split(/\s+/)
+      .filter(word => 
+        word.length >= 3 && 
+        word.length <= 20 && // Avoid very long words (likely URLs or technical terms)
+        !STOPWORDS.has(word) &&
+        !/^\d+$/.test(word) && // No pure numbers
+        !word.includes('@') && // No email fragments
+        !/^(www|http|https)/.test(word) && // No URL fragments
+        isNaN(word) // Not a number
+      );
+    
+    // Count word frequency
+    const wordFreq = {};
+    words.forEach(word => {
+      wordFreq[word] = (wordFreq[word] || 0) + 1;
+    });
+    
+    // Extract multi-word phrases (2-3 words) for better context
+    const phrases = [];
+    for (let i = 0; i < words.length - 1; i++) {
+      const twoWordPhrase = `${words[i]} ${words[i + 1]}`;
+      const threeWordPhrase = i < words.length - 2 ? `${words[i]} ${words[i + 1]} ${words[i + 2]}` : null;
+      
+      // Add valuable phrases
+      if (isValuablePhrase(twoWordPhrase)) {
+        phrases.push(twoWordPhrase);
+      }
+      if (threeWordPhrase && isValuablePhrase(threeWordPhrase)) {
+        phrases.push(threeWordPhrase);
+      }
+    }
+    
+    // Combine single words and phrases
+    const allTerms = { ...wordFreq };
+    phrases.forEach(phrase => {
+      allTerms[phrase] = (allTerms[phrase] || 0) + 2; // Give phrases higher weight
+    });
+    
+    // Filter and rank terms by relevance and frequency
+    const rankedTerms = Object.entries(allTerms)
+      .filter(([term, freq]) => 
+        freq >= 2 && // Must appear at least twice
+        isTopicalKeyword(term) // Must be topically relevant
+      )
+      .sort((a, b) => {
+        // Sort by frequency, but boost topical relevance
+        const aBoost = getTopicalBoost(a[0]);
+        const bBoost = getTopicalBoost(b[0]);
+        return (b[1] + bBoost) - (a[1] + aBoost);
+      })
+      .slice(0, limit)
+      .map(([term]) => term);
+    
+    console.log(`🔍 Extracted ${rankedTerms.length} meaningful keywords:`, rankedTerms.slice(0, 10));
+    return rankedTerms;
+    
+  } catch (error) {
+    console.error('Keyword extraction error:', error);
+    // Fallback to simple extraction
+    return simpleKeywordExtraction(htmlContent + ' ' + title, limit);
+  }
+}
+
+// Check if a phrase is valuable for backlink context
+function isValuablePhrase(phrase) {
+  const valuablePatterns = [
+    /\b(digital|content|social|email|search|video|graphic|web|mobile|brand|marketing)\s+(marketing|strategy|design|development|content|campaign|optimization|analytics)\b/i,
+    /\b(creative|design|branding|visual|user|website|app|logo|brand)\s+(process|strategy|identity|experience|design|development|solution|services)\b/i,
+    /\b(business|startup|entrepreneur|freelance|agency|consultant|professional)\s+(strategy|growth|development|services|consulting|solutions|tips|advice)\b/i,
+    /\b(seo|sem|ppc|social|content|email|digital|online|internet|web)\s+(marketing|strategy|optimization|advertising|campaign|management|analysis)\b/i
+  ];
+  
+  return valuablePatterns.some(pattern => pattern.test(phrase)) || 
+         phrase.split(' ').every(word => !STOPWORDS.has(word));
+}
+
+// Check if a term is topically relevant
+function isTopicalKeyword(term) {
+  // Industry and business terms
+  const industryTerms = [
+    'marketing', 'branding', 'design', 'creative', 'strategy', 'business', 'freelance', 'agency',
+    'consultant', 'professional', 'services', 'solutions', 'development', 'management', 'growth',
+    'optimization', 'analytics', 'campaign', 'advertising', 'content', 'digital', 'social',
+    'seo', 'sem', 'ppc', 'email', 'video', 'graphic', 'web', 'mobile', 'app', 'website',
+    'brand', 'identity', 'logo', 'visual', 'user', 'experience', 'interface', 'portfolio',
+    'client', 'project', 'process', 'workflow', 'tool', 'software', 'platform', 'technology'
+  ];
+  
+  // Creative and design terms
+  const creativeTerms = [
+    'photography', 'illustration', 'typography', 'layout', 'color', 'composition', 'aesthetic',
+    'style', 'trend', 'inspiration', 'concept', 'vision', 'artistic', 'creative', 'innovative',
+    'unique', 'original', 'custom', 'bespoke', 'premium', 'quality', 'professional', 'expert'
+  ];
+  
+  // Business and strategy terms
+  const businessTerms = [
+    'revenue', 'profit', 'growth', 'scale', 'market', 'target', 'audience', 'customer',
+    'client', 'conversion', 'roi', 'kpi', 'metric', 'analysis', 'report', 'dashboard',
+    'automation', 'efficiency', 'productivity', 'innovation', 'competitive', 'advantage'
+  ];
+  
+  // Check if term contains industry-relevant words
+  const allRelevantTerms = [...industryTerms, ...creativeTerms, ...businessTerms];
+  const termLower = term.toLowerCase();
+  
+  return allRelevantTerms.some(relevant => 
+    termLower.includes(relevant) || relevant.includes(termLower)
+  ) || 
+  // Or if it's a multi-word phrase with at least one relevant word
+  (term.includes(' ') && term.split(' ').some(word => 
+    allRelevantTerms.includes(word.toLowerCase())
+  ));
+}
+
+// Get topical relevance boost for ranking
+function getTopicalBoost(term) {
+  const highValueTerms = [
+    'marketing', 'branding', 'design', 'creative', 'strategy', 'business',
+    'freelance', 'agency', 'professional', 'consultant', 'development',
+    'optimization', 'analytics', 'campaign', 'content', 'digital'
+  ];
+  
+  const termLower = term.toLowerCase();
+  const boost = highValueTerms.filter(valuable => 
+    termLower.includes(valuable) || valuable.includes(termLower)
+  ).length;
+  
+  return boost * 5; // Give 5 point boost per valuable term
+}
+
+// Fallback simple extraction for error cases
+function simpleKeywordExtraction(text, limit) {
   if (!text) return [];
   
   const words = text
-    .replace(/[^a-zA-Z0-9\s]/g, ' ')
     .toLowerCase()
+    .replace(/[^a-zA-Z\s]/g, ' ')
     .split(/\s+/)
-    .filter(w => w.length > 2 && !STOPWORDS.has(w));
+    .filter(w => w.length > 3 && !STOPWORDS.has(w));
   
   const freq = {};
-  for (const w of words) {
-    freq[w] = (freq[w] || 0) + 1;
-  }
+  words.forEach(w => freq[w] = (freq[w] || 0) + 1);
   
   return Object.entries(freq)
     .sort((a, b) => b[1] - a[1])
@@ -350,8 +542,8 @@ async function analyzePage(url, userNiche = '') {
     content = content.replace(/\s+/g, ' ').substring(0, 5000);
     const wordCount = content.split(/\s+/).length;
     
-    // Extract keywords
-    const keywords = extractKeywords(content);
+    // Extract keywords using enhanced extraction with full HTML content
+    const keywords = extractKeywords(html, title);
     
     // Calculate linkability score
     const linkabilityScore = calculateLinkabilityScore(html, title, wordCount, url);
@@ -676,9 +868,42 @@ exports.handler = async (event, context) => {
       }
     }
 
-    // Generate content summary
+    // Generate enhanced content summary
     const topKeywords = Array.from(allKeywords).slice(0, 20);
-    const summary = `Analyzed ${pages.length} pages. Top content themes: ${topKeywords.slice(0, 5).join(', ')}. ${linkableContent.length} pages with linkable content identified.`;
+    const highQualityPages = linkableContent.filter(page => page.linkable_score >= 70).length;
+    const blogPages = linkableContent.filter(page => 
+      page.page_url.toLowerCase().includes('/blog/') || 
+      page.page_url.toLowerCase().includes('/article/') ||
+      page.page_url.toLowerCase().includes('/post/')
+    ).length;
+    
+    // Create intelligent summary based on content analysis
+    let summary = `Analyzed ${pages.length} pages and found ${linkableContent.length} linkable opportunities.`;
+    
+    if (highQualityPages > 0) {
+      summary += ` ${highQualityPages} high-quality pages (70+ score) identified.`;
+    }
+    
+    if (blogPages > 0) {
+      summary += ` ${blogPages} blog posts discovered.`;
+    }
+    
+    if (topKeywords.length > 0) {
+      const mainTopics = topKeywords.slice(0, 3).join(', ');
+      summary += ` Main content themes: ${mainTopics}.`;
+    }
+    
+    // Add niche-specific insights
+    if (niche) {
+      const nicheKeywords = topKeywords.filter(keyword => 
+        keyword.toLowerCase().includes(niche.toLowerCase()) ||
+        niche.toLowerCase().includes(keyword.toLowerCase())
+      );
+      
+      if (nicheKeywords.length > 0) {
+        summary += ` Strong ${niche} content focus detected.`;
+      }
+    }
 
     // Complete the analysis
     await supabase
