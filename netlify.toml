@@ -43,8 +43,10 @@
   VITE_SUPABASE_URL = "https://sljlwvrtwqmhmjunyplr.supabase.co"
   VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU"
   VITE_SITE_URL = "https://linkzy.ai"
+  STRIPE_SECRET_KEY = "sk_test_YOUR_STRIPE_SECRET_KEY_HERE"
 
 [context.deploy-preview.environment]
   VITE_SUPABASE_URL = "https://sljlwvrtwqmhmjunyplr.supabase.co"
   VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU"
   VITE_SITE_URL = "https://linkzy.ai"
+  STRIPE_SECRET_KEY = "sk_test_YOUR_STRIPE_SECRET_KEY_HERE"

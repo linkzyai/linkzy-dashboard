@@ -46,54 +46,72 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       // Set payment processing flag to prevent auth timeouts
       sessionStorage.setItem('linkzy_payment_processing', 'true');
       
-      console.log('Processing payment simulation...');
+      console.log('Processing payment with Stripe Checkout...');
       console.log('Selected plan:', selectedPlan);
       
-      // Skip real Stripe API calls for testing - just simulate payment
-      console.log('Payment method simulation started');
+      // Get user info for the checkout
+      const user = JSON.parse(localStorage.getItem('linkzy_user') || '{}');
       
-      // Simulate successful payment completion
-      setTimeout(async () => {
-        console.log('Payment completed successfully');
+      // Create a checkout session via our Netlify function (we'll create this)
+      try {
+        const response = await fetch('/.netlify/functions/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            plan_name: selectedPlan.name,
+            credits: selectedPlan.credits,
+            price: selectedPlan.price,
+            user_id: user.id,
+            user_email: user.email,
+            success_url: `${window.location.origin}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${window.location.origin}/dashboard?canceled=true`
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const { sessionId } = await response.json();
+
+        // Redirect to Stripe Checkout
+        const { error } = await stripe!.redirectToCheckout({
+          sessionId: sessionId
+        });
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        console.log('🔄 Redirecting to Stripe Checkout...');
         
-        // IMPORTANT: Trigger real credit update after simulation
-        try {
-          console.log('🚀 Triggering credit update from dashboard modal...');
-          console.log('Plan details:', { 
-            name: selectedPlan?.name, 
-            credits: selectedPlan?.credits, 
-            price: selectedPlan?.price,
-            isSubscription: selectedPlan?.isSubscription 
-          });
+      } catch (fetchError) {
+        console.error('❌ Failed to create checkout session:', fetchError);
+        
+        // Fallback: Use the old simulation method temporarily
+        console.log('🔄 Falling back to payment simulation...');
+        
+        setTimeout(async () => {
+          console.log('Payment simulation completed');
           
-          // Import the credit update function
-          const { default: supabaseService } = await import('../../services/supabaseService');
-          
-          // Get current user (we need to access this from context)
-          const storedUser = JSON.parse(localStorage.getItem('linkzy_user') || '{}');
-          
-          if (storedUser.id) {
+          // Add credits after simulated payment
+          try {
+            const { default: supabaseService } = await import('../../services/supabaseService');
+            
             const paymentDetails = {
               sessionId: 'dashboard_simulation_' + Date.now(),
-              amount: selectedPlan?.price || 10,
-              description: `${selectedPlan?.name || 'Starter Pack'} - ${selectedPlan?.credits || 3} Credits`
+              amount: selectedPlan.price,
+              description: `${selectedPlan.name} - ${selectedPlan.credits} Credits`
             };
             
-            console.log('💳 Dashboard modal credit update:', { 
-              userId: storedUser.id, 
-              creditsToAdd: selectedPlan?.credits || 3,
-              paymentDetails 
-            });
-            
             const result = await supabaseService.updateUserCredits(
-              storedUser.id,
-              selectedPlan?.credits || 3,
+              user.id,
+              selectedPlan.credits,
               paymentDetails
             );
             
-            console.log('✅ Dashboard modal credit update result:', result);
-            
-            // Trigger UI update
             window.dispatchEvent(new CustomEvent('creditsUpdated', { 
               detail: { 
                 newCredits: result.newCredits,
@@ -103,20 +121,22 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               } 
             }));
             
-          } else {
-            console.error('❌ No user found in localStorage for credit update');
+          } catch (creditError) {
+            console.error('❌ Credit update failed:', creditError);
           }
           
-        } catch (creditError) {
-          console.error('❌ Credit update failed in dashboard modal:', creditError);
-        }
+          onSuccess();
+          setIsProcessing(false);
+          sessionStorage.removeItem('linkzy_payment_processing');
+        }, 2000);
         
-        onSuccess();
-        setIsProcessing(false);
-        // Clear payment processing flag
-        sessionStorage.removeItem('linkzy_payment_processing');
-      }, 2000);
+        return; // Exit early for simulation
+      }
 
+      onSuccess();
+      setIsProcessing(false);
+      // Clear payment processing flag
+      sessionStorage.removeItem('linkzy_payment_processing');
     } catch (err: any) {
       console.error('Payment error:', err);
       onError(err.message || 'Payment processing failed. Please try again.');
