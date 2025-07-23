@@ -17,12 +17,18 @@ declare class SupabaseService {
   updateUserProfile(website: string, niche: string): Promise<{ success: boolean; error?: string }>;
   getDashboardStats(): Promise<any>;
   getBacklinks(page?: number, limit?: number): Promise<any>;
+  updateUserCredits(userId: string, creditsToAdd: number, paymentDetails: any): Promise<any>;
+  
+  // Website Scanner Methods
+  scanWebsite(websiteUrl: string, userId: string, niche?: string): Promise<any>;
+  getWebsiteAnalysis(userId: string): Promise<any>;
+  getLinkableContent(userId: string, analysisId?: string): Promise<any>;
+  getAnalysisProgress(analysisId: string): Promise<any>;
   getAnalytics?(timeframe?: string): Promise<any>;
   getDetectedPages?(): Promise<any>;
   getBillingInfo?(): Promise<any>;
   getApiUsage?(): Promise<any>;
   getKeywordAnalytics(): Promise<any>;
-  updateUserCredits(userId: string, creditsToAdd: number, paymentDetails: { sessionId: string; amount: number; description: string }): Promise<{ success: boolean; oldCredits: number; newCredits: number; creditsAdded: number; verificationPassed: boolean }>;
   getBillingHistory(userId: string): Promise<any[]>;
   // Add other methods as needed
 }

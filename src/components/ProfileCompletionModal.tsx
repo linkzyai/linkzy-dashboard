@@ -63,6 +63,26 @@ const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
       // Mark profile completion as seen
       localStorage.setItem('linkzy_profile_completion_seen', 'true');
       
+      // Trigger automatic website scan
+      try {
+        const { default: supabaseService } = await import('../services/supabaseService');
+        console.log('🔍 Triggering automatic website scan for:', website);
+        
+        // Start the scan in the background (don't wait for completion)
+        supabaseService.scanWebsite(website, user.id, niche).then(result => {
+          console.log('✅ Background website scan completed:', result);
+          
+          // Dispatch event to notify other components
+          window.dispatchEvent(new CustomEvent('websiteScanCompleted', { 
+            detail: result 
+          }));
+        }).catch(error => {
+          console.warn('⚠️ Background website scan failed:', error);
+        });
+      } catch (error) {
+        console.warn('⚠️ Failed to start website scan:', error);
+      }
+      
       onComplete();
     } catch (err: any) {
       console.error('Profile update error:', err);

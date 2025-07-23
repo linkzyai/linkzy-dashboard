@@ -1463,6 +1463,94 @@ If you're testing, try these workarounds:
       return [];
     }
   }
+
+  // Website Scanner Methods
+  async scanWebsite(websiteUrl, userId, niche = '') {
+    try {
+      console.log('🔍 Starting website scan for:', websiteUrl);
+      
+      const response = await fetch('/.netlify/functions/scan-website', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          website_url: websiteUrl,
+          user_id: userId,
+          niche: niche
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Website scan completed:', result);
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Website scan failed:', error);
+      throw error;
+    }
+  }
+
+  async getWebsiteAnalysis(userId) {
+    try {
+      const { data, error } = await supabase
+        .from('website_analysis')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      return data || [];
+    } catch (error) {
+      console.error('Failed to get website analysis:', error);
+      throw error;
+    }
+  }
+
+  async getLinkableContent(userId, analysisId = null) {
+    try {
+      let query = supabase
+        .from('linkable_content')
+        .select('*')
+        .eq('user_id', userId)
+        .order('linkable_score', { ascending: false });
+
+      if (analysisId) {
+        query = query.eq('website_analysis_id', analysisId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      
+      return data || [];
+    } catch (error) {
+      console.error('Failed to get linkable content:', error);
+      throw error;
+    }
+  }
+
+  async getAnalysisProgress(analysisId) {
+    try {
+      const { data, error } = await supabase
+        .from('website_analysis')
+        .select('scan_status, scan_progress, error_message')
+        .eq('id', analysisId)
+        .single();
+
+      if (error) throw error;
+      
+      return data;
+    } catch (error) {
+      console.error('Failed to get analysis progress:', error);
+      throw error;
+    }
+  }
 }
 
 // Create singleton instance
