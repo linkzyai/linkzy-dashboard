@@ -31,6 +31,70 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 }) => {
   const stripe = useStripe();
   const elements = useElements();
+  const [discountCode, setDiscountCode] = useState('');
+  const [discountApplied, setDiscountApplied] = useState<{
+    code: string;
+    amount_off?: number;
+    percent_off?: number;
+    valid: boolean;
+  } | null>(null);
+  const [checkingDiscount, setCheckingDiscount] = useState(false);
+
+  // Function to validate discount code with Stripe
+  const validateDiscountCode = async (code: string) => {
+    if (!code.trim()) {
+      setDiscountApplied(null);
+      return;
+    }
+
+    setCheckingDiscount(true);
+    try {
+      const response = await fetch('/.netlify/functions/validate-coupon', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ coupon_code: code }),
+      });
+
+      if (response.ok) {
+        const couponData = await response.json();
+        setDiscountApplied({
+          code: code,
+          amount_off: couponData.amount_off,
+          percent_off: couponData.percent_off,
+          valid: true
+        });
+      } else {
+        setDiscountApplied({
+          code: code,
+          valid: false
+        });
+      }
+    } catch (error) {
+      console.error('Error validating discount code:', error);
+      setDiscountApplied({
+        code: code,
+        valid: false
+      });
+    }
+    setCheckingDiscount(false);
+  };
+
+  // Calculate discounted price
+  const getDiscountedPrice = () => {
+    if (!discountApplied?.valid || !selectedPlan) return selectedPlan?.price || 0;
+    
+    if (discountApplied.percent_off) {
+      return selectedPlan.price * (1 - discountApplied.percent_off / 100);
+    }
+    
+    if (discountApplied.amount_off) {
+      return Math.max(0, selectedPlan.price - (discountApplied.amount_off / 100)); // amount_off is in cents
+    }
+    
+    return selectedPlan.price;
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -75,14 +139,15 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            amount: selectedPlan.price * 100, // Convert to cents
+            amount: Math.round(getDiscountedPrice() * 100), // Convert discounted price to cents
             currency: 'usd',
             payment_method_id: paymentMethod.id,
-            description: `${selectedPlan.name} - ${selectedPlan.credits} Credits`,
+            description: `${selectedPlan.name} - ${selectedPlan.credits} Credits${discountApplied?.valid ? ` (${discountApplied.code} applied)` : ''}`,
             user_id: user.id,
             user_email: user.email,
             credits: selectedPlan.credits,
-            plan_name: selectedPlan.name
+            plan_name: selectedPlan.name,
+            coupon_code: discountApplied?.valid ? discountApplied.code : undefined
           }),
         });
 
@@ -213,6 +278,57 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         </div>
       </div>
 
+      {/* Discount Code Section */}
+      <div className="bg-gray-800 rounded-lg p-4 border border-gray-600">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          🎟️ Discount Code (Optional)
+        </label>
+        <div className="flex space-x-2">
+          <input
+            type="text"
+            value={discountCode}
+            onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+            placeholder="Enter discount code"
+            className="flex-1 bg-gray-900 rounded-md p-3 border border-gray-600 text-white placeholder-gray-400 focus:border-orange-500 focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => validateDiscountCode(discountCode)}
+            disabled={checkingDiscount || !discountCode.trim()}
+            className="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-3 rounded-md transition-colors"
+          >
+            {checkingDiscount ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            ) : (
+              'Apply'
+            )}
+          </button>
+        </div>
+        
+        {/* Discount Status */}
+        {discountApplied && (
+          <div className={`mt-2 text-sm ${discountApplied.valid ? 'text-green-400' : 'text-red-400'}`}>
+            {discountApplied.valid ? (
+              <div className="flex items-center space-x-2">
+                <span>✅ Code "{discountApplied.code}" applied!</span>
+                {discountApplied.percent_off && (
+                  <span className="bg-green-500 text-white px-2 py-1 rounded text-xs">
+                    {discountApplied.percent_off}% OFF
+                  </span>
+                )}
+                {discountApplied.amount_off && (
+                  <span className="bg-green-500 text-white px-2 py-1 rounded text-xs">
+                    ${(discountApplied.amount_off / 100).toFixed(2)} OFF
+                  </span>
+                )}
+              </div>
+            ) : (
+              <span>❌ Invalid discount code</span>
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="flex items-center justify-center space-x-2 text-sm text-gray-400 mb-4">
         <Lock className="w-4 h-4" />
         <span>Secured by Stripe • Your payment information is encrypted</span>
@@ -231,7 +347,15 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         ) : (
           <>
             <CreditCard className="w-4 h-4" />
-            <span>Pay ${selectedPlan?.price} • Add {selectedPlan?.credits} Credits</span>
+            {discountApplied?.valid ? (
+              <span>
+                Pay ${getDiscountedPrice().toFixed(2)} 
+                <span className="line-through text-gray-400 ml-2">${selectedPlan?.price}</span>
+                • Add {selectedPlan?.credits} Credits
+              </span>
+            ) : (
+              <span>Pay ${selectedPlan?.price} • Add {selectedPlan?.credits} Credits</span>
+            )}
           </>
         )}
       </button>

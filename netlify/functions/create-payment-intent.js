@@ -10,10 +10,10 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const { amount, currency, payment_method_id, description, user_id, user_email, credits, plan_name } = JSON.parse(event.body);
+    const { amount, currency, payment_method_id, description, user_id, user_email, credits, plan_name, coupon_code } = JSON.parse(event.body);
 
-    // Create payment intent
-    const paymentIntent = await stripe.paymentIntents.create({
+    // Create payment intent configuration
+    const paymentIntentConfig = {
       amount: amount, // Already in cents
       currency: currency,
       payment_method: payment_method_id,
@@ -27,7 +27,15 @@ exports.handler = async (event, context) => {
         user_email: user_email,
       },
       return_url: `${process.env.VITE_SITE_URL || 'https://linkzy.ai'}/dashboard`,
-    });
+    };
+
+    // Add coupon if provided
+    if (coupon_code) {
+      paymentIntentConfig.metadata.coupon_code = coupon_code;
+    }
+
+    // Create payment intent
+    const paymentIntent = await stripe.paymentIntents.create(paymentIntentConfig);
 
     return {
       statusCode: 200,
