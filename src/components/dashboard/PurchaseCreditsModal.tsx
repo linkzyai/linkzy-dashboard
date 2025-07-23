@@ -46,27 +46,43 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       // Set payment processing flag to prevent auth timeouts
       sessionStorage.setItem('linkzy_payment_processing', 'true');
       
-      console.log('Processing payment with Stripe Checkout...');
+      console.log('Processing payment with Stripe Elements...');
       console.log('Selected plan:', selectedPlan);
       
-      // Get user info for the checkout
+      // Get user info
       const user = JSON.parse(localStorage.getItem('linkzy_user') || '{}');
       
-      // Create a checkout session via our Netlify function (we'll create this)
+      // Create payment method using the card element
+      const { error: paymentMethodError, paymentMethod } = await stripe!.createPaymentMethod({
+        type: 'card',
+        card: elements!.getElement(CardElement)!,
+        billing_details: {
+          email: user.email,
+        },
+      });
+
+      if (paymentMethodError) {
+        throw new Error(paymentMethodError.message);
+      }
+
+      console.log('💳 Payment method created:', paymentMethod.id);
+
+      // Create payment intent via our Netlify function
       try {
-        const response = await fetch('/.netlify/functions/create-checkout-session', {
+        const response = await fetch('/.netlify/functions/create-payment-intent', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            plan_name: selectedPlan.name,
-            credits: selectedPlan.credits,
-            price: selectedPlan.price,
+            amount: selectedPlan.price * 100, // Convert to cents
+            currency: 'usd',
+            payment_method_id: paymentMethod.id,
+            description: `${selectedPlan.name} - ${selectedPlan.credits} Credits`,
             user_id: user.id,
             user_email: user.email,
-            success_url: `${window.location.origin}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${window.location.origin}/dashboard?canceled=true`
+            credits: selectedPlan.credits,
+            plan_name: selectedPlan.name
           }),
         });
 
@@ -74,34 +90,62 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const { sessionId } = await response.json();
+        const { client_secret } = await response.json();
 
-        // Redirect to Stripe Checkout
-        const { error } = await stripe!.redirectToCheckout({
-          sessionId: sessionId
+        // Confirm payment
+        const { error: confirmError } = await stripe!.confirmCardPayment(client_secret, {
+          payment_method: paymentMethod.id
         });
 
-        if (error) {
-          throw new Error(error.message);
+        if (confirmError) {
+          throw new Error(confirmError.message);
         }
 
-        console.log('🔄 Redirecting to Stripe Checkout...');
+        console.log('✅ Payment confirmed successfully');
+        
+        // Update credits after successful payment
+        try {
+          const { default: supabaseService } = await import('../../services/supabaseService');
+          
+          const paymentDetails = {
+            sessionId: paymentMethod.id,
+            amount: selectedPlan.price,
+            description: `${selectedPlan.name} - ${selectedPlan.credits} Credits`
+          };
+          
+          const result = await supabaseService.updateUserCredits(
+            user.id,
+            selectedPlan.credits,
+            paymentDetails
+          );
+          
+          window.dispatchEvent(new CustomEvent('creditsUpdated', { 
+            detail: { 
+              newCredits: result.newCredits,
+              oldCredits: result.oldCredits,
+              creditsAdded: result.creditsAdded,
+              verificationPassed: result.verificationPassed
+            } 
+          }));
+          
+        } catch (creditError) {
+          console.error('❌ Credit update failed:', creditError);
+        }
         
       } catch (fetchError) {
-        console.error('❌ Failed to create checkout session:', fetchError);
+        console.error('❌ Failed to create payment intent:', fetchError);
         
-        // Fallback: Use the old simulation method temporarily
+        // Fallback: Use simulation method temporarily
         console.log('🔄 Falling back to payment simulation...');
         
         setTimeout(async () => {
           console.log('Payment simulation completed');
           
-          // Add credits after simulated payment
           try {
             const { default: supabaseService } = await import('../../services/supabaseService');
             
             const paymentDetails = {
-              sessionId: 'dashboard_simulation_' + Date.now(),
+              sessionId: 'simulation_' + Date.now(),
               amount: selectedPlan.price,
               description: `${selectedPlan.name} - ${selectedPlan.credits} Credits`
             };
