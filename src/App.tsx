@@ -20,6 +20,7 @@ import DashboardAPI from './components/dashboard/DashboardAPI';
 import DashboardBilling from './components/dashboard/DashboardBilling';
 import DashboardSettings from './components/dashboard/DashboardSettings';
 import DashboardAccount from './components/dashboard/DashboardAccount';
+import DashboardWebsiteScanner from './components/dashboard/DashboardWebsiteScanner';
 import AnimatedDashboardDemo from './components/AnimatedDashboardDemo';
 import EmailVerification from './components/EmailVerification';
 import AuthCallback from './components/AuthCallback';
@@ -65,6 +66,11 @@ function App() {
             <Route path="/dashboard/account" element={
               <ProtectedRoute>
                 <DashboardAccount />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/website-scanner" element={
+              <ProtectedRoute>
+                <DashboardWebsiteScanner />
               </ProtectedRoute>
             } />
             <Route path="/demo" element={<AnimatedDashboardDemo />} />

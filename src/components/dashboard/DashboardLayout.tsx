@@ -9,7 +9,8 @@ import {
   User,
   LogOut,
   Menu,
-  X
+  X,
+  Search
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -69,6 +70,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
       href: '/dashboard/analytics', 
       icon: BarChart3, 
       current: location.pathname === '/dashboard/analytics' 
+    },
+    { 
+      name: 'Website Scanner', 
+      href: '/dashboard/website-scanner', 
+      icon: Search, 
+      current: location.pathname === '/dashboard/website-scanner' 
     },
     { 
       name: 'Account', 
