@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from './DashboardLayout';
 import { 
   User,
@@ -31,14 +31,50 @@ import {
 
 const DashboardSettings = () => {
   const [profileData, setProfileData] = useState({
-    name: 'Michael Carpenter',
-    email: 'michael@example.com',
-    company: 'Acme Corp',
-    phone: '+1 (555) 123-4567',
-    website: 'https://acmecorp.com',
+    name: '',
+    email: '',
+    company: '',
+    phone: '',
+    website: '',
     timezone: 'America/New_York',
-    bio: 'Digital marketing specialist focused on SEO and content strategy.'
+    bio: '',
+    niche: ''
   });
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+
+  useEffect(() => {
+    loadUserProfile();
+  }, []);
+
+  const loadUserProfile = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('linkzy_user') || '{}');
+      if (!user.id) return;
+
+      const { default: supabaseService } = await import('../../services/supabaseService');
+      const userProfile = await supabaseService.getUserProfile(user.id);
+      
+      if (userProfile) {
+        setProfileData({
+          name: userProfile.name || '',
+          email: userProfile.email || '',
+          company: userProfile.company || '',
+          phone: userProfile.phone || '',
+          website: userProfile.website || '',
+          timezone: userProfile.timezone || 'America/New_York',
+          bio: userProfile.bio || '',
+          niche: userProfile.niche || ''
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load user profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const [notifications, setNotifications] = useState({
     emailNotifications: true,
@@ -81,8 +117,36 @@ const DashboardSettings = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleProfileSave = () => {
-    alert('Profile updated successfully!');
+  const handleProfileSave = async () => {
+    if (!profileData.website.trim()) {
+      setSaveMessage('Website URL is required for backlink scanning.');
+      return;
+    }
+
+    setSaving(true);
+    setSaveMessage('');
+
+    try {
+      const user = JSON.parse(localStorage.getItem('linkzy_user') || '{}');
+      if (!user.id) {
+        throw new Error('User not authenticated');
+      }
+
+      const { default: supabaseService } = await import('../../services/supabaseService');
+      await supabaseService.updateUserProfile(profileData.website, profileData.niche);
+      
+      setSaveMessage('Profile updated successfully! You can now scan your website.');
+      
+      // Update local storage with new website
+      const updatedUser = { ...user, website: profileData.website, niche: profileData.niche };
+      localStorage.setItem('linkzy_user', JSON.stringify(updatedUser));
+
+    } catch (error: any) {
+      console.error('Failed to update profile:', error);
+      setSaveMessage('Failed to update profile: ' + error.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleNotificationSave = () => {
@@ -109,37 +173,10 @@ const DashboardSettings = () => {
     setIsDeleting(true);
     
     try {
-      // Import supabaseService
-      const { default: supabaseService } = await import('../../services/supabaseService');
-      
-      // Get current user
-      const user = await supabaseService.getCurrentUser();
-      
-      if (user) {
-        // Delete user data from custom tables first
-        const { supabase } = await import('../../lib/supabase');
-        
-        // Delete backlinks
-        await supabase.from('backlinks').delete().eq('user_id', user.id);
-        
-        // Delete user record
-        await supabase.from('users').delete().eq('id', user.id);
-        
-        // Delete auth user (this will sign them out)
-        await supabase.auth.admin.deleteUser(user.id);
-      }
-      
-      // Clear local storage
-      supabaseService.clearApiKey();
-      
-      alert('Account deleted successfully! You will be redirected to the homepage.');
-      
-      // Redirect to homepage
-      window.location.href = '/';
-      
-    } catch (error) {
+      alert('Account deletion is not available in demo mode. Contact support for assistance.');
+    } catch (error: any) {
       console.error('Delete account error:', error);
-      alert('Delete failed: ' + error.message + '\n\nFor testing purposes, you can also delete via Supabase Dashboard → Authentication → Users');
+      alert('Delete failed: ' + error.message);
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
@@ -238,7 +275,7 @@ const DashboardSettings = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Website
+                  Website <span className="text-red-400">*</span>
                 </label>
                 <div className="relative">
                   <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -247,8 +284,53 @@ const DashboardSettings = () => {
                     value={profileData.website}
                     onChange={(e) => setProfileData({...profileData, website: e.target.value})}
                     className="w-full bg-gray-800 border border-gray-600 rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-colors"
+                    placeholder="https://yourwebsite.com"
+                    required
                   />
                 </div>
+                <p className="text-gray-500 text-xs mt-1">This is the only website you can scan for backlinks</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Website Niche
+                </label>
+                <div className="relative">
+                  <Target className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <select 
+                    value={profileData.niche}
+                    onChange={(e) => setProfileData({...profileData, niche: e.target.value})}
+                    className="w-full bg-gray-800 border border-gray-600 rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-colors"
+                  >
+                    <option value="">Select your niche</option>
+                    <option value="technology">🖥️ Technology & Software</option>
+                    <option value="home-services">🏠 Home Services & Contractors</option>
+                    <option value="creative-arts">🎨 Creative Services & Arts</option>
+                    <option value="food-restaurants">🍕 Food, Restaurants & Recipes</option>
+                    <option value="health-wellness">💊 Health & Wellness</option>
+                    <option value="finance-business">💰 Finance & Business</option>
+                    <option value="travel-lifestyle">✈️ Travel & Lifestyle</option>
+                    <option value="education">📚 Education & Learning</option>
+                    <option value="ecommerce">🛒 E-commerce & Retail</option>
+                    <option value="automotive">🚗 Automotive & Transportation</option>
+                    <option value="real-estate">🏡 Real Estate & Property</option>
+                    <option value="sports-outdoors">⚽ Sports & Outdoors</option>
+                    <option value="beauty-fashion">💄 Beauty & Fashion</option>
+                    <option value="pets-animals">🐕 Pets & Animals</option>
+                    <option value="gaming-entertainment">🎮 Gaming & Entertainment</option>
+                    <option value="parenting-family">👶 Parenting & Family</option>
+                    <option value="diy-crafts">🔨 DIY & Crafts</option>
+                    <option value="legal-professional">⚖️ Legal & Professional Services</option>
+                    <option value="marketing-advertising">📈 Marketing & Advertising</option>
+                    <option value="news-media">📰 News & Media</option>
+                    <option value="spirituality-religion">🙏 Spirituality & Religion</option>
+                    <option value="green-sustainability">🌱 Green Living & Sustainability</option>
+                    <option value="self-improvement">🚀 Self-Improvement & Productivity</option>
+                    <option value="politics-advocacy">🗳️ Politics & Advocacy</option>
+                    <option value="local-community">🏘️ Local & Community</option>
+                  </select>
+                </div>
+                <p className="text-gray-500 text-xs mt-1">Help us find better backlink opportunities for your industry</p>
               </div>
 
               <div>
@@ -287,12 +369,40 @@ const DashboardSettings = () => {
               <p className="text-gray-500 text-xs mt-1">Brief description for your profile</p>
             </div>
 
+            {/* Save Message */}
+            {saveMessage && (
+              <div className={`p-3 rounded-lg flex items-center space-x-2 mb-4 ${
+                saveMessage.includes('successfully') 
+                  ? 'bg-green-900/20 border border-green-500/30' 
+                  : 'bg-red-900/20 border border-red-500/30'
+              }`}>
+                {saveMessage.includes('successfully') ? (
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-red-500" />
+                )}
+                <span className={saveMessage.includes('successfully') ? 'text-green-400' : 'text-red-400'}>
+                  {saveMessage}
+                </span>
+              </div>
+            )}
+
             <button 
               onClick={handleProfileSave}
-              className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg transition-colors flex items-center space-x-2"
+              disabled={saving || loading}
+              className="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg transition-colors flex items-center space-x-2"
             >
-              <Save className="w-4 h-4" />
-              <span>Save Changes</span>
+              {saving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>Save Changes</span>
+                </>
+              )}
             </button>
           </div>
 

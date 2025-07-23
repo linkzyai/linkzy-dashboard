@@ -28,6 +28,27 @@ class SupabaseService {
     localStorage.removeItem('linkzy_user');
   }
 
+  // Get user profile data
+  async getUserProfile(userId) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, email, website, niche, plan, credits, created_at, updated_at')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Failed to get user profile:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error getting user profile:', error);
+      throw error;
+    }
+  }
+
   // Send welcome email with improved error handling
   async sendWelcomeEmail(email, apiKey, website, niche, verificationToken = null) {
     try {

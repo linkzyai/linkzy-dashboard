@@ -6,7 +6,7 @@ declare class SupabaseService {
   getApiKey(): string | null;
   clearApiKey(): void;
   signOut(): Promise<{ success: boolean; error?: string }>;
-  getUserProfile(): Promise<any>;
+  getUserProfile(userId: string): Promise<any>;
   createBacklinkRequest(data: any): Promise<any>;
   signInWithGoogle(): Promise<{ success: boolean; data?: any; error?: any }>;
   signUpWithGoogle(website: string, niche: string): Promise<{ success: boolean; data?: any; error?: any }>;

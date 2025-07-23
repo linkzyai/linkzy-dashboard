@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Globe, Zap, CheckCircle, AlertCircle, Clock, BarChart3, Target, ExternalLink } from 'lucide-react';
+import { Search, Globe, Zap, CheckCircle, AlertCircle, Clock, BarChart3, Target, ExternalLink, Settings } from 'lucide-react';
 
 interface WebsiteScannerProps {
   onScanComplete?: (result: any) => void;
@@ -34,7 +34,7 @@ interface LinkableContent {
 }
 
 const WebsiteScanner: React.FC<WebsiteScannerProps> = ({ onScanComplete }) => {
-  const [websiteUrl, setWebsiteUrl] = useState('');
+  const [userWebsite, setUserWebsite] = useState('');
   const [scanProgress, setScanProgress] = useState<ScanProgress>({
     status: 'idle',
     progress: 0,
@@ -43,10 +43,32 @@ const WebsiteScanner: React.FC<WebsiteScannerProps> = ({ onScanComplete }) => {
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([]);
   const [linkableContent, setLinkableContent] = useState<LinkableContent[]>([]);
   const [selectedAnalysis, setSelectedAnalysis] = useState<string | null>(null);
+  const [hasWebsite, setHasWebsite] = useState(false);
 
   useEffect(() => {
+    loadUserWebsite();
     loadPreviousAnalyses();
   }, []);
+
+  const loadUserWebsite = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('linkzy_user') || '{}');
+      if (!user.id) return;
+
+      const { default: supabaseService } = await import('../../services/supabaseService');
+      const userProfile = await supabaseService.getUserProfile(user.id);
+      
+      if (userProfile?.website) {
+        setUserWebsite(userProfile.website);
+        setHasWebsite(true);
+      } else {
+        setHasWebsite(false);
+      }
+    } catch (error) {
+      console.error('Failed to load user website:', error);
+      setHasWebsite(false);
+    }
+  };
 
   const loadPreviousAnalyses = async () => {
     try {
@@ -62,7 +84,7 @@ const WebsiteScanner: React.FC<WebsiteScannerProps> = ({ onScanComplete }) => {
   };
 
   const startScan = async () => {
-    if (!websiteUrl.trim()) return;
+    if (!userWebsite.trim()) return;
 
     try {
       const user = JSON.parse(localStorage.getItem('linkzy_user') || '{}');
@@ -78,8 +100,8 @@ const WebsiteScanner: React.FC<WebsiteScannerProps> = ({ onScanComplete }) => {
 
       const { default: supabaseService } = await import('../../services/supabaseService');
       
-      // Start the scan
-      const result = await supabaseService.scanWebsite(websiteUrl, user.id, user.niche || '');
+      // Start the scan with user's website
+      const result = await supabaseService.scanWebsite(userWebsite, user.id, user.niche || '');
       
       setScanProgress({
         status: 'completed',
@@ -138,27 +160,56 @@ const WebsiteScanner: React.FC<WebsiteScannerProps> = ({ onScanComplete }) => {
         </div>
         
         <p className="text-gray-400 mb-6">
-          Analyze your website to discover backlink opportunities and optimize content for link building.
+          Analyze your website to discover backlink opportunities and optimize content for the Linkzy ecosystem.
         </p>
 
-        <div className="flex space-x-4">
-          <input
-            type="url"
-            value={websiteUrl}
-            onChange={(e) => setWebsiteUrl(e.target.value)}
-            placeholder="https://example.com"
-            className="flex-1 bg-gray-800 rounded-lg p-3 border border-gray-600 text-white placeholder-gray-400 focus:border-orange-500 focus:outline-none"
-            disabled={scanProgress.status === 'scanning'}
-          />
-          <button
-            onClick={startScan}
-            disabled={scanProgress.status === 'scanning' || !websiteUrl.trim()}
-            className="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg transition-colors flex items-center space-x-2 font-semibold"
-          >
-            <Search className="w-4 h-4" />
-            <span>{scanProgress.status === 'scanning' ? 'Scanning...' : 'Scan Website'}</span>
-          </button>
-        </div>
+        {hasWebsite ? (
+          <div className="space-y-4">
+            {/* Display user's website */}
+            <div className="flex items-center justify-between p-4 bg-gray-800 rounded-lg border border-gray-600">
+              <div className="flex items-center space-x-3">
+                <Globe className="w-5 h-5 text-gray-400" />
+                <div>
+                  <p className="text-white font-medium">Your Website</p>
+                  <p className="text-gray-400 text-sm">{userWebsite}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => window.location.href = '/dashboard/settings'}
+                className="text-gray-400 hover:text-white transition-colors flex items-center space-x-1 text-sm"
+              >
+                <Settings className="w-4 h-4" />
+                <span>Edit</span>
+              </button>
+            </div>
+
+            {/* Scan button */}
+            <button
+              onClick={startScan}
+              disabled={scanProgress.status === 'scanning'}
+              className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg transition-colors flex items-center justify-center space-x-2 font-semibold"
+            >
+              <Search className="w-4 h-4" />
+              <span>{scanProgress.status === 'scanning' ? 'Scanning...' : 'Scan Your Website'}</span>
+            </button>
+          </div>
+        ) : (
+          /* No website set - prompt to add one */
+          <div className="text-center py-8">
+            <Globe className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+            <h3 className="text-white text-lg font-semibold mb-2">No Website Set</h3>
+            <p className="text-gray-400 mb-4">
+              You need to set your website URL in your profile before you can scan it for backlink opportunities.
+            </p>
+            <button
+              onClick={() => window.location.href = '/dashboard/settings'}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg transition-colors inline-flex items-center space-x-2"
+            >
+              <Settings className="w-4 h-4" />
+              <span>Add Website in Settings</span>
+            </button>
+          </div>
+        )}
 
         {/* Progress Indicator */}
         {scanProgress.status === 'scanning' && (
