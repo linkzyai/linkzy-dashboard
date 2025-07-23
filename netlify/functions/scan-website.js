@@ -2,6 +2,12 @@ const cheerio = require('cheerio');
 
 // Initialize Supabase client
 const { createClient } = require('@supabase/supabase-js');
+
+// Add fetch polyfill for Node.js environments that don't have it
+if (typeof fetch === 'undefined') {
+  global.fetch = require('node-fetch');
+}
+
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -266,6 +272,19 @@ exports.handler = async (event, context) => {
   }
 
   try {
+    // Validate environment variables
+    if (!process.env.VITE_SUPABASE_URL) {
+      throw new Error('VITE_SUPABASE_URL environment variable is missing');
+    }
+    
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is missing');
+    }
+
+    console.log('🔧 Environment check passed');
+    console.log('📡 Supabase URL:', process.env.VITE_SUPABASE_URL);
+    console.log('🔑 Service key exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+
     const { website_url, user_id, niche = '' } = JSON.parse(event.body);
 
     if (!website_url || !user_id) {
@@ -393,6 +412,41 @@ exports.handler = async (event, context) => {
 
   } catch (error) {
     console.error('Website scan error:', error);
+    
+    // Try to create a basic analysis record even if scan fails
+    try {
+      const { website_url, user_id } = JSON.parse(event.body || '{}');
+      
+      if (website_url && user_id) {
+        console.log('🔄 Creating fallback analysis record...');
+        
+        const { data: fallbackAnalysis } = await supabase
+          .from('website_analysis')
+          .insert({
+            user_id,
+            website_url,
+            scan_status: 'failed',
+            scan_progress: 0,
+            error_message: error.message,
+            content_summary: 'Scan failed - manual retry may be needed'
+          })
+          .select()
+          .single();
+
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({
+            error: 'Website scan failed',
+            message: error.message,
+            analysis_id: fallbackAnalysis?.id,
+            fallback_created: true
+          }),
+        };
+      }
+    } catch (fallbackError) {
+      console.error('Fallback analysis creation failed:', fallbackError);
+    }
     
     return {
       statusCode: 500,
