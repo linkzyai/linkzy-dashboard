@@ -97,7 +97,7 @@ export default function AuthCallback() {
         
         const { data: existingUser, error: fetchError } = await supabase
           .from('users')
-          .select('id, email, website, niche, api_key, credits, plan, is_pro')
+          .select('id, email, website, niche, api_key, credits, plan')
           .eq('id', session.user.id)
           .maybeSingle();
 
@@ -134,8 +134,7 @@ export default function AuthCallback() {
               niche: 'technology', // Default value triggers onboarding
               api_key: apiKey,
               credits: 3,
-              plan: 'free',
-              is_pro: false
+              plan: 'free'
             }])
             .select()
             .single();
@@ -151,7 +150,7 @@ export default function AuthCallback() {
               // User was created by another process, fetch their data
               const { data: fetchedUser, error: refetchError } = await supabase
                 .from('users')
-                .select('id, email, website, niche, api_key, credits, plan, is_pro')
+                .select('id, email, website, niche, api_key, credits, plan')
                 .eq('id', session.user.id)
                 .single();
                 
@@ -197,8 +196,7 @@ export default function AuthCallback() {
             niche: userProfile.niche,
             api_key: apiKey,
             credits: userProfile.credits,
-            plan: userProfile.plan,
-            is_pro: userProfile.is_pro
+            plan: userProfile.plan
           };
           localStorage.setItem('linkzy_user', JSON.stringify(userData));
           console.log('✅ User data stored');

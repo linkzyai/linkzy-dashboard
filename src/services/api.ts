@@ -176,8 +176,9 @@ class ApiService {
   // Send welcome email with onboarding instructions
   async sendWelcomeEmail(email: string, apiKey: string, website?: string, niche?: string) {
     try {
-      // Use Supabase Edge Function via proper invoke method
-      const { supabase } = await import('../lib/supabase');
+      // Use Supabase Edge Function via proper invoke method  
+      // @ts-ignore - supabase.js file exists but lacks TypeScript declarations
+      const { supabase } = await import('../lib/supabase.js');
       
       const { data, error } = await supabase.functions.invoke('send-welcome-email', {
         body: { email, apiKey, website, niche }
@@ -198,7 +199,8 @@ class ApiService {
   // Send email via resend-email function
   async sendEmail(to: string, subject: string, html: string) {
     try {
-      const { supabase } = await import('../lib/supabase');
+      // @ts-ignore - supabase.js file exists but lacks TypeScript declarations  
+      const { supabase } = await import('../lib/supabase.js');
       
       const { data, error } = await supabase.functions.invoke('resend-email', {
         body: { to, subject, html }
@@ -403,6 +405,87 @@ class ApiService {
     return this.fetchApi<{ downloadUrl: string }>(`/api/export?type=${type}`, {
       method: 'POST',
     });
+  }
+
+  // Content Tracking
+  async trackContent(data: {
+    apiKey: string;
+    url: string;
+    title?: string;
+    referrer?: string;
+    content?: string;
+  }) {
+    try {
+      // Use direct fetch to the Edge Function for better compatibility
+      const payload = {
+        ...data,
+        timestamp: new Date().toISOString()
+      };
+      
+      const response = await fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/track-content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU',
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(`Track content error: ${result.error || response.statusText}`);
+      }
+      
+      console.log('✅ Content tracked successfully:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Failed to track content:', error);
+      throw error;
+    }
+  }
+
+  // Get JavaScript tracking snippet
+  getTrackingSnippet(apiKey: string): string {
+    return `(function() {
+    // Linkzy Content Tracking Snippet
+    const LINKZY_API_KEY = '${apiKey}';
+    const LINKZY_API_URL = 'https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/track-content';
+    
+    function trackContent() {
+        const content = document.body.innerText || '';
+        const title = document.title || '';
+        const url = window.location.href;
+        const referrer = document.referrer || '';
+        
+        const payload = {
+            apiKey: LINKZY_API_KEY,
+            url: url,
+            title: title,
+            referrer: referrer,
+            timestamp: new Date().toISOString(),
+            content: content.substring(0, 5000) // Limit content size
+        };
+        
+        fetch(LINKZY_API_URL, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU'
+            },
+            body: JSON.stringify(payload)
+        }).then(response => response.json())
+          .then(data => console.log('✅ Content tracked:', data))
+          .catch(error => console.warn('⚠️ Tracking failed:', error));
+    }
+    
+    // Track when page loads
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', trackContent);
+    } else {
+        trackContent();
+    }
+})();`;
   }
 }
 

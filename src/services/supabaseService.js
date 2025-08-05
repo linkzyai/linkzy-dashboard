@@ -1350,7 +1350,7 @@ If you're testing, try these workarounds:
       
       // Check if this purchase should grant Pro status (30+ credits = Pro Monthly plan)
       const shouldGrantPro = creditsToAdd >= 30 || newCredits >= 30; // Check both added credits AND total credits
-      const isProUpdate = shouldGrantPro ? { is_pro: true, plan: 'Pro Monthly' } : {};
+      const planUpdate = shouldGrantPro ? { plan: 'Pro Monthly' } : {};
       
       console.log('🧮 Credit calculation:', { 
         currentCredits, 
@@ -1358,7 +1358,7 @@ If you're testing, try these workarounds:
         newCredits,
         userIdForUpdate: user.id,
         shouldGrantPro,
-        isProUpdate
+        planUpdate
       });
       
       // Update user credits and potentially Pro status in database with detailed logging
@@ -1367,7 +1367,7 @@ If you're testing, try these workarounds:
         .from('users')
         .update({ 
           credits: newCredits,
-          ...isProUpdate
+          ...planUpdate
         })
         .eq('id', userId)
         .select(); // Add select to see what was actually updated
@@ -1437,7 +1437,7 @@ If you're testing, try these workarounds:
       const updatedUser = { 
         ...user, 
         credits: verifyUser?.credits || newCredits,
-        ...isProUpdate
+        ...planUpdate
       };
       localStorage.setItem('linkzy_user', JSON.stringify(updatedUser));
       

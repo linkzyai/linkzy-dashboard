@@ -147,8 +147,8 @@ const DashboardAccount = () => {
           setCredits(authStatus.user.credits);
           console.log('✅ Loaded credits from database:', authStatus.user.credits);
           
-          // Check if user has 30+ credits but is_pro is false - auto-upgrade
-          if (authStatus.user.credits >= 30 && !authStatus.user.is_pro) {
+              // Check if user has 30+ credits but plan is still free - auto-upgrade
+    if (authStatus.user.credits >= 30 && authStatus.user.plan === 'free') {
             console.log('🔄 Auto-upgrading user to Pro status...');
             try {
               const result = await supabaseService.updateUserCredits(
@@ -231,7 +231,7 @@ const DashboardAccount = () => {
     niche: user?.niche || 'Technology',
     apiKey: user?.api_key || 'demo_api_key_123',
     credits: user?.credits || 3,
-    isPro: user?.is_pro || false,
+    isPro: user?.plan && user.plan !== 'free',
     joinDate: 'December 2024'
   };
   

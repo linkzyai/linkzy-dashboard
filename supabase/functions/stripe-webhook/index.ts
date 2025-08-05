@@ -181,7 +181,6 @@ async function handleSubscription(supabase: any, session: any) {
         .from('users')
         .update({ 
           plan: 'Pro',
-          is_pro: true,
           subscription_id: subscriptionId,
           credits: 30 // Monthly credits for Pro plan
         })
@@ -217,12 +216,12 @@ async function handleSubscriptionRenewal(supabase: any, invoice: any) {
         return
       }
 
-      // Add monthly credits and set is_pro true
+      // Add monthly credits for Pro plan
       const { error: updateError } = await supabase
         .from('users')
         .update({
           credits: 30,
-          is_pro: true
+          plan: 'Pro'
         })
         .eq('id', user.id)
 
@@ -271,12 +270,11 @@ async function handleSubscriptionCancellation(supabase: any, subscription: any) 
       return
     }
 
-    // Downgrade user to Free plan and set is_pro false
+    // Downgrade user to Free plan
     const { error: updateError } = await supabase
       .from('users')
       .update({ 
-        plan: 'Free',
-        is_pro: false,
+        plan: 'free',
         subscription_id: null
       })
       .eq('id', user.id)

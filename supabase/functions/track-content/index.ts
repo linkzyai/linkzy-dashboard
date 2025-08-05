@@ -27,6 +27,43 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+// Real-time ecosystem matching trigger
+async function triggerEcosystemMatching(contentId: string, userId: string): Promise<void> {
+  try {
+    console.log(`🎯 Starting real-time ecosystem matching for content ${contentId}`);
+    
+    // Call the ecosystem-matcher function directly
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/ecosystem-matcher`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+      body: JSON.stringify({
+        contentId: contentId,
+        userId: userId,
+        forceReprocess: false,
+        realTime: true
+      })
+    });
+
+    const result = await response.json();
+    
+    if (result.success && result.opportunities_created > 0) {
+      console.log(`✅ Real-time matching success: ${result.opportunities_created} opportunities created`);
+      
+      // TODO: Send notifications to potential partners
+      // await notifyPartners(result.opportunities);
+    } else {
+      console.log(`ℹ️ No new opportunities found for content ${contentId}`);
+    }
+    
+  } catch (error) {
+    console.error(`❌ Real-time ecosystem matching failed:`, error);
+    throw error;
+  }
+}
+
 // Simple stopwords list for English
 const STOPWORDS = new Set([
   'the','and','for','are','but','not','you','with','this','that','from','have','was','your','all','can','will','has','our','they','their','what','when','where','which','who','how','why','about','into','more','than','then','them','out','use','any','had','his','her','its','one','two','three','four','five','on','in','at','by','to','of','a','an','is','it','as','be','or','if','so','do','we','he','she','i','my','me','no','yes','up','down','over','under','again','new','just','now','only','very','also','after','before','such','each','other','some','most','many','much','like','see','get','got','make','made','back','off','own','too','via','per','via','should','could','would','may','might','must','shall','let','let\'s','did','does','done','being','were','been','because','while','during','between','among','within','without','across','through','upon','against','toward','towards','upon','around','amongst','beside','besides','behind','ahead','along','alongside','amid','amidst','among','amongst','beyond','despite','except','inside','outside','since','than','though','unless','until','upon','versus','via','whether','yet','etc'
@@ -85,7 +122,7 @@ serve(async (req: Request) => {
 
   // Basic validation
   if (!payload.apiKey || !payload.url || !payload.timestamp) {
-    return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+    return new Response(JSON.stringify({ error: 'Missing required fields: apiKey, url, timestamp' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -101,9 +138,24 @@ serve(async (req: Request) => {
     .filter(w => w.length > 2 && !STOPWORDS.has(w)).length;
   const density = keywordDensity(keywordList, totalWords || 1);
 
+  // Validate API key and get user_id (service role bypasses RLS)
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('id')
+    .eq('api_key', payload.apiKey)
+    .single();
+
+  if (userError || !userData) {
+    return new Response(JSON.stringify({ error: 'Invalid API key' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   // Store tracked content in the database
   const { error } = await supabase.from('tracked_content').insert([
     {
+      user_id: userData.id,
       api_key: payload.apiKey,
       url: payload.url,
       title: payload.title || '',
@@ -116,16 +168,44 @@ serve(async (req: Request) => {
   ]);
 
   if (error) {
+    console.error('Database insert error:', error);
     return new Response(JSON.stringify({ error: 'Failed to store tracked content', details: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
-  // Placeholder for opportunity suggestion logic
-  // const suggestions = getSuggestions(payload.content);
+  // Get the content ID from the insert
+  const { data: insertedContent } = await supabase
+    .from('tracked_content')
+    .select('id')
+    .eq('user_id', userData.id)
+    .eq('url', payload.url)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
 
-  return new Response(JSON.stringify({ success: true, message: 'Data received and stored' }), {
+  // 🚀 REAL-TIME ECOSYSTEM MATCHING: Trigger automatic opportunity generation
+  if (insertedContent?.id) {
+    console.log(`🔄 Triggering real-time ecosystem matching for content ${insertedContent.id}`);
+    
+    // Trigger ecosystem matching asynchronously (don't wait for it to complete)
+    triggerEcosystemMatching(insertedContent.id, userData.id).catch(error => {
+      console.error('⚠️ Ecosystem matching failed (non-blocking):', error);
+    });
+  }
+
+  return new Response(JSON.stringify({ 
+    success: true, 
+    message: 'Content tracked successfully',
+    realTimeMatching: insertedContent?.id ? 'triggered' : 'skipped',
+    analytics: {
+      keywordsExtracted: keywordList.length,
+      topKeywords: keywordList.slice(0, 5).map(k => k.word),
+      contentLength: contentText.length,
+      wordCount: totalWords
+    }
+  }), {
     status: 200,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });

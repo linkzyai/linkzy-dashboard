@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Content API Test Suite</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            max-width: 1200px; 
+            margin: 20px auto; 
+            padding: 20px; 
+            background: #f5f7fa;
+        }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #374151; }
+        input, textarea, select { 
+            width: 100%; 
+            padding: 12px; 
+            border: 2px solid #e5e7eb; 
+            border-radius: 8px; 
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        input:focus, textarea:focus, select:focus { 
+            outline: none; 
+            border-color: #3b82f6; 
+        }
+        button { 
+            background: #3b82f6; 
+            color: white; 
+            padding: 12px 24px; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 14px;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        button:hover { background: #2563eb; }
+        button:disabled { background: #9ca3af; cursor: not-allowed; }
+        .result { margin-top: 20px; padding: 20px; border-radius: 8px; }
+        .success { background: #d1fae5; color: #065f46; border: 2px solid #34d399; }
+        .error { background: #fee2e2; color: #991b1b; border: 2px solid #f87171; }
+        .warning { background: #fef3c7; color: #92400e; border: 2px solid #fbbf24; }
+        pre { 
+            background: #f9fafb; 
+            padding: 15px; 
+            border-radius: 6px; 
+            overflow-x: auto; 
+            border: 1px solid #e5e7eb;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+        }
+        .test-section { margin-bottom: 40px; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px; }
+        .test-section h3 { margin-top: 0; color: #1f2937; }
+        .tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid #e5e7eb; }
+        .tab { padding: 12px 24px; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500; }
+        .tab.active { border-bottom-color: #3b82f6; color: #3b82f6; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .status-indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
+        .status-pending { background: #fbbf24; }
+        .status-success { background: #10b981; }
+        .status-error { background: #ef4444; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Track Content API Test Suite</h1>
+        <p>Comprehensive testing for your deployed track-content Edge Function</p>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('manual')">Manual Test</div>
+            <div class="tab" onclick="switchTab('snippet')">JavaScript Snippet</div>
+            <div class="tab" onclick="switchTab('batch')">Batch Test</div>
+        </div>
+
+        <!-- Manual Test Tab -->
+        <div id="manual" class="tab-content active">
+            <div class="test-section">
+                <h3>📡 API Configuration</h3>
+                
+                <div class="form-group">
+                    <label for="apiUrl">Supabase Function URL:</label>
+                    <input type="url" id="apiUrl" value="https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/track-content">
+                </div>
+                
+                <div class="form-group">
+                    <label for="apiKey">API Key:</label>
+                    <input type="text" id="apiKey" placeholder="Get from Supabase dashboard → users table">
+                    <button type="button" onclick="getApiKeyFromDashboard()" style="margin-top: 8px; font-size: 12px; padding: 8px 16px;">
+                        🔑 Get API Key from Dashboard
+                    </button>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h3>📄 Content Data</h3>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="form-group">
+                        <label for="url">Page URL:</label>
+                        <input type="url" id="url" value="https://example.com/test-page">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="title">Page Title:</label>
+                        <input type="text" id="title" value="Test Page - Web Development Guide">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="content">Content (for keyword analysis):</label>
+                    <textarea id="content" rows="6">This is a comprehensive guide about modern web development using JavaScript, React, and Node.js. Learn best practices for frontend development, backend API design, and database optimization. Perfect for developers looking to improve their skills in full-stack development.</textarea>
+                </div>
+                
+                <button type="button" onclick="testTrackContent()">🚀 Test Track Content API</button>
+            </div>
+        </div>
+
+        <!-- JavaScript Snippet Tab -->
+        <div id="snippet" class="tab-content">
+            <div class="test-section">
+                <h3>🌐 Website Integration Snippet</h3>
+                <p>Copy this snippet to any website to track content:</p>
+                
+                <pre id="snippetCode">(function() {
+    // Linkzy Content Tracking Snippet
+    const LINKZY_API_KEY = 'YOUR_API_KEY_HERE';
+    const LINKZY_API_URL = 'https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/track-content';
+    
+    function trackContent() {
+        const content = document.body.innerText || '';
+        const title = document.title || '';
+        const url = window.location.href;
+        const referrer = document.referrer || '';
+        
+        const payload = {
+            apiKey: LINKZY_API_KEY,
+            url: url,
+            title: title,
+            referrer: referrer,
+            timestamp: new Date().toISOString(),
+            content: content.substring(0, 5000) // Limit content size
+        };
+        
+        fetch(LINKZY_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(response => response.json())
+          .then(data => console.log('✅ Content tracked:', data))
+          .catch(error => console.warn('⚠️ Tracking failed:', error));
+    }
+    
+    // Track when page loads
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', trackContent);
+    } else {
+        trackContent();
+    }
+})();</pre>
+                
+                <button type="button" onclick="copySnippet()">📋 Copy Snippet</button>
+                <button type="button" onclick="testSnippetOnThisPage()">🧪 Test Snippet on This Page</button>
+            </div>
+        </div>
+
+        <!-- Batch Test Tab -->
+        <div id="batch" class="tab-content">
+            <div class="test-section">
+                <h3>📊 Batch Testing</h3>
+                <p>Test multiple content submissions to verify consistency:</p>
+                
+                <div class="form-group">
+                    <label for="batchCount">Number of test requests:</label>
+                    <select id="batchCount">
+                        <option value="3">3 requests</option>
+                        <option value="5">5 requests</option>
+                        <option value="10">10 requests</option>
+                    </select>
+                </div>
+                
+                <button type="button" onclick="runBatchTest()">🔄 Run Batch Test</button>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="result"></div>
+        
+        <!-- Quick Links -->
+        <div class="test-section">
+            <h3>🔗 Quick Links</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
+                <a href="https://supabase.com/dashboard/project/sljlwvrtwqmhmjunyplr/editor" target="_blank" style="display: block; padding: 12px; background: #f3f4f6; border-radius: 6px; text-decoration: none; color: #374151;">
+                    📊 View Database Tables
+                </a>
+                <a href="https://supabase.com/dashboard/project/sljlwvrtwqmhmjunyplr/functions" target="_blank" style="display: block; padding: 12px; background: #f3f4f6; border-radius: 6px; text-decoration: none; color: #374151;">
+                    ⚡ View Edge Functions  
+                </a>
+                <a href="https://supabase.com/dashboard/project/sljlwvrtwqmhmjunyplr/logs/functions" target="_blank" style="display: block; padding: 12px; background: #f3f4f6; border-radius: 6px; text-decoration: none; color: #374151;">
+                    📝 View Function Logs
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        function showResult(content, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            const statusClass = type === 'success' ? 'success' : type === 'error' ? 'error' : 'warning';
+            const statusIcon = type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️';
+            
+            resultDiv.innerHTML = `
+                <div class="result ${statusClass}">
+                    <h3>${statusIcon} ${type.charAt(0).toUpperCase() + type.slice(1)}</h3>
+                    ${content}
+                </div>
+            `;
+            
+            // Scroll to result
+            resultDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function getApiKeyFromDashboard() {
+            showResult(`
+                <p><strong>To get your API key:</strong></p>
+                <ol>
+                    <li>Go to <a href="https://supabase.com/dashboard/project/sljlwvrtwqmhmjunyplr/editor" target="_blank">Supabase Dashboard</a></li>
+                    <li>Click on "Table Editor" in the sidebar</li>
+                    <li>Find and click on the "users" table</li>
+                    <li>Look for a row with an "api_key" column</li>
+                    <li>Copy the API key value and paste it above</li>
+                </ol>
+                <p>If no users exist, you may need to register first through your dashboard.</p>
+            `, 'warning');
+        }
+
+        async function testTrackContent() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const apiKey = document.getElementById('apiKey').value;
+            const url = document.getElementById('url').value;
+            const title = document.getElementById('title').value;
+            const content = document.getElementById('content').value;
+            
+            if (!apiKey.trim()) {
+                showResult('Please enter an API key first. Use the "Get API Key from Dashboard" button for help.', 'error');
+                return;
+            }
+            
+            const payload = {
+                apiKey: apiKey,
+                url: url,
+                title: title,
+                referrer: window.location.href,
+                timestamp: new Date().toISOString(),
+                content: content
+            };
+            
+            showResult('<p>Testing API connection...</p><div class="status-indicator status-pending"></div> Sending request...', 'warning');
+            
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`
+                        <h4>🎉 API Test Successful!</h4>
+                        <p><strong>Status:</strong> ${response.status} ${response.statusText}</p>
+                        <p><strong>Response:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                        <p><strong>Next:</strong> Check your <a href="https://supabase.com/dashboard/project/sljlwvrtwqmhmjunyplr/editor" target="_blank">tracked_content table</a> to see the data!</p>
+                    `, 'success');
+                } else {
+                    showResult(`
+                        <h4>API Error</h4>
+                        <p><strong>Status:</strong> ${response.status} ${response.statusText}</p>
+                        <p><strong>Error Details:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                        <p><strong>Common Issues:</strong></p>
+                        <ul>
+                            <li>Invalid API key (check your users table)</li>
+                            <li>Missing tracked_content table (run the migration)</li>
+                            <li>Network connectivity issues</li>
+                        </ul>
+                    `, 'error');
+                }
+            } catch (error) {
+                showResult(`
+                    <h4>Network Error</h4>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p>This could indicate:</p>
+                    <ul>
+                        <li>CORS issues with the Edge Function</li>
+                        <li>Edge Function not deployed correctly</li>
+                        <li>Network connectivity problems</li>
+                    </ul>
+                `, 'error');
+            }
+        }
+
+        function copySnippet() {
+            const snippetCode = document.getElementById('snippetCode').textContent;
+            navigator.clipboard.writeText(snippetCode).then(() => {
+                showResult('📋 JavaScript snippet copied to clipboard! Replace YOUR_API_KEY_HERE with your actual API key.', 'success');
+            });
+        }
+
+        async function testSnippetOnThisPage() {
+            const apiKey = document.getElementById('apiKey').value;
+            
+            if (!apiKey.trim()) {
+                showResult('Please enter an API key first to test the snippet.', 'error');
+                return;
+            }
+            
+            // Execute the snippet with the current API key
+            const payload = {
+                apiKey: apiKey,
+                url: window.location.href,
+                title: document.title,
+                referrer: document.referrer || '',
+                timestamp: new Date().toISOString(),
+                content: document.body.innerText.substring(0, 5000)
+            };
+            
+            try {
+                const response = await fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/track-content', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`
+                        <h4>🎉 Snippet Test Successful!</h4>
+                        <p>The JavaScript snippet successfully tracked this page!</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `, 'success');
+                } else {
+                    showResult(`Snippet test failed: ${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult(`Snippet test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function runBatchTest() {
+            const count = parseInt(document.getElementById('batchCount').value);
+            const apiKey = document.getElementById('apiKey').value;
+            
+            if (!apiKey.trim()) {
+                showResult('Please enter an API key first.', 'error');
+                return;
+            }
+            
+            showResult(`Running ${count} batch tests...`, 'warning');
+            
+            const results = [];
+            const startTime = Date.now();
+            
+            for (let i = 0; i < count; i++) {
+                try {
+                    const payload = {
+                        apiKey: apiKey,
+                        url: `https://example.com/batch-test-${i + 1}`,
+                        title: `Batch Test Page ${i + 1}`,
+                        referrer: window.location.href,
+                        timestamp: new Date().toISOString(),
+                        content: `This is batch test content number ${i + 1}. Testing API consistency and performance.`
+                    };
+                    
+                                         const response = await fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/track-content', {
+                         method: 'POST',
+                         headers: { 
+                             'Content-Type': 'application/json',
+                             'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU'
+                         },
+                         body: JSON.stringify(payload)
+                     });
+                    
+                    const data = await response.json();
+                    results.push({ success: response.ok, status: response.status, data });
+                    
+                } catch (error) {
+                    results.push({ success: false, error: error.message });
+                }
+            }
+            
+            const endTime = Date.now();
+            const duration = endTime - startTime;
+            const successCount = results.filter(r => r.success).length;
+            
+            showResult(`
+                <h4>📊 Batch Test Results</h4>
+                <p><strong>Total Tests:</strong> ${count}</p>
+                <p><strong>Successful:</strong> ${successCount}</p>
+                <p><strong>Failed:</strong> ${count - successCount}</p>
+                <p><strong>Duration:</strong> ${duration}ms</p>
+                <p><strong>Average:</strong> ${Math.round(duration / count)}ms per request</p>
+                <details>
+                    <summary>View detailed results</summary>
+                    <pre>${JSON.stringify(results, null, 2)}</pre>
+                </details>
+            `, successCount === count ? 'success' : 'warning');
+        }
+    </script>
+</body>
+</html> 

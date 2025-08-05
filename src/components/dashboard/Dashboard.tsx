@@ -325,7 +325,7 @@ const Dashboard = () => {
     niche: user?.niche || 'Technology',
     apiKey: user?.api_key || 'linkzy_user_example_com_1234567890',
     credits: user?.credits || 3,
-    isPro: user?.is_pro || false,
+    isPro: user?.plan && user.plan !== 'free',
     joinDate: 'December 2024'
   };
 

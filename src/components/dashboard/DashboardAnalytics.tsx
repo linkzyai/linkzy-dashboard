@@ -30,8 +30,8 @@ const DashboardAnalytics = () => {
   const userDomain = user?.website || 'yourdomain.com';
   const userApiKey = user?.api_key || '';
   
-  // Check if user has Pro access (either is_pro flag OR has 30+ credits from Pro Monthly purchase)
-  const hasProAccess = user?.is_pro || (user?.credits && user.credits >= 30);
+  // Check if user has Pro access (either pro plan OR has 30+ credits from Pro Monthly purchase)
+  const hasProAccess = (user?.plan && user.plan !== 'free') || (user?.credits && user.credits >= 30);
 
   const addCompetitor = () => {
     if (!newCompetitor.trim() || competitors.includes(newCompetitor.trim())) return;

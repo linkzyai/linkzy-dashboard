@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 JavaScript Injection Test - Linkzy Demo</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 40px auto; 
+            padding: 20px;
+            line-height: 1.6;
+            background: #f8f9fa;
+        }
+        .container { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; border-bottom: 3px solid #f97316; padding-bottom: 10px; }
+        h2 { color: #555; margin-top: 30px; }
+        p { margin-bottom: 15px; color: #666; }
+        .status { 
+            padding: 15px; 
+            border-radius: 5px; 
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .status.loading { background: #e3f2fd; color: #1976d2; }
+        .status.success { background: #e8f5e8; color: #2e7d32; }
+        .status.error { background: #ffebee; color: #d32f2f; }
+        .highlight { background: #fff3cd; padding: 2px 6px; border-radius: 3px; }
+        .test-controls {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #f97316;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 JavaScript Injection Test Page</h1>
+        
+        <div class="status loading" id="script-status">
+            📡 Linkzy Enhanced Tracking Script: Loading...
+        </div>
+
+        <div class="test-controls">
+            <h3>🎯 Test Controls</h3>
+            <p><strong>API Key:</strong> <span class="highlight">demo_plumber_key_123</span></p>
+            <button onclick="simulatePlacementInstruction()" style="background: #f97316; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+                🚀 Simulate Placement Instruction
+            </button>
+            <button onclick="checkForInstructions()" style="background: #333; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">
+                📋 Check for Instructions
+            </button>
+        </div>
+
+        <h2>About Our HVAC Services</h2>
+        <p>Welcome to Phoenix HVAC Services, your trusted partner for heating, ventilation, and air conditioning solutions. Our team of certified technicians brings over 15 years of experience to every project, ensuring your home stays comfortable year-round.</p>
+
+        <p>We specialize in comprehensive air conditioning repair, installation, and maintenance services throughout the Phoenix metropolitan area. Our emergency repair services are available 24/7 because we understand that HVAC issues don't wait for convenient times.</p>
+
+        <p>At Phoenix HVAC, we pride ourselves on transparent pricing and quality workmanship. Every installation comes with a comprehensive warranty, and our maintenance plans help extend the life of your equipment while reducing energy costs.</p>
+
+        <h2>Our Service Areas</h2>
+        <p>We proudly serve Phoenix, Scottsdale, Tempe, Mesa, and surrounding areas with reliable HVAC solutions. Our local expertise means we understand the unique challenges of Arizona's extreme climate and can recommend the best systems for your specific needs.</p>
+
+        <p>Whether you need routine maintenance, emergency repairs, or a complete system replacement, our certified technicians are ready to help. Contact us today for a free consultation and discover why Phoenix residents trust us for all their HVAC needs.</p>
+
+        <h2>Why Choose Phoenix HVAC?</h2>
+        <p>Our commitment to customer satisfaction has made us the preferred HVAC contractor in the Phoenix area. We use only high-quality parts and equipment from trusted manufacturers, ensuring reliable performance and long-lasting results.</p>
+
+        <div id="placement-log" style="margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 5px; font-family: monospace; font-size: 12px;">
+            <strong>📊 Placement Activity Log:</strong><br>
+            <div id="log-content">Script initializing...</div>
+        </div>
+    </div>
+
+    <!-- Enhanced Linkzy Tracking Script -->
+    <script data-linkzy-api-key="demo_hvac_key_789">
+        (function() {
+            'use strict';
+            
+            // Configuration
+            const CONFIG = {
+                API_BASE_URL: 'https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1',
+                CHECK_INTERVAL: 10000, // Check every 10 seconds for demo
+                PLACEMENT_DELAY: 2000
+            };
+            
+            let placementLog = [];
+            
+            function logActivity(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                placementLog.push(`[${timestamp}] ${message}`);
+                const logElement = document.getElementById('log-content');
+                if (logElement) {
+                    logElement.innerHTML = placementLog.slice(-10).join('<br>'); // Show last 10 entries
+                }
+                console.log('🔗 Linkzy:', message);
+            }
+            
+            function updateStatus(message, type = 'loading') {
+                const statusElement = document.getElementById('script-status');
+                if (statusElement) {
+                    statusElement.textContent = message;
+                    statusElement.className = `status ${type}`;
+                }
+            }
+            
+            function getAPIKey() {
+                const scriptTag = document.querySelector('script[data-linkzy-api-key]');
+                return scriptTag ? scriptTag.getAttribute('data-linkzy-api-key') : '';
+            }
+            
+            // Track content (original functionality)
+            function trackContent() {
+                const apiKey = getAPIKey();
+                logActivity(`Tracking content with API key: ${apiKey}`);
+                
+                const contentData = {
+                    apiKey: apiKey,
+                    url: window.location.href,
+                    title: document.title,
+                    referrer: document.referrer,
+                    content: extractMainContent(),
+                    timestamp: new Date().toISOString()
+                };
+                
+                fetch(`${CONFIG.API_BASE_URL}/track-content`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU'
+                    },
+                    body: JSON.stringify(contentData)
+                })
+                .then(response => response.json())
+                .then(data => logActivity('✅ Content tracking successful'))
+                .catch(err => logActivity('❌ Content tracking failed: ' + err.message));
+            }
+            
+            function extractMainContent() {
+                const selectors = ['main', 'article', '.container'];
+                for (const selector of selectors) {
+                    const element = document.querySelector(selector);
+                    if (element) {
+                        return element.innerText.substring(0, 2000);
+                    }
+                }
+                return document.body.innerText.substring(0, 2000);
+            }
+            
+            // Check for placement instructions
+            async function checkForPlacementInstructions() {
+                const apiKey = getAPIKey();
+                if (!apiKey) return;
+                
+                try {
+                    logActivity('Checking for placement instructions...');
+                    
+                    const response = await fetch(`${CONFIG.API_BASE_URL}/get-placement-instructions`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU'
+                        },
+                        body: JSON.stringify({ apiKey: apiKey })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.instructions && data.instructions.length > 0) {
+                        logActivity(`📋 Found ${data.instructions.length} placement instruction(s)`);
+                        for (const instruction of data.instructions) {
+                            await executeBacklinkPlacement(instruction);
+                        }
+                    } else {
+                        logActivity('📭 No pending placement instructions');
+                    }
+                } catch (error) {
+                    logActivity('❌ Failed to check placement instructions: ' + error.message);
+                }
+            }
+            
+            // Execute backlink placement
+            async function executeBacklinkPlacement(instruction) {
+                logActivity(`🔧 Executing placement: ${instruction.id}`);
+                
+                try {
+                    const placementData = instruction.instruction_data;
+                    const { targetUrl, anchorText, keywords } = placementData;
+                    
+                    logActivity(`🎯 Target: ${targetUrl}, Anchor: ${anchorText}`);
+                    
+                    // Find optimal insertion point
+                    const insertionPoint = findOptimalInsertionPoint(keywords || []);
+                    
+                    if (!insertionPoint) {
+                        throw new Error('No suitable insertion point found');
+                    }
+                    
+                    logActivity(`📍 Found insertion point in paragraph with ${insertionPoint.wordCount} words`);
+                    
+                    // Create the backlink element
+                    const link = document.createElement('a');
+                    link.href = targetUrl;
+                    link.textContent = anchorText;
+                    link.style.color = '#f97316';
+                    link.style.textDecoration = 'underline';
+                    link.setAttribute('rel', 'noopener');
+                    
+                    // Insert the link naturally into content
+                    const success = insertLinkNaturally(insertionPoint, link, anchorText);
+                    
+                    if (success) {
+                        logActivity('✅ Backlink placed successfully!');
+                        updateStatus('✅ JavaScript Injection Active - Link Placed!', 'success');
+                        
+                        // Verify placement
+                        const verificationSuccess = verifyLinkPlacement(targetUrl);
+                        logActivity(`🔍 Verification: ${verificationSuccess ? 'Success' : 'Failed'}`);
+                        
+                        // Report success
+                        await updateInstructionStatus(instruction.id, 'completed', {
+                            placementUrl: window.location.href,
+                            insertionMethod: insertionPoint.method,
+                            verificationSuccess: verificationSuccess,
+                            placementTimestamp: new Date().toISOString()
+                        });
+                    } else {
+                        throw new Error('Failed to insert link into content');
+                    }
+                    
+                } catch (error) {
+                    logActivity('❌ Placement failed: ' + error.message);
+                    await updateInstructionStatus(instruction.id, 'failed', {
+                        error: error.message,
+                        failureTimestamp: new Date().toISOString()
+                    });
+                }
+            }
+            
+            // Find the best place to insert a backlink
+            function findOptimalInsertionPoint(keywords) {
+                const paragraphs = document.querySelectorAll('p');
+                
+                for (const paragraph of paragraphs) {
+                    const text = paragraph.textContent.toLowerCase();
+                    const wordCount = text.split(/\s+/).length;
+                    
+                    // Look for paragraphs with sufficient length
+                    if (wordCount >= 20 && wordCount <= 100) {
+                        const keywordScore = keywords.reduce((score, keyword) => {
+                            return score + (text.includes(keyword.toLowerCase()) ? 1 : 0);
+                        }, 0);
+                        
+                        if (keywordScore > 0 || keywords.length === 0) {
+                            return {
+                                element: paragraph,
+                                method: 'paragraph_insertion',
+                                wordCount: wordCount,
+                                keywordScore: keywordScore
+                            };
+                        }
+                    }
+                }
+                
+                return null;
+            }
+            
+            // Insert link naturally into existing content
+            function insertLinkNaturally(insertionPoint, linkElement, anchorText) {
+                try {
+                    const paragraph = insertionPoint.element;
+                    const text = paragraph.textContent;
+                    
+                    // Find a good spot in the middle of the paragraph
+                    const sentences = text.split(/[.!?]+/);
+                    if (sentences.length < 2) return false;
+                    
+                    // Insert after the first sentence
+                    const insertAfter = sentences[0].length + 1;
+                    const beforeText = text.substring(0, insertAfter);
+                    const afterText = text.substring(insertAfter);
+                    
+                    // Clear the paragraph and rebuild with the link
+                    paragraph.innerHTML = '';
+                    
+                    // Add text before link
+                    const beforeSpan = document.createElement('span');
+                    beforeSpan.textContent = beforeText;
+                    paragraph.appendChild(beforeSpan);
+                    
+                    // Add contextual connector and link
+                    const connector = document.createElement('span');
+                    connector.textContent = ' For related services, see ';
+                    paragraph.appendChild(connector);
+                    paragraph.appendChild(linkElement);
+                    
+                    // Add remaining text
+                    const afterSpan = document.createElement('span');
+                    afterSpan.textContent = '.' + afterText;
+                    paragraph.appendChild(afterSpan);
+                    
+                    return true;
+                } catch (error) {
+                    logActivity('Link insertion failed: ' + error.message);
+                    return false;
+                }
+            }
+            
+            // Verify that the link was successfully placed
+            function verifyLinkPlacement(targetUrl) {
+                const links = document.querySelectorAll(`a[href="${targetUrl}"]`);
+                return links.length > 0 && Array.from(links).some(link => link.offsetParent !== null);
+            }
+            
+            // Update instruction status in database
+            async function updateInstructionStatus(instructionId, status, result = null) {
+                try {
+                    await fetch(`${CONFIG.API_BASE_URL}/update-placement-instruction`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU'
+                        },
+                        body: JSON.stringify({
+                            instructionId: instructionId,
+                            status: status,
+                            result: result
+                        })
+                    });
+                    logActivity(`📝 Updated instruction status: ${status}`);
+                } catch (error) {
+                    logActivity('Failed to update instruction status: ' + error.message);
+                }
+            }
+            
+            // Global functions for manual testing
+            window.simulatePlacementInstruction = function() {
+                logActivity('🎭 Simulating placement instruction...');
+                const fakeInstruction = {
+                    id: 'test-' + Date.now(),
+                    instruction_data: {
+                        targetUrl: 'https://bestplumbing.demo',
+                        anchorText: 'Phoenix Plumbing Services',
+                        keywords: ['plumbing', 'repair', 'emergency']
+                    }
+                };
+                executeBacklinkPlacement(fakeInstruction);
+            };
+            
+            window.checkForInstructions = checkForPlacementInstructions;
+            
+            // Initialize
+            function initialize() {
+                logActivity('Enhanced Tracking Script loaded');
+                updateStatus('🔗 Linkzy Enhanced Script: Active', 'success');
+                
+                // Track content on page load
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', trackContent);
+                } else {
+                    trackContent();
+                }
+                
+                // Start checking for placement instructions
+                setTimeout(() => {
+                    checkForPlacementInstructions();
+                    setInterval(checkForPlacementInstructions, CONFIG.CHECK_INTERVAL);
+                }, CONFIG.PLACEMENT_DELAY);
+            }
+            
+            initialize();
+        })();
+    </script>
+</body>
+</html> 

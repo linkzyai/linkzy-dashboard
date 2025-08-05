@@ -177,7 +177,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
                     {user?.email?.split('@')[0] || 'User'}
                   </p>
                   <p className="text-xs text-gray-400 truncate">
-                    {user?.is_pro ? 'Pro' : 'Free'} Plan
+                    {user?.plan && user.plan !== 'free' ? 'Pro' : 'Free'} Plan
                   </p>
                 </div>
               </div>
