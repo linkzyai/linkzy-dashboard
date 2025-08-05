@@ -124,48 +124,33 @@ export default function AuthCallback() {
           // Generate API key
           apiKey = `linkzy_${session.user.email?.replace('@', '_').replace(/\./g, '_')}_${Date.now()}`;
           
-          // Insert new user with default values for onboarding
-          const { data: newUser, error: insertError } = await supabase
-            .from('users')
-            .insert([{
-              id: session.user.id,
+          // Create user via Edge Function (bypasses RLS using service role)
+          const createUserResponse = await fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/create-user', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU`
+            },
+            body: JSON.stringify({
+              userId: session.user.id,
               email: session.user.email,
               website: 'yourdomain.com', // Default value triggers onboarding
-              niche: 'technology', // Default value triggers onboarding
-              api_key: apiKey,
-              credits: 3,
-              plan: 'free'
-            }])
-            .select()
-            .single();
+              niche: 'technology' // Default value triggers onboarding
+            })
+          });
+
+          const createUserResult = await createUserResponse.json();
 
           if (!mounted) return;
 
-          if (insertError) {
-            console.error('❌ Database insert error:', insertError);
-            
-            // Check if it's a duplicate key error (user already exists)
-            if (insertError.code === '23505' || insertError.message?.includes('duplicate')) {
-              console.log('🔄 User already exists, fetching existing data...');
-              // User was created by another process, fetch their data
-              const { data: fetchedUser, error: refetchError } = await supabase
-                .from('users')
-                .select('id, email, website, niche, api_key, credits, plan')
-                .eq('id', session.user.id)
-                .single();
-                
-              if (refetchError) {
-                throw new Error(`Failed to fetch existing user: ${refetchError.message}`);
-              }
-              
-              userProfile = fetchedUser;
-              apiKey = fetchedUser.api_key;
-            } else {
-              throw new Error(`Failed to create account: ${insertError.message}`);
-            }
-          } else {
-            userProfile = newUser;
+          if (!createUserResult.success) {
+            console.error('❌ User creation error:', createUserResult.error);
+            throw new Error(`Failed to create user account: ${createUserResult.error}`);
           }
+
+          // User created successfully
+          userProfile = createUserResult.user;
+          apiKey = createUserResult.user.api_key;
           
           updateStage('setup', 'completed', 'New account created successfully');
         } else {
