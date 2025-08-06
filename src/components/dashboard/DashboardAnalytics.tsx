@@ -102,8 +102,6 @@ const DashboardAnalytics = () => {
 
   const analyticsTabs = [
     { id: 'Overview', name: 'Overview', icon: Gauge },
-    { id: 'Keywords', name: 'Keywords', icon: BarChart },
-    { id: 'Competitors', name: 'Competitors', icon: Users },
   ];
 
   return (
@@ -700,7 +698,7 @@ const DashboardAnalytics = () => {
             </div>
           </>
         )}
-        {activeTab === 'Keywords' && (
+        {activeTab === 'Keywords_REMOVED' && (
           <>
             {hasProAccess ? (
               <>
@@ -1081,7 +1079,7 @@ const DashboardAnalytics = () => {
             )}
           </>
         )}
-        {activeTab === 'Competitors' && (
+        {activeTab === 'Competitors_REMOVED' && (
           <>
             {/* Optionally, move advanced competitor comparison UI here in the future */}
             <div className="text-gray-400">Competitor comparison features coming soon!</div>

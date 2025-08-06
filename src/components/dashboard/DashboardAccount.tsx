@@ -1040,28 +1040,30 @@ const DashboardAccount = () => {
 
   const renderIntegrationsTab = () => (
     <div className="space-y-8">
-      {/* Sitemap Integration Card */}
+      {/* API Integration Card - Only Integration Option */}
       <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
-        <h3 className="text-xl font-bold text-white mb-4">Sitemap Integration</h3>
-        <form className="flex flex-col md:flex-row md:items-center md:space-x-4 mb-4">
-          <input
-            type="url"
-            inputMode="url"
-            autoComplete="url"
-            placeholder="https://yourdomain.com/sitemap.xml"
-            value={sitemapUrl}
-            onChange={e => setSitemapUrl(e.target.value)}
-            className="bg-gray-800 border border-gray-600 rounded-lg px-4 py-4 text-white text-base md:text-lg focus:outline-none focus:border-orange-500 transition-colors flex-1 mb-2 md:mb-0"
-          />
-          <button
-            type="button"
-            className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-3 rounded-md font-semibold transition-colors min-w-[160px] max-w-fit min-h-[44px] text-base"
-            onClick={() => fetchSitemap(sitemapUrl)}
-            disabled={sitemapLoading || !sitemapUrl}
-          >
-            {sitemapLoading ? 'Connecting...' : 'Connect Sitemap'}
-          </button>
-        </form>
+        <h3 className="text-xl font-bold text-white mb-4">API Integration</h3>
+        <p className="text-gray-300 mb-6">
+          Add this simple script to your website to start tracking content and finding backlink opportunities automatically.
+        </p>
+        <div className="bg-gray-800 border border-gray-600 rounded-lg p-4 mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-300">Universal Tracking Script</span>
+            <button className="text-orange-400 hover:text-orange-300 text-xs">Copy</button>
+          </div>
+          <code className="text-green-400 text-xs block bg-gray-900 p-3 rounded border overflow-x-auto">
+            {apiSnippet}
+          </code>
+        </div>
+        
+        <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-4">
+          <h4 className="text-blue-300 font-medium mb-2">Installation:</h4>
+          <ul className="text-sm text-gray-300 space-y-1">
+            <li>• Add to your website's &lt;head&gt; section</li>
+            <li>• Works on any platform (WordPress, Shopify, Wix, custom sites)</li>
+            <li>• Automatically tracks content and finds backlink opportunities</li>
+          </ul>
+        </div>
         {sitemapError && <div className="text-red-400 text-sm mb-2">{sitemapError}</div>}
         {sitemapPages.length > 0 && (
           <div className="mb-4">
