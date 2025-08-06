@@ -1091,8 +1091,8 @@ const DashboardAccount = () => {
           </div>
         )}
       </div>
-      {/* Blog Integration Card */}
-      <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 flex flex-col md:flex-row md:items-center md:space-x-8 mb-4">
+      {/* Blog Integration Card - HIDDEN */}
+      <div className="hidden bg-gray-900 border border-gray-700 rounded-xl p-6 flex flex-col md:flex-row md:items-center md:space-x-8 mb-4">
         <div className="flex-shrink-0 flex items-center justify-center w-16 h-16 bg-orange-500/20 rounded-lg mb-4 md:mb-0">
           <FileText className="w-8 h-8 text-orange-500" />
         </div>
@@ -1105,8 +1105,8 @@ const DashboardAccount = () => {
           </form>
         </div>
       </div>
-      {/* WordPress Integration Card */}
-      <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 flex flex-col md:flex-row md:items-center md:space-x-8 mb-4">
+      {/* WordPress Integration Card - HIDDEN */}
+      <div className="hidden bg-gray-900 border border-gray-700 rounded-xl p-6 flex flex-col md:flex-row md:items-center md:space-x-8 mb-4">
         <div className="flex-shrink-0 flex items-center justify-center w-16 h-16 bg-orange-500/20 rounded-lg mb-4 md:mb-0">
           <Monitor className="w-8 h-8 text-orange-500" />
         </div>
