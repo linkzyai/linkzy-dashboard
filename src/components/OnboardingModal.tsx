@@ -90,29 +90,22 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClose, onAc
                 <div className="flex items-start space-x-3">
                   <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 mt-0.5 min-w-[24px]">1</div>
                   <div>
-                    <p className="text-white font-medium">Choose Your Niche</p>
-                    <p className="text-gray-400 text-sm">You already selected your niche during signup</p>
+                    <p className="text-white font-medium">Enter Website + Niche</p>
+                    <p className="text-gray-400 text-sm">Tell us your website URL and business niche</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
                   <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 mt-0.5">2</div>
                   <div>
-                    <p className="text-white font-medium">Connect Your Website</p>
-                    <p className="text-gray-400 text-sm">Set up an integration (Sitemap, Blog, WordPress, or API)</p>
+                    <p className="text-white font-medium">Install Tracking Script</p>
+                    <p className="text-gray-400 text-sm">Add one simple script to your website</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
                   <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 mt-0.5">3</div>
                   <div>
-                    <p className="text-white font-medium">Automatic Backlink Matching</p>
-                    <p className="text-gray-400 text-sm">The platform will automatically find and place backlinks with other users in your niche—no manual requests needed!</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 mt-0.5">4</div>
-                  <div>
-                    <p className="text-white font-medium">Track Your Results</p>
-                    <p className="text-gray-400 text-sm">See integration status, found opportunities, and active exchanges in your dashboard</p>
+                    <p className="text-white font-medium">Automatic Backlink Magic</p>
+                    <p className="text-gray-400 text-sm">We'll automatically find and place high-quality backlinks with other businesses in your niche</p>
                   </div>
                 </div>
               </div>
@@ -120,32 +113,31 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClose, onAc
           )}
           {currentStep === 3 && (
             <div className="space-y-4 md:space-y-6">
-              <h3 className="text-xl font-bold text-white">Connect Your Website</h3>
-              <div className="space-y-3 md:space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <button className="bg-gray-800 hover:bg-orange-900/30 border border-gray-700 rounded-lg p-4 flex flex-col items-center transition-colors">
-                    <FileText className="w-7 h-7 text-orange-400 mb-2" />
-                    <span className="text-white font-semibold">Sitemap</span>
-                    <span className="text-gray-400 text-xs mt-1 text-center">Connect your XML sitemap for automatic content discovery</span>
-                  </button>
-                  <button className="bg-gray-800 hover:bg-orange-900/30 border border-gray-700 rounded-lg p-4 flex flex-col items-center transition-colors">
-                    <BarChart3 className="w-7 h-7 text-orange-400 mb-2" />
-                    <span className="text-white font-semibold">Blog RSS</span>
-                    <span className="text-gray-400 text-xs mt-1 text-center">Connect your blog's RSS feed for content updates</span>
-                  </button>
-                  <button className="bg-gray-800 hover:bg-orange-900/30 border border-gray-700 rounded-lg p-4 flex flex-col items-center transition-colors">
-                    <Zap className="w-7 h-7 text-orange-400 mb-2" />
-                    <span className="text-white font-semibold">WordPress</span>
-                    <span className="text-gray-400 text-xs mt-1 text-center">Connect your WordPress site for seamless integration</span>
-                  </button>
-                  <button className="bg-orange-900/30 hover:bg-orange-500/20 border-2 border-orange-500 rounded-lg p-4 flex flex-col items-center transition-colors shadow-lg">
-                    <Target className="w-7 h-7 text-orange-400 mb-2" />
-                    <span className="text-white font-semibold">API (Recommended)</span>
-                    <span className="text-orange-400 text-xs mt-1 text-center font-bold">Best experience: unlocks all features, real-time updates, and the most backlink opportunities!</span>
-                  </button>
+              <h3 className="text-xl font-bold text-white">Install Tracking Script</h3>
+              <div className="space-y-4">
+                <p className="text-gray-300">Add this simple script to your website to start tracking content and finding backlink opportunities:</p>
+                
+                <div className="bg-gray-800 border border-gray-600 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-300">Universal Tracking Script</span>
+                    <button className="text-orange-400 hover:text-orange-300 text-xs">Copy</button>
+                  </div>
+                  <code className="text-green-400 text-xs block bg-gray-900 p-3 rounded border overflow-x-auto">
+                    {`<script src="https://cdn.linkzy.ai/track.js" data-api-key="YOUR_API_KEY"></script>`}
+                  </code>
                 </div>
-                <div className="bg-green-900/20 border border-green-500/30 rounded-xl p-4 mt-4 text-center">
-                  <p className="text-green-300 font-medium">Once your integration is set up, Linkzy will automatically match you with other users in your niche and place backlinks for you. No manual requests needed!</p>
+                
+                <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                  <h4 className="text-blue-300 font-medium mb-2">Where to add it:</h4>
+                  <ul className="text-sm text-gray-300 space-y-1">
+                    <li>• Before the closing &lt;/head&gt; tag</li>
+                    <li>• Works on any website (WordPress, Shopify, Wix, custom sites)</li>
+                    <li>• Tracks content automatically and finds backlink opportunities</li>
+                  </ul>
+                </div>
+                
+                <div className="bg-green-900/20 border border-green-500/30 rounded-xl p-4 text-center">
+                  <p className="text-green-300 font-medium">That's it! Once installed, we'll automatically find and place high-quality backlinks with other businesses in your niche.</p>
                 </div>
               </div>
             </div>

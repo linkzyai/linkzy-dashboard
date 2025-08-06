@@ -13,14 +13,14 @@ import Cancel from './components/Cancel';
 import About from './components/About';
 import Terms from './components/Terms';
 import Privacy from './components/Privacy';
-import Blog from './components/Blog';
+
 import Dashboard from './components/dashboard/Dashboard';
 import DashboardAnalytics from './components/dashboard/DashboardAnalytics';
 import DashboardAPI from './components/dashboard/DashboardAPI';
 import DashboardBilling from './components/dashboard/DashboardBilling';
 import DashboardSettings from './components/dashboard/DashboardSettings';
 import DashboardAccount from './components/dashboard/DashboardAccount';
-import DashboardWebsiteScanner from './components/dashboard/DashboardWebsiteScanner';
+
 import AnimatedDashboardDemo from './components/AnimatedDashboardDemo';
 import EmailVerification from './components/EmailVerification';
 import AuthCallback from './components/AuthCallback';
@@ -49,7 +49,7 @@ function App() {
             <Route path="/about" element={<About />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
-            <Route path="/blog" element={<Blog />} />
+
             <Route path="/success" element={<Success />} />
             <Route path="/cancel" element={<Cancel />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
@@ -68,11 +68,7 @@ function App() {
                 <DashboardAccount />
               </ProtectedRoute>
             } />
-            <Route path="/dashboard/website-scanner" element={
-              <ProtectedRoute>
-                <DashboardWebsiteScanner />
-              </ProtectedRoute>
-            } />
+
             <Route path="/demo" element={<AnimatedDashboardDemo />} />
             <Route path="/verify-email" element={<EmailVerification />} />
 
