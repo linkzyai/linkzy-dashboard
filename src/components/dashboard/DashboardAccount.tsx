@@ -1049,7 +1049,7 @@ const DashboardAccount = () => {
         <div className="bg-gray-800 border border-gray-600 rounded-lg p-4 mb-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-300">Universal Tracking Script</span>
-            <button className="text-orange-400 hover:text-orange-300 text-xs">Copy</button>
+            <button className="text-orange-400 hover:text-orange-300 text-xs" onClick={handleCopySnippet}>{snippetCopied ? 'Copied!' : 'Copy'}</button>
           </div>
           <code className="text-green-400 text-xs block bg-gray-900 p-3 rounded border overflow-x-auto">
             {apiSnippet}
@@ -1059,37 +1059,22 @@ const DashboardAccount = () => {
         <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-4">
           <h4 className="text-blue-300 font-medium mb-2">Installation:</h4>
           <ul className="text-sm text-gray-300 space-y-1">
-            <li>• Add to your website's &lt;head&gt; section</li>
-            <li>• Works on any platform (WordPress, Shopify, Wix, custom sites)</li>
-            <li>• Automatically tracks content and finds backlink opportunities</li>
+            <li>1) Paste the snippet into your site's global header or layout (e.g. <code>&lt;head&gt;</code>).</li>
+            <li>2) Place it on your primary template so it loads on every page.</li>
+            <li>3) Publish/deploy your site. We will begin tracking automatically.</li>
           </ul>
-        </div>
-        {sitemapError && <div className="text-red-400 text-sm mb-2">{sitemapError}</div>}
-        {sitemapPages.length > 0 && (
-          <div className="mb-4">
-            <h4 className="text-white font-semibold mb-2">Discovered Pages ({sitemapPages.length})</h4>
-            <div className="max-h-64 overflow-y-auto space-y-2">
-              {sitemapPages.map((page, idx) => (
-                <button
-                  key={page.url + idx}
-                  type="button"
-                  className="block w-full text-left bg-gray-800 hover:bg-orange-900/30 text-orange-400 px-4 py-2 rounded-lg text-xs font-mono truncate"
-                  onClick={() => setRequestUrl(page.url)}
-                >
-                  <div className="flex flex-col items-start">
-                    <span className="truncate w-full">{page.url}</span>
-                    <span className="text-gray-400 text-[10px] mt-1">
-                      {page.lastmod && <span>Last Modified: {page.lastmod} </span>}
-                      {page.priority && <span>• Priority: {page.priority} </span>}
-                      {page.changefreq && <span>• Changefreq: {page.changefreq}</span>}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-            <div className="text-gray-400 text-xs mt-2">Tap a page to auto-fill the request form. Metadata shown if available.</div>
+          <div className="text-gray-400 text-xs mt-3">
+            <span className="block"><strong>WordPress:</strong> Appearance → Theme File Editor → <code>header.php</code>, or use a header script plugin.</span>
+            <span className="block"><strong>Shopify:</strong> Online Store → Themes → Edit code → <code>layout/theme.liquid</code>.</span>
+            <span className="block"><strong>Wix/Squarespace/Other:</strong> Add a custom code snippet to the global header.</span>
           </div>
-        )}
+        </div>
+
+        <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4 text-sm text-green-300 space-y-1 mb-4">
+          <div><strong>What happens next:</strong> We automatically detect new content, find partner matches, and queue placements.</div>
+          <div><strong>Credits:</strong> Credits are only deducted after a confirmed placement.</div>
+          <div><strong>Troubleshooting:</strong> If you don’t see data within a few minutes, clear cache/CDN and reload a few pages on your site.</div>
+        </div>
       </div>
       {/* Blog Integration Card - HIDDEN */}
       <div className="hidden bg-gray-900 border border-gray-700 rounded-xl p-6 flex flex-col md:flex-row md:items-center md:space-x-8 mb-4">
@@ -1195,36 +1180,7 @@ const DashboardAccount = () => {
           )}
         </div>
       </div>
-      {/* API Integration Card */}
-      <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 flex flex-col md:flex-row md:items-center md:space-x-8">
-        <div className="flex-shrink-0 flex items-center justify-center w-16 h-16 bg-orange-500/20 rounded-lg mb-4 md:mb-0">
-          <Code className="w-8 h-8 text-orange-500" />
-        </div>
-        <div className="flex-1">
-          <h3 className="text-xl font-bold text-white mb-2">API Integration</h3>
-          <p className="text-gray-400 mb-4">
-            <strong>One-time setup:</strong> Add this JavaScript snippet <strong>ONCE</strong> to your site's main template or header, just like you would with Google Analytics. This will automatically track <strong>ALL</strong> pages on your site.
-          </p>
-          <ul className="text-gray-400 text-sm mb-4 list-disc pl-5">
-            <li><strong>For most sites:</strong> Add to your main HTML template or header file (e.g., <code>header.html</code> or <code>_app.js</code> in Next.js).</li>
-            <li><strong>For WordPress:</strong> Add to <code>header.php</code> in your theme, or use a plugin like "Insert Headers and Footers".</li>
-            <li><strong>For other platforms:</strong> Add to your main layout or template file.</li>
-          </ul>
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-2 overflow-x-auto">
-            <code className="text-green-400 text-xs select-all whitespace-pre">{apiSnippet}</code>
-          </div>
-          <button
-            type="button"
-            className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-3 rounded-md font-semibold transition-colors min-w-[160px] max-w-fit min-h-[44px] text-base mb-2"
-            onClick={handleCopySnippet}
-          >
-            {snippetCopied ? 'Copied!' : 'Copy Snippet'}
-          </button>
-          <div className="text-gray-400 text-xs">
-            <strong>Note:</strong> This is a <strong>one-time setup</strong>. You do <strong>not</strong> need to add the snippet to every page—just your site's main template or header, and it will track all pages automatically.
-          </div>
-        </div>
-      </div>
+
     </div>
   );
 
