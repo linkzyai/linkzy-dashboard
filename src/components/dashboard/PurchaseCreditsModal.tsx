@@ -131,7 +131,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
       console.log('💳 Payment method created:', paymentMethod.id);
 
-      // Create payment intent via our Netlify function
+      // Create payment intent via our Netlify function (no server-side confirm)
       try {
         const response = await fetch('/.netlify/functions/create-payment-intent', {
           method: 'POST',
@@ -139,9 +139,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            amount: Math.round(getDiscountedPrice() * 100), // Convert discounted price to cents
+            amount: Math.round(getDiscountedPrice() * 100), // cents
             currency: 'usd',
-            payment_method_id: paymentMethod.id,
             description: `${selectedPlan.name} - ${selectedPlan.credits} Credits${discountApplied?.valid ? ` (${discountApplied.code} applied)` : ''}`,
             user_id: user.id,
             user_email: user.email,
@@ -157,7 +156,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
         const { client_secret } = await response.json();
 
-        // Confirm payment
+        // Confirm payment client-side
         const { error: confirmError } = await stripe!.confirmCardPayment(client_secret, {
           payment_method: paymentMethod.id
         });

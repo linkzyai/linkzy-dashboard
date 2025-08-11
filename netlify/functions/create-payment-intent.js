@@ -10,26 +10,24 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const { amount, currency, payment_method_id, description, user_id, user_email, credits, plan_name, coupon_code } = JSON.parse(event.body);
+    const { amount, currency, description, user_id, user_email, credits, plan_name, coupon_code } = JSON.parse(event.body);
 
-    // Create payment intent configuration
+    // Create payment intent configuration (no server-side confirmation)
     const paymentIntentConfig = {
-      amount: amount, // Already in cents
+      amount: amount, // cents
       currency: currency,
-      payment_method: payment_method_id,
-      confirmation_method: 'manual',
-      confirm: true,
+      automatic_payment_methods: { enabled: true },
       description: description,
       metadata: {
         user_id: user_id,
-        credits: credits.toString(),
+        credits: credits?.toString?.() || String(credits || ''),
         plan_name: plan_name,
         user_email: user_email,
       },
       return_url: `${process.env.VITE_SITE_URL || 'https://linkzy.ai'}/dashboard`,
     };
 
-    // Add coupon if provided
+    // Add coupon to metadata if provided
     if (coupon_code) {
       paymentIntentConfig.metadata.coupon_code = coupon_code;
     }
