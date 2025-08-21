@@ -1,5 +1,27 @@
 const fetch = global.fetch;
 
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+  };
+}
+
+function json(status, obj) {
+  return { statusCode: status, headers: { ...corsHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(obj) };
+}
+
+function safeJson(str) {
+  try { return str ? JSON.parse(str) : {}; } catch { return {}; }
+}
+
+const supabaseHeaders = (key, includeJson = true) => ({
+  ...(includeJson ? { 'Content-Type': 'application/json' } : {}),
+  'apikey': key,
+  'Authorization': `Bearer ${key}`
+});
+
 exports.handler = async (event, context) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers: corsHeaders() };
@@ -17,11 +39,7 @@ exports.handler = async (event, context) => {
   const ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
   if (!SUPABASE_URL || !SERVICE_KEY) {
-    return {
-      statusCode: 500,
-      headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars.' })
-    };
+    return json(500, { error: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars.' });
   }
 
   const body = safeJson(event.body) || {};
@@ -46,15 +64,8 @@ exports.handler = async (event, context) => {
     // 3) Trigger the ecosystem matcher
     const matchRes = await fetch(`${SUPABASE_URL}/functions/v1/ecosystem-matcher`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${ANON_KEY || SERVICE_KEY}`
-      },
-      body: JSON.stringify({
-        contentId: sourceContent.id,
-        userId: sourceUser.id,
-        forceReprocess: true
-      })
+      headers: { ...supabaseHeaders(ANON_KEY || SERVICE_KEY) },
+      body: JSON.stringify({ contentId: sourceContent.id, userId: sourceUser.id, forceReprocess: true })
     });
     const matchJson = await matchRes.json().catch(() => ({}));
 
@@ -76,28 +87,12 @@ exports.handler = async (event, context) => {
   }
 };
 
-function corsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS'
-  };
-}
-
-function json(status, obj) {
-  return { statusCode: status, headers: { ...corsHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(obj) };
-}
-
-function safeJson(str) {
-  try { return str ? JSON.parse(str) : {}; } catch { return {}; }
-}
-
 async function ensurePartnerUser(url, serviceKey, niche) {
   // Create auth user via Admin API
   const email = `demo-partner+${Date.now()}@linkzy.ai`;
   const adminRes = await fetch(`${url}/auth/v1/admin/users`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceKey}` },
+    headers: { ...supabaseHeaders(serviceKey) },
     body: JSON.stringify({ email, password: `Temp${Date.now()}!aA`, email_confirm: true })
   });
   if (!adminRes.ok) {
@@ -112,7 +107,7 @@ async function ensurePartnerUser(url, serviceKey, niche) {
   const apiKey = `linkzy_demo_partner_${Date.now()}`;
   const profileRes = await fetch(`${url}/rest/v1/users`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceKey}`, 'Prefer': 'return=representation' },
+    headers: { ...supabaseHeaders(serviceKey) , 'Prefer': 'return=representation' },
     body: JSON.stringify([{ id: authId, email, website: `https://demo-${niche}.example`, niche, api_key: apiKey, credits: 5, plan: 'free' }])
   });
   if (!profileRes.ok) {
@@ -131,7 +126,7 @@ async function ensurePartnerContent(url, serviceKey, userId, niche) {
   const rows = seed.map(s => ({ user_id: userId, api_key: 'demo_seed', url: s.url, title: s.title, content: 'Demo content', keywords: s.keywords, keyword_density: {}, timestamp: new Date().toISOString() }));
   const res = await fetch(`${url}/rest/v1/tracked_content`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceKey}` },
+    headers: { ...supabaseHeaders(serviceKey) },
     body: JSON.stringify(rows)
   });
   if (!res.ok) {
@@ -144,14 +139,14 @@ async function pickSourceContent(url, serviceKey, primaryUserId, excludeUserId) 
   // If primaryUserId provided, use their most recent content
   if (primaryUserId) {
     const res = await fetch(`${url}/rest/v1/tracked_content?user_id=eq.${primaryUserId}&select=id,user_id,created_at&order=created_at.desc&limit=1`, {
-      headers: { 'Authorization': `Bearer ${serviceKey}` }
+      headers: { ...supabaseHeaders(serviceKey, false) }
     });
     const arr = await res.json();
     if (arr?.length) return { sourceContent: arr[0], sourceUser: { id: arr[0].user_id } };
   }
   // Else pick the most recent content from any user not excluded
   const res = await fetch(`${url}/rest/v1/tracked_content?select=id,user_id,created_at&order=created_at.desc&limit=1`, {
-    headers: { 'Authorization': `Bearer ${serviceKey}` }
+    headers: { ...supabaseHeaders(serviceKey, false) }
   });
   const arr = await res.json();
   const pick = (arr || []).find(r => r.user_id !== excludeUserId) || arr?.[0] || null;
@@ -161,7 +156,7 @@ async function pickSourceContent(url, serviceKey, primaryUserId, excludeUserId) 
 
 async function countOpportunities(url, serviceKey, contentId) {
   const res = await fetch(`${url}/rest/v1/placement_opportunities?select=id&source_content_id=eq.${contentId}`, {
-    headers: { 'Authorization': `Bearer ${serviceKey}`, 'Range': '0-0' }
+    headers: { ...supabaseHeaders(serviceKey, false), 'Range': '0-0' }
   });
   // PostgREST count via content-range
   const total = res.headers.get('content-range')?.split('/')?.[1];
