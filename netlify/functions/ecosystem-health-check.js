@@ -27,11 +27,7 @@ exports.handler = async (event, context) => {
     return { statusCode: 200, headers: corsHeaders() };
   }
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Method not allowed' })
-    };
+    return json(405, { error: 'Method not allowed' });
   }
 
   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://sljlwvrtwqmhmjunyplr.supabase.co';
@@ -44,21 +40,39 @@ exports.handler = async (event, context) => {
 
   const body = safeJson(event.body) || {};
   const shouldSeed = body.seed !== false; // default true
-  const preferredNiche = body.niche || 'fitness';
+  let preferredNiche = body.niche || 'fitness';
   let primaryUserId = body.primaryUserId || null;
 
   try {
-    // 1) Optionally seed a partner demo user (auth + profile + content)
+    // 1) Choose a source content/user first
+    let { sourceContent, sourceUser } = await pickSourceContent(SUPABASE_URL, SERVICE_KEY, primaryUserId, null);
+
+    // If no content and we have a primary user, seed a demo source page for them
+    if (!sourceContent && primaryUserId) {
+      await ensureSourceContent(SUPABASE_URL, SERVICE_KEY, primaryUserId, preferredNiche);
+      ({ sourceContent, sourceUser } = await pickSourceContent(SUPABASE_URL, SERVICE_KEY, primaryUserId, null));
+    }
+
+    if (!sourceContent) {
+      return json(200, { ok: true, message: 'No source content found. Install the snippet or visit pages to generate tracked content.' });
+    }
+
+    // Load the source user's profile to align niches
+    const profile = await getUserProfile(SUPABASE_URL, SERVICE_KEY, sourceUser.id);
+    if (profile?.niche) preferredNiche = profile.niche;
+
+    // If the source content has empty keywords, seed an additional demo page for overlap
+    const hasKeywords = Array.isArray(sourceContent.keywords) && sourceContent.keywords.length > 0;
+    if (!hasKeywords && primaryUserId) {
+      await ensureSourceContent(SUPABASE_URL, SERVICE_KEY, primaryUserId, preferredNiche);
+      ({ sourceContent } = await pickSourceContent(SUPABASE_URL, SERVICE_KEY, primaryUserId, null));
+    }
+
+    // 2) Seed a partner demo user/content in the SAME niche as the source
     let partnerUser = null;
     if (shouldSeed) {
       partnerUser = await ensurePartnerUser(SUPABASE_URL, SERVICE_KEY, preferredNiche);
       await ensurePartnerContent(SUPABASE_URL, SERVICE_KEY, partnerUser.id, preferredNiche);
-    }
-
-    // 2) Pick a source content to match from: prefer provided primaryUserId, fallback to most recent non-partner content
-    const { sourceContent, sourceUser } = await pickSourceContent(SUPABASE_URL, SERVICE_KEY, primaryUserId, partnerUser?.id);
-    if (!sourceContent) {
-      return json(200, { ok: true, message: 'No source content found. Visit your site with the tracking snippet installed to generate content first.' });
     }
 
     // 3) Trigger the ecosystem matcher
@@ -161,4 +175,21 @@ async function countOpportunities(url, serviceKey, contentId) {
   // PostgREST count via content-range
   const total = res.headers.get('content-range')?.split('/')?.[1];
   return Number(total || 0);
+}
+
+async function getUserProfile(url, serviceKey, userId) {
+  const res = await fetch(`${url}/rest/v1/users?id=eq.${userId}&select=id,email,niche`, {
+    headers: { ...supabaseHeaders(serviceKey, false) }
+  });
+  const arr = await res.json();
+  return arr?.[0] || null;
+}
+
+async function ensureSourceContent(url, serviceKey, userId, niche) {
+  const row = [{ user_id: userId, api_key: 'demo_seed', url: `https://your-demo-${niche}.example/guide-1`, title: 'Demo Guide', content: 'Demo content', keywords: niche.startsWith('fitness') ? ['fitness','workout','hiit'] : [niche, 'guide', 'tips'], keyword_density: {}, timestamp: new Date().toISOString() }];
+  await fetch(`${url}/rest/v1/tracked_content`, {
+    method: 'POST',
+    headers: { ...supabaseHeaders(serviceKey) },
+    body: JSON.stringify(row)
+  });
 } 
