@@ -108,7 +108,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-300">
                 <span className="text-orange-500 font-semibold">
-                  {user?.credits || '0'} credits
+                  {(() => {
+                    const plan = user?.plan || 'free';
+                    const credits = user?.credits ?? 0;
+                    return (plan === 'free' && credits < 3) ? 3 : credits;
+                  })()} credits
                 </span> remaining
               </div>
               <button 

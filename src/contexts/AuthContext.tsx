@@ -89,6 +89,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             .eq('id', authUser.id)
             .single();
           if (profile) {
+            // Ensure free users start with minimum 3 credits
+            try {
+              if ((!profile.plan || profile.plan === 'free') && (profile.credits ?? 0) < 3) {
+                await supabase.from('users').update({ credits: 3 }).eq('id', authUser.id);
+                profile.credits = 3;
+              }
+            } catch (_) {}
             setIsAuthenticated(true);
             setUser({
               ...authUser,
@@ -192,6 +199,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 .eq('id', session.user.id)
                 .single();
               if (profile) {
+                // Ensure free users start with minimum 3 credits
+                try {
+                  if ((!profile.plan || profile.plan === 'free') && (profile.credits ?? 0) < 3) {
+                    await supabase.from('users').update({ credits: 3 }).eq('id', session.user.id);
+                    profile.credits = 3;
+                  }
+                } catch (_) {}
                 const userObj = {
                   id: session.user.id,
                   email: session.user.email,

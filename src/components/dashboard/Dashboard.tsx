@@ -259,6 +259,11 @@ const Dashboard = () => {
 
   // Use real data or fallback to defaults
   const hasBacklinks = ((dashboardData as DashboardDataType)?.totalBacklinks || 0) > 0;
+  const effectiveCredits = (() => {
+    const plan = user?.plan || 'free';
+    const credits = currentCredits ?? 0;
+    return (plan === 'free' && credits < 3) ? 3 : credits;
+  })();
   
   // Define onboarding steps
   const onboardingSteps = [
@@ -298,7 +303,7 @@ const Dashboard = () => {
     }] : []),
     { 
       name: 'Credits Remaining', 
-      value: currentCredits.toString() || '0', 
+      value: effectiveCredits.toString() || '0', 
       change: 'Available for use', 
       changeType: 'neutral', 
       icon: Zap,
