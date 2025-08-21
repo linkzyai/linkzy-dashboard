@@ -174,9 +174,12 @@ const Dashboard = () => {
     // Check if user is new (has 0 backlinks) and show onboarding modal
     if (!loading && !error && dashboardData) {
       const hasNoBacklinks = ((dashboardData as DashboardDataType)?.totalBacklinks || 0) === 0;
-      const isNewUser = hasNoBacklinks && !localStorage.getItem('linkzy_onboarding_shown');
+      const initialFreeCredits = 3;
+      const isFreePlan = !user?.plan || user?.plan === 'free';
+      const hasOnlyFreeCredits = (user?.credits ?? 0) <= initialFreeCredits;
+      const shouldShowOnboarding = hasNoBacklinks && isFreePlan && hasOnlyFreeCredits && !localStorage.getItem('linkzy_onboarding_shown');
       
-      if (isNewUser) {
+      if (shouldShowOnboarding) {
         // Show onboarding modal after a short delay
         setTimeout(() => {
           setShowOnboardingModal(true);
@@ -214,7 +217,7 @@ const Dashboard = () => {
         setTimeout(() => {
           setShowProfileCompletion(true);
           // Don't set completion flag here - wait for actual completion
-        }, isNewUser ? 3000 : 1000);
+        }, shouldShowOnboarding ? 3000 : 1000);
       }
       
       // Check if user just got their first backlink
@@ -775,9 +778,13 @@ const Dashboard = () => {
           {/* Onboarding Modal */}
           <OnboardingModal 
             isOpen={showOnboardingModal}
-            onClose={() => setShowOnboardingModal(false)}
+            onClose={() => {
+              setShowOnboardingModal(false);
+              localStorage.setItem('linkzy_onboarding_shown', 'true');
+            }}
             onAction={() => {
               setShowOnboardingModal(false);
+              localStorage.setItem('linkzy_onboarding_shown', 'true');
               navigate('/dashboard/account');
             }}
             creditsRemaining={userData?.credits || 3}

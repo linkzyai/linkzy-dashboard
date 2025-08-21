@@ -73,13 +73,13 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClose, onAc
         <div className="min-h-[220px] md:min-h-[240px]">
           {currentStep === 1 && (
             <div className="space-y-4 md:space-y-6">
-              <h3 className="text-xl font-bold text-white">Your Free Credits</h3>
+              <h3 className="text-xl font-bold text-white">Your Available Credits</h3>
               <div className="bg-orange-900/20 border border-orange-500/30 rounded-xl p-4 text-center">
                 <div className="text-5xl font-bold text-orange-400 mb-2">{creditsRemaining}</div>
-                <p className="text-gray-300">Free backlink credits</p>
+                <p className="text-gray-300">Backlink credits</p>
               </div>
               <p className="text-gray-300">
-                You have <span className="text-orange-400 font-bold">{creditsRemaining} free credits</span> to get started. The platform will automatically find and place backlinks for you in your niche.
+                You have <span className="text-orange-400 font-bold">{creditsRemaining} credits</span> ready to use. The platform will automatically find and place backlinks for you in your niche.
               </p>
             </div>
           )}
