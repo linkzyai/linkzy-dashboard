@@ -75,6 +75,9 @@ const Dashboard = () => {
   const [hcLoading, setHcLoading] = useState(false);
   const [hcResult, setHcResult] = useState<any | null>(null);
   const [hcError, setHcError] = useState<string | null>(null);
+  const [apLoading, setApLoading] = useState(false);
+  const [apResult, setApResult] = useState<any | null>(null);
+  const [apError, setApError] = useState<string | null>(null);
   const runHealthCheck = async () => {
     try {
       setHcLoading(true);
@@ -92,6 +95,26 @@ const Dashboard = () => {
       setHcError(e?.message || 'Failed to run health check');
     } finally {
       setHcLoading(false);
+    }
+  };
+
+  const runApprovePlace = async () => {
+    try {
+      setApLoading(true);
+      setApError(null);
+      setApResult(null);
+      const res = await fetch('/.netlify/functions/approve-and-place', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ primaryUserId: user?.id || undefined })
+      });
+      const json = await res.json();
+      setApResult(json);
+      if (!res.ok || json?.ok === false) setApError(json?.error || `HTTP ${res.status}`);
+    } catch (e: any) {
+      setApError(e?.message || 'Failed to approve and place');
+    } finally {
+      setApLoading(false);
     }
   };
 
@@ -433,6 +456,20 @@ const Dashboard = () => {
                 )}
                 {!hcResult && !hcError && (
                   <p className="text-gray-400 text-sm">Seeds a demo partner (fitness), triggers matcher for your latest content, and reports opportunities created.</p>
+                )}
+                <div className="flex items-center justify-between mt-4">
+                  <h4 className="text-white font-medium">Approve & Place</h4>
+                  <button
+                    onClick={runApprovePlace}
+                    disabled={apLoading}
+                    className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm"
+                  >
+                    {apLoading ? 'Placing…' : 'Approve & Place Latest'}
+                  </button>
+                </div>
+                {apError && <div className="text-red-400 text-sm mt-2">{apError}</div>}
+                {apResult && (
+                  <pre className="bg-black/60 border border-gray-700 rounded p-3 text-xs text-gray-300 overflow-x-auto mt-2">{JSON.stringify(apResult, null, 2)}</pre>
                 )}
               </div>
             </div>
