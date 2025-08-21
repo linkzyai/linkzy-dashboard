@@ -44,7 +44,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Check if we're in a payment flow - if so, be more patient with auth checks
         const urlParams = new URLSearchParams(window.location.search);
         const isPaymentFlow = urlParams.get('canceled') === 'true' || urlParams.get('success') === 'true';
-        const timeoutDuration = isPaymentFlow ? 15000 : 10000;
+        const timeoutDuration = isPaymentFlow ? 15000 : 6000;
         
         // Set timeout for authentication check
         authTimeout = setTimeout(() => {
@@ -279,7 +279,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const apiKey = supabaseService.getApiKey();
           if (apiKey) {
             try {
-              const userData = await supabaseService.getUserProfile();
+              // Attempt to load profile using the last known user id from localStorage
+              const stored = localStorage.getItem('linkzy_user');
+              const storedId = stored ? (() => { try { return JSON.parse(stored).id; } catch { return undefined; } })() : undefined;
+              const userData = storedId ? await supabaseService.getUserProfile(storedId) : null;
               if (userData) {
                 setUser(userData);
                 setIsAuthenticated(true);

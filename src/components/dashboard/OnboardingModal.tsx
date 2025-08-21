@@ -59,19 +59,25 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
       const result = await supabaseService.updateUserProfile(website, niche);
       
       if (result.success) {
-        // Send welcome email with business profile
+        // Proceed immediately
+        onComplete(website, niche);
+        
+        // Fire-and-forget welcome email with a short timeout cap
         try {
-          await supabaseService.sendWelcomeEmail(
-            userEmail, 
-            supabaseService.getApiKey() || '', 
-            website, 
+          const emailPromise = supabaseService.sendWelcomeEmail(
+            userEmail,
+            supabaseService.getApiKey() || '',
+            website,
             niche
           );
+          // Cap the wait to 1500ms, ignore outcome
+          Promise.race([
+            emailPromise,
+            new Promise((resolve) => setTimeout(resolve, 1500))
+          ]).catch(() => {});
         } catch (emailError) {
-          console.warn('⚠️ Welcome email failed (non-critical):', emailError);
+          console.warn('⚠️ Welcome email skipped (non-critical):', emailError);
         }
-        
-        onComplete(website, niche);
       } else {
         throw new Error(result.error || 'Failed to update profile');
       }
