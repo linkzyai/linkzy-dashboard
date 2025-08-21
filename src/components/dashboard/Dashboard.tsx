@@ -69,6 +69,31 @@ const Dashboard = () => {
   const { data: dashboardData, loading, error, refetch } = useDashboardStats();
   const [currentCredits, setCurrentCredits] = useState(user?.credits || 0);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
+  // Admin-only health check state
+  const adminEmails = ['multimatumc@gmail.com', 'michaelcarpenter@multimatum.com'];
+  const isAdmin = !!user?.email && adminEmails.includes(user.email);
+  const [hcLoading, setHcLoading] = useState(false);
+  const [hcResult, setHcResult] = useState<any | null>(null);
+  const [hcError, setHcError] = useState<string | null>(null);
+  const runHealthCheck = async () => {
+    try {
+      setHcLoading(true);
+      setHcError(null);
+      setHcResult(null);
+      const res = await fetch('/.netlify/functions/ecosystem-health-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ primaryUserId: user?.id || undefined })
+      });
+      const json = await res.json();
+      setHcResult(json);
+      if (!res.ok || json?.ok === false) setHcError(json?.error || `HTTP ${res.status}`);
+    } catch (e: any) {
+      setHcError(e?.message || 'Failed to run health check');
+    } finally {
+      setHcLoading(false);
+    }
+  };
 
   // Listen for credit updates
   useEffect(() => {
@@ -388,6 +413,30 @@ const Dashboard = () => {
               </button>
             )}
           </div>
+
+          {isAdmin && (
+            <div className="mb-8">
+              <div className="bg-gray-900 border border-orange-500/40 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-white font-semibold">Admin: Ecosystem Health Check</h3>
+                  <button
+                    onClick={runHealthCheck}
+                    disabled={hcLoading}
+                    className="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm"
+                  >
+                    {hcLoading ? 'Running…' : 'Run Health Check'}
+                  </button>
+                </div>
+                {hcError && <div className="text-red-400 text-sm mb-2">{hcError}</div>}
+                {hcResult && (
+                  <pre className="bg-black/60 border border-gray-700 rounded p-3 text-xs text-gray-300 overflow-x-auto">{JSON.stringify(hcResult, null, 2)}</pre>
+                )}
+                {!hcResult && !hcError && (
+                  <p className="text-gray-400 text-sm">Seeds a demo partner (fitness), triggers matcher for your latest content, and reports opportunities created.</p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Onboarding Progress Tracker - Show only for new users */}
           {!hasBacklinks && (
