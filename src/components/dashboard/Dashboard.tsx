@@ -78,6 +78,9 @@ const Dashboard = () => {
   const [apLoading, setApLoading] = useState(false);
   const [apResult, setApResult] = useState<any | null>(null);
   const [apError, setApError] = useState<string | null>(null);
+  const [finLoading, setFinLoading] = useState(false);
+  const [finResult, setFinResult] = useState<any | null>(null);
+  const [finError, setFinError] = useState<string | null>(null);
   const runHealthCheck = async () => {
     try {
       setHcLoading(true);
@@ -115,6 +118,26 @@ const Dashboard = () => {
       setApError(e?.message || 'Failed to approve and place');
     } finally {
       setApLoading(false);
+    }
+  };
+
+  const runFinalizeInstruction = async () => {
+    try {
+      setFinLoading(true);
+      setFinError(null);
+      setFinResult(null);
+      const res = await fetch('/.netlify/functions/finalize-instruction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: user?.id || undefined })
+      });
+      const json = await res.json();
+      setFinResult(json);
+      if (!res.ok || json?.ok === false) setFinError(json?.error || `HTTP ${res.status}`);
+    } catch (e: any) {
+      setFinError(e?.message || 'Failed to finalize instruction');
+    } finally {
+      setFinLoading(false);
     }
   };
 
@@ -470,6 +493,20 @@ const Dashboard = () => {
                 {apError && <div className="text-red-400 text-sm mt-2">{apError}</div>}
                 {apResult && (
                   <pre className="bg-black/60 border border-gray-700 rounded p-3 text-xs text-gray-300 overflow-x-auto mt-2">{JSON.stringify(apResult, null, 2)}</pre>
+                )}
+                <div className="flex items-center justify-between mt-4">
+                  <h4 className="text-white font-medium">Finalize Instruction</h4>
+                  <button
+                    onClick={runFinalizeInstruction}
+                    disabled={finLoading}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm"
+                  >
+                    {finLoading ? 'Finalizing…' : 'Mark Executed & Deduct Credit'}
+                  </button>
+                </div>
+                {finError && <div className="text-red-400 text-sm mt-2">{finError}</div>}
+                {finResult && (
+                  <pre className="bg-black/60 border border-gray-700 rounded p-3 text-xs text-gray-300 overflow-x-auto mt-2">{JSON.stringify(finResult, null, 2)}</pre>
                 )}
               </div>
             </div>

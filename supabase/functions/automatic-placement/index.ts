@@ -37,6 +37,29 @@ interface PlatformDetection {
   jsInjectionPossible: boolean;
 }
 
+interface PlacementInstructionData {
+  type: string;
+  targetUrl: string;
+  anchorText: string;
+  opportunityId: string;
+  placementContext: string;
+  keywords: string[];
+  injectionMethod: string;
+  paragraph?: string;
+}
+
+function generateContextualParagraph(anchorText: string, targetUrl: string, niche: string | undefined, keywords: string[] = []): string {
+  const kw = (keywords[0] || niche || 'resources').toString();
+  const sentences = [
+    `If you're exploring ${kw}, you might find ${anchorText} helpful for practical tips and real examples.`,
+    `For readers focused on ${kw}, check out ${anchorText} for an in‑depth look and actionable guidance.`,
+    `Looking to improve your ${kw}? ${anchorText} breaks it down with a simple walkthrough.`
+  ];
+  const pick = sentences[Math.floor(Math.random() * sentences.length)];
+  // Ensure anchor text is linked in the snippet
+  return pick.replace(anchorText, `<a href="${targetUrl}" rel="nofollow noopener" target="_blank">${anchorText}</a>`);
+}
+
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -118,15 +141,24 @@ async function attemptJavaScriptPlacement(opportunity: any, targetDomainMetrics:
   try {
     console.log(`🔧 Attempting JavaScript injection placement for ${targetDomainMetrics.website}`);
     
+    const niche = opportunity?.target_user?.niche || opportunity?.source_user?.niche || undefined;
+    const paragraph = generateContextualParagraph(
+      opportunity.suggested_anchor_text || 'this guide',
+      opportunity.suggested_target_url,
+      niche,
+      opportunity.source_content?.keywords || []
+    );
+    
     // Create the placement instruction that will be sent to the tracking script
-    const placementInstruction = {
+    const placementInstruction: PlacementInstructionData = {
       type: 'backlink_placement',
       targetUrl: opportunity.suggested_target_url,
       anchorText: opportunity.suggested_anchor_text,
       opportunityId: opportunity.id,
       placementContext: opportunity.suggested_placement_context,
       keywords: opportunity.source_content?.keywords || [],
-      injectionMethod: 'dom_manipulation'
+      injectionMethod: 'dom_manipulation',
+      paragraph
     };
     
     // Store the placement instruction in the database for the tracking script to pick up
@@ -158,7 +190,7 @@ async function attemptJavaScriptPlacement(opportunity: any, targetDomainMetrics:
     console.error('JavaScript placement failed:', error);
     return {
       success: false,
-      errorMessage: error.message,
+      errorMessage: (error as any).message,
       placementMethod: 'javascript_injection',
       responseTime: Date.now() - startTime
     };
