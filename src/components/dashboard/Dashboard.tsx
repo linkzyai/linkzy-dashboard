@@ -338,8 +338,11 @@ const Dashboard = () => {
         <div className="p-6">
           {/* Welcome Section with guidance for new users */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">
+            <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
               {hasBacklinks ? "Welcome back!" : "Welcome to Linkzy"}
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${userData.isPro ? 'bg-green-900/30 text-green-300 border-green-500/30' : 'bg-gray-800 text-gray-300 border-gray-600'}`}>
+                {userData.isPro ? 'Pro plan • 30 credits/mo' : 'Free plan'}
+              </span>
               {!hasBacklinks && (
                 <ContextualHelp
                   title="Getting Started"
