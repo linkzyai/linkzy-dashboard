@@ -38,6 +38,16 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClose, onAc
     }
   };
 
+  const goToIntegrationsAndCopy = () => {
+    try {
+      // Signal the dashboard/account page to copy the real snippet
+      window.dispatchEvent(new CustomEvent('copyRealApiSnippet'));
+    } catch {}
+    // Navigate to account integrations
+    navigate('/dashboard/account');
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6">
       <div className={`bg-gray-900 border border-orange-500 rounded-2xl max-w-md w-full p-5 md:p-8 relative ${animation} overflow-y-auto max-h-[90vh]`}>
@@ -115,15 +125,13 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClose, onAc
             <div className="space-y-4 md:space-y-6">
               <h3 className="text-xl font-bold text-white">Install Tracking Script</h3>
               <div className="space-y-4">
-                <p className="text-gray-300">Add this simple script to your website to start tracking content and finding backlink opportunities:</p>
-                
+                <p className="text-gray-300">Install the tracking script from your Account → Integrations. Your snippet includes your unique API key.</p>
                 <div className="bg-gray-800 border border-gray-600 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-300">Universal Tracking Script</span>
-                    <button className="text-orange-400 hover:text-orange-300 text-xs">Copy</button>
+                    <span className="text-sm font-medium text-gray-300">Example (masked)</span>
                   </div>
-                  <code className="text-green-400 text-xs block bg-gray-900 p-3 rounded border overflow-x-auto">
-                    {`<script src="https://cdn.linkzy.ai/track.js" data-api-key="YOUR_API_KEY"></script>`}
+                  <code className="text-green-400 text-xs block bg-gray-900 p-3 rounded border overflow-x-auto select-none">
+                    {`<script src="https://cdn.linkzy.ai/track.js" data-api-key="••••-YOUR-KEY-••••"></script>`}
                   </code>
                 </div>
                 
@@ -164,10 +172,10 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClose, onAc
             </>
           ) : (
             <button
-              onClick={onClose}
+              onClick={goToIntegrationsAndCopy}
               className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-4 rounded-lg transition-colors flex items-center justify-center space-x-2 min-h-[56px]"
             >
-              <span>Finish</span>
+              <span>Open Integrations & Copy My Snippet</span>
               <Check className="w-4 h-4" />
             </button>
           )}

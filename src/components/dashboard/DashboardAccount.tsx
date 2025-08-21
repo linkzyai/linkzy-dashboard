@@ -265,6 +265,17 @@ const DashboardAccount = () => {
     setTimeout(() => setSnippetCopied(false), 2000);
   };
 
+  useEffect(() => {
+    const handleCopyRealApiSnippet = async () => {
+      try {
+        await navigator.clipboard.writeText(apiSnippet);
+        setSnippetCopied(true);
+        setTimeout(() => setSnippetCopied(false), 2000);
+      } catch {}
+    };
+    window.addEventListener('copyRealApiSnippet', handleCopyRealApiSnippet);
+    return () => window.removeEventListener('copyRealApiSnippet', handleCopyRealApiSnippet);
+  }, [apiSnippet]);
 
 
   // Mock active requests
