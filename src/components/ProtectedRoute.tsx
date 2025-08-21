@@ -138,6 +138,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   // Show loading spinner while checking authentication (unless forced to complete)
   if ((loading || checkingEmailVerification) && !forceComplete) {
+    // If we are logging out, do not show any intermediate UI
+    if (sessionStorage.getItem('linkzy_logging_out') === 'true') {
+      navigate('/', { replace: true });
+      return null;
+    }
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center max-w-md px-4">
@@ -250,6 +255,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   // If not authenticated, show login/registration prompt
   if (!isAuthenticated) {
+    // If we are logging out, go straight to home without showing prompt
+    if (sessionStorage.getItem('linkzy_logging_out') === 'true') {
+      sessionStorage.removeItem('linkzy_logging_out');
+      navigate('/', { replace: true });
+      return null;
+    }
     return (
       <>
         <div className="min-h-screen bg-black flex items-center justify-center px-4">

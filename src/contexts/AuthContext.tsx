@@ -363,33 +363,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(false);
     
     try {
+      // Mark logout in progress so guards can skip UI
+      sessionStorage.setItem('linkzy_logging_out', 'true');
+      
       // Clear local storage first
       supabaseService.clearApiKey();
       localStorage.removeItem('linkzy_user');
       localStorage.clear(); // Clear all local storage
       
-      // Sign out from Supabase with timeout
-      const logoutPromise = supabaseService.signOut();
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Logout timeout')), 5000)
-      );
-      
-      await Promise.race([logoutPromise, timeoutPromise]);
-      console.log('✅ Logout successful');
-      
+      // Fire-and-forget sign out from Supabase
+      supabaseService.signOut().catch(() => {});
     } catch (error) {
       console.error('❌ Logout error (non-critical):', error);
-      // Don't throw - logout should always succeed from UI perspective
-    }
-    
-    // Force redirect regardless of any errors
-    setTimeout(() => {
+    } finally {
+      // Redirect immediately to home
       try {
         window.location.replace('/');
-      } catch (redirectError) {
+      } catch {
         window.location.href = '/';
       }
-    }, 100); // Small delay to ensure state is cleared
+    }
   };
 
   // Add a function to refresh user data from database
