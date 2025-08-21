@@ -1,0 +1,169 @@
+const fetch = global.fetch;
+
+exports.handler = async (event, context) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers: corsHeaders() };
+  }
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Method not allowed' })
+    };
+  }
+
+  const SUPABASE_URL = process.env.SUPABASE_URL || 'https://sljlwvrtwqmhmjunyplr.supabase.co';
+  const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const ANON_KEY = process.env.SUPABASE_ANON_KEY;
+
+  if (!SUPABASE_URL || !SERVICE_KEY) {
+    return {
+      statusCode: 500,
+      headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars.' })
+    };
+  }
+
+  const body = safeJson(event.body) || {};
+  const shouldSeed = body.seed !== false; // default true
+  const preferredNiche = body.niche || 'fitness';
+  let primaryUserId = body.primaryUserId || null;
+
+  try {
+    // 1) Optionally seed a partner demo user (auth + profile + content)
+    let partnerUser = null;
+    if (shouldSeed) {
+      partnerUser = await ensurePartnerUser(SUPABASE_URL, SERVICE_KEY, preferredNiche);
+      await ensurePartnerContent(SUPABASE_URL, SERVICE_KEY, partnerUser.id, preferredNiche);
+    }
+
+    // 2) Pick a source content to match from: prefer provided primaryUserId, fallback to most recent non-partner content
+    const { sourceContent, sourceUser } = await pickSourceContent(SUPABASE_URL, SERVICE_KEY, primaryUserId, partnerUser?.id);
+    if (!sourceContent) {
+      return json(200, { ok: true, message: 'No source content found. Visit your site with the tracking snippet installed to generate content first.' });
+    }
+
+    // 3) Trigger the ecosystem matcher
+    const matchRes = await fetch(`${SUPABASE_URL}/functions/v1/ecosystem-matcher`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ANON_KEY || SERVICE_KEY}`
+      },
+      body: JSON.stringify({
+        contentId: sourceContent.id,
+        userId: sourceUser.id,
+        forceReprocess: true
+      })
+    });
+    const matchJson = await matchRes.json().catch(() => ({}));
+
+    // 4) Count fresh opportunities
+    const oppCount = await countOpportunities(SUPABASE_URL, SERVICE_KEY, sourceContent.id);
+
+    return json(200, {
+      ok: true,
+      seededPartner: !!partnerUser,
+      partnerId: partnerUser?.id || null,
+      sourceUserId: sourceUser.id,
+      sourceContentId: sourceContent.id,
+      opportunitiesCreated: matchJson.opportunities_created ?? oppCount,
+      autoApproved: matchJson.auto_approved ?? 0,
+      message: matchJson.message || 'Health check complete'
+    });
+  } catch (err) {
+    return json(500, { ok: false, error: String(err?.message || err) });
+  }
+};
+
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+  };
+}
+
+function json(status, obj) {
+  return { statusCode: status, headers: { ...corsHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(obj) };
+}
+
+function safeJson(str) {
+  try { return str ? JSON.parse(str) : {}; } catch { return {}; }
+}
+
+async function ensurePartnerUser(url, serviceKey, niche) {
+  // Create auth user via Admin API
+  const email = `demo-partner+${Date.now()}@linkzy.ai`;
+  const adminRes = await fetch(`${url}/auth/v1/admin/users`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceKey}` },
+    body: JSON.stringify({ email, password: `Temp${Date.now()}!aA`, email_confirm: true })
+  });
+  if (!adminRes.ok) {
+    const t = await adminRes.text();
+    throw new Error(`Failed to create auth user: ${adminRes.status} ${t}`);
+  }
+  const adminJson = await adminRes.json();
+  const authId = adminJson?.id;
+  if (!authId) throw new Error('Auth user id missing');
+
+  // Insert profile row
+  const apiKey = `linkzy_demo_partner_${Date.now()}`;
+  const profileRes = await fetch(`${url}/rest/v1/users`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceKey}`, 'Prefer': 'return=representation' },
+    body: JSON.stringify([{ id: authId, email, website: `https://demo-${niche}.example`, niche, api_key: apiKey, credits: 5, plan: 'free' }])
+  });
+  if (!profileRes.ok) {
+    const t = await profileRes.text();
+    throw new Error(`Failed to insert partner profile: ${profileRes.status} ${t}`);
+  }
+  const profJson = await profileRes.json();
+  return profJson[0];
+}
+
+async function ensurePartnerContent(url, serviceKey, userId, niche) {
+  const seed = [
+    { url: `https://demo-${niche}.example/post-1`, title: 'Demo Post One', keywords: ['fitness','workout','hiit'] },
+    { url: `https://demo-${niche}.example/post-2`, title: 'Demo Post Two', keywords: ['fitness','nutrition','protein'] }
+  ];
+  const rows = seed.map(s => ({ user_id: userId, api_key: 'demo_seed', url: s.url, title: s.title, content: 'Demo content', keywords: s.keywords, keyword_density: {}, timestamp: new Date().toISOString() }));
+  const res = await fetch(`${url}/rest/v1/tracked_content`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceKey}` },
+    body: JSON.stringify(rows)
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`Failed to seed partner content: ${res.status} ${t}`);
+  }
+}
+
+async function pickSourceContent(url, serviceKey, primaryUserId, excludeUserId) {
+  // If primaryUserId provided, use their most recent content
+  if (primaryUserId) {
+    const res = await fetch(`${url}/rest/v1/tracked_content?user_id=eq.${primaryUserId}&select=id,user_id,created_at&order=created_at.desc&limit=1`, {
+      headers: { 'Authorization': `Bearer ${serviceKey}` }
+    });
+    const arr = await res.json();
+    if (arr?.length) return { sourceContent: arr[0], sourceUser: { id: arr[0].user_id } };
+  }
+  // Else pick the most recent content from any user not excluded
+  const res = await fetch(`${url}/rest/v1/tracked_content?select=id,user_id,created_at&order=created_at.desc&limit=1`, {
+    headers: { 'Authorization': `Bearer ${serviceKey}` }
+  });
+  const arr = await res.json();
+  const pick = (arr || []).find(r => r.user_id !== excludeUserId) || arr?.[0] || null;
+  if (!pick) return { sourceContent: null, sourceUser: null };
+  return { sourceContent: pick, sourceUser: { id: pick.user_id } };
+}
+
+async function countOpportunities(url, serviceKey, contentId) {
+  const res = await fetch(`${url}/rest/v1/placement_opportunities?select=id&source_content_id=eq.${contentId}`, {
+    headers: { 'Authorization': `Bearer ${serviceKey}`, 'Range': '0-0' }
+  });
+  // PostgREST count via content-range
+  const total = res.headers.get('content-range')?.split('/')?.[1];
+  return Number(total || 0);
+} 
