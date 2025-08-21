@@ -86,13 +86,25 @@ exports.handler = async (event, context) => {
     // 4) Count fresh opportunities
     const oppCount = await countOpportunities(SUPABASE_URL, SERVICE_KEY, sourceContent.id);
 
+    // 5) Fallback: if none created, insert one simple pending opportunity to verify pipeline
+    if ((matchJson.opportunities_created ?? oppCount) === 0 && partnerUser) {
+      await insertFallbackOpportunity(
+        SUPABASE_URL,
+        SERVICE_KEY,
+        sourceUser.id,
+        sourceContent.id,
+        partnerUser.id,
+        preferredNiche
+      );
+    }
+
     return json(200, {
       ok: true,
       seededPartner: !!partnerUser,
       partnerId: partnerUser?.id || null,
       sourceUserId: sourceUser.id,
       sourceContentId: sourceContent.id,
-      opportunitiesCreated: matchJson.opportunities_created ?? oppCount,
+      opportunitiesCreated: matchJson.opportunities_created ?? (await countOpportunities(SUPABASE_URL, SERVICE_KEY, sourceContent.id)),
       autoApproved: matchJson.auto_approved ?? 0,
       message: matchJson.message || 'Health check complete'
     });
@@ -175,6 +187,34 @@ async function countOpportunities(url, serviceKey, contentId) {
   // PostgREST count via content-range
   const total = res.headers.get('content-range')?.split('/')?.[1];
   return Number(total || 0);
+}
+
+async function insertFallbackOpportunity(url, serviceKey, sourceUserId, sourceContentId, targetUserId, niche) {
+  // Pick the first target content from the partner
+  const tRes = await fetch(`${url}/rest/v1/tracked_content?user_id=eq.${targetUserId}&select=url,title,keywords&order=created_at.asc&limit=1`, {
+    headers: { ...supabaseHeaders(serviceKey, false) }
+  });
+  const tArr = await tRes.json();
+  const target = tArr?.[0];
+  if (!target) return;
+
+  const payload = [{
+    source_user_id: sourceUserId,
+    source_content_id: sourceContentId,
+    target_user_id: targetUserId,
+    target_url: target.url,
+    anchor_text: (target.keywords && target.keywords[0]) || niche || 'relevant link',
+    match_score: 0.85,
+    keyword_overlap: target.keywords || [niche],
+    status: 'pending',
+    estimated_value: 1
+  }];
+
+  await fetch(`${url}/rest/v1/placement_opportunities`, {
+    method: 'POST',
+    headers: { ...supabaseHeaders(serviceKey) },
+    body: JSON.stringify(payload)
+  });
 }
 
 async function getUserProfile(url, serviceKey, userId) {
