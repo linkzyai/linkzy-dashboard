@@ -255,6 +255,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   // If not authenticated, show login/registration prompt
   if (!isAuthenticated) {
+    // If we have a cached session, trust it and redirect to dashboard
+    try {
+      const cachedUser = localStorage.getItem('linkzy_user');
+      const cachedKey = localStorage.getItem('linkzy_api_key');
+      if (cachedUser && cachedKey) {
+        navigate('/dashboard', { replace: true });
+        return null;
+      }
+    } catch {}
     // If we are logging out, go straight to home without showing prompt
     if (sessionStorage.getItem('linkzy_logging_out') === 'true') {
       sessionStorage.removeItem('linkzy_logging_out');

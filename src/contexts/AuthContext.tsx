@@ -44,29 +44,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Check if we're in a payment flow - if so, be more patient with auth checks
         const urlParams = new URLSearchParams(window.location.search);
         const isPaymentFlow = urlParams.get('canceled') === 'true' || urlParams.get('success') === 'true';
-        const timeoutDuration = isPaymentFlow ? 15000 : 6000;
+        const timeoutDuration = isPaymentFlow ? 15000 : 8000;
         
         // Set timeout for authentication check
         authTimeout = setTimeout(() => {
           if (isMounted && loading) {
             console.warn(`Authentication check timed out after ${timeoutDuration/1000} seconds`);
             
-            // For payment flows, try to preserve existing auth state from localStorage
-            if (isPaymentFlow) {
-              const existingUser = localStorage.getItem('linkzy_user');
-              const existingApiKey = localStorage.getItem('linkzy_api_key');
-              
-              if (existingUser && existingApiKey) {
-                console.log('Payment flow detected - preserving existing authentication');
-                try {
-                  const userData = JSON.parse(existingUser);
-                  setIsAuthenticated(true);
-                  setUser(userData);
-                  setLoading(false);
-                  return;
-                } catch (e) {
-                  console.error('Failed to restore auth from localStorage:', e);
-                }
+            // Try to preserve existing auth state from localStorage (not just in payment flow)
+            const existingUser = localStorage.getItem('linkzy_user');
+            const existingApiKey = localStorage.getItem('linkzy_api_key');
+            if (existingUser && existingApiKey) {
+              try {
+                const userData = JSON.parse(existingUser);
+                console.log('Restoring auth from localStorage due to timeout');
+                setIsAuthenticated(true);
+                setUser(userData);
+                setLoading(false);
+                return;
+              } catch (e) {
+                console.error('Failed to restore auth from localStorage:', e);
               }
             }
             
