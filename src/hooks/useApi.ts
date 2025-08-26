@@ -98,3 +98,7 @@ export function useApiUsage() {
 export function useKeywordAnalytics() {
   return useApi(() => supabaseService.getKeywordAnalytics(), []);
 }
+
+export function useHasTrackedContent(userId?: string) {
+  return useApi(() => supabaseService.hasTrackedContent(userId as any), [userId]);
+}

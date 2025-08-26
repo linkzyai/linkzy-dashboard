@@ -18,6 +18,8 @@ declare class SupabaseService {
   getDashboardStats(): Promise<any>;
   getBacklinks(page?: number, limit?: number): Promise<any>;
   updateUserCredits(userId: string, creditsToAdd: number, paymentDetails: any): Promise<any>;
+  getBillingHistory(userId: string): Promise<any[]>;
+  hasTrackedContent(userId: string): Promise<boolean>;
   
   // Website Scanner Methods
   scanWebsite(websiteUrl: string, userId: string, niche?: string): Promise<any>;
@@ -30,7 +32,6 @@ declare class SupabaseService {
   getApiUsage?(): Promise<any>;
   getKeywordAnalytics(): Promise<any>;
   getBillingHistory(userId: string): Promise<any[]>;
-  // Add other methods as needed
 }
 
 declare const supabaseService: SupabaseService;

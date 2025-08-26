@@ -160,14 +160,44 @@ const Hero = () => {
                 </div>
               </>
             ) : (
-              /* Live Interactive Demo */
-              <LiveDashboardDemo 
-                onClose={() => setShowDemo(false)} 
-                onGetStarted={() => {
-                  setShowDemo(false);
-                  setIsModalOpen(true);
-                }}
-              />
+              /* Looping promo video */
+              <div className="relative">
+                <button 
+                  onClick={() => setShowDemo(false)}
+                  className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors z-10"
+                >
+                  <span className="text-sm">✕</span>
+                </button>
+                <div className="aspect-video rounded-xl overflow-hidden bg-black">
+                  <video 
+                    src="/demo-video.mp4" 
+                    className="w-full h-full object-cover" 
+                    autoPlay 
+                    loop 
+                    muted 
+                    playsInline 
+                    disablePictureInPicture
+                    controls={false}
+                    poster="/chainlink.PNG"
+                  />
+                  {/* Autoplay nudge for Safari/iOS */}
+                  <script dangerouslySetInnerHTML={{__html: `
+                    (function(){
+                      var v=document.querySelector('video[src="/demo-video.mp4"]');
+                      if(v){ var play=()=>v.play().catch(()=>{}); document.addEventListener('visibilitychange',play,{once:true}); setTimeout(play, 100); }
+                    })();
+                  `}} />
+                </div>
+                <div className="mt-4 text-center">
+                  <button 
+                    onClick={() => { setShowDemo(false); setIsModalOpen(true); }}
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg transition-colors inline-flex items-center space-x-2"
+                  >
+                    <span>Start Building Backlinks</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </div>

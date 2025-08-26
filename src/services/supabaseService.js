@@ -1485,6 +1485,25 @@ If you're testing, try these workarounds:
     }
   }
 
+  // Check if any tracked content exists for a user (integration gate)
+  async hasTrackedContent(userId) {
+    try {
+      if (!userId) return false;
+      const { count, error } = await supabase
+        .from('tracked_content')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId);
+      if (error) {
+        console.warn('hasTrackedContent error:', error);
+        return false;
+      }
+      return (count || 0) > 0;
+    } catch (e) {
+      console.warn('hasTrackedContent exception:', e);
+      return false;
+    }
+  }
+
   // Website Scanner Methods
   async scanWebsite(websiteUrl, userId, niche = '') {
     try {

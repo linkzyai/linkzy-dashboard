@@ -46,9 +46,10 @@ interface PlacementInstructionData {
   keywords: string[];
   injectionMethod: string;
   paragraph?: string;
+  rel?: string;
 }
 
-function generateContextualParagraph(anchorText: string, targetUrl: string, niche: string | undefined, keywords: string[] = []): string {
+function generateContextualParagraph(anchorText: string, targetUrl: string, niche: string | undefined, keywords: string[] = [], rel: string = 'noopener'): string {
   const kw = (keywords[0] || niche || 'resources').toString();
   const sentences = [
     `If you're exploring ${kw}, you might find ${anchorText} helpful for practical tips and real examples.`,
@@ -56,8 +57,7 @@ function generateContextualParagraph(anchorText: string, targetUrl: string, nich
     `Looking to improve your ${kw}? ${anchorText} breaks it down with a simple walkthrough.`
   ];
   const pick = sentences[Math.floor(Math.random() * sentences.length)];
-  // Ensure anchor text is linked in the snippet
-  return pick.replace(anchorText, `<a href="${targetUrl}" rel="nofollow noopener" target="_blank">${anchorText}</a>`);
+  return pick.replace(anchorText, `<a href="${targetUrl}" rel="${rel}" target="_blank">${anchorText}</a>`);
 }
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -142,11 +142,14 @@ async function attemptJavaScriptPlacement(opportunity: any, targetDomainMetrics:
     console.log(`🔧 Attempting JavaScript injection placement for ${targetDomainMetrics.website}`);
     
     const niche = opportunity?.target_user?.niche || opportunity?.source_user?.niche || undefined;
+    // Default to dofollow (no 'nofollow'); switch to nofollow for low-quality/experimental cases later if needed
+    const rel = 'noopener';
     const paragraph = generateContextualParagraph(
       opportunity.suggested_anchor_text || 'this guide',
       opportunity.suggested_target_url,
       niche,
-      opportunity.source_content?.keywords || []
+      opportunity.source_content?.keywords || [],
+      rel
     );
     
     // Create the placement instruction that will be sent to the tracking script
@@ -158,7 +161,8 @@ async function attemptJavaScriptPlacement(opportunity: any, targetDomainMetrics:
       placementContext: opportunity.suggested_placement_context,
       keywords: opportunity.source_content?.keywords || [],
       injectionMethod: 'dom_manipulation',
-      paragraph
+      paragraph,
+      rel
     };
     
     // Store the placement instruction in the database for the tracking script to pick up
