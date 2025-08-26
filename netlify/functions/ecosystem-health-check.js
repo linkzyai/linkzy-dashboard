@@ -1,20 +1,5 @@
 const fetch = global.fetch;
-
-function corsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS'
-  };
-}
-
-function json(status, obj) {
-  return { statusCode: status, headers: { ...corsHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(obj) };
-}
-
-function safeJson(str) {
-  try { return str ? JSON.parse(str) : {}; } catch { return {}; }
-}
+const { corsHeaders, json, isAdmin, checkOrigin, safeJson } = require('./_utils');
 
 const supabaseHeaders = (key, includeJson = true) => ({
   ...(includeJson ? { 'Content-Type': 'application/json' } : {}),
@@ -26,17 +11,14 @@ exports.handler = async (event, context) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers: corsHeaders() };
   }
-  if (event.httpMethod !== 'POST') {
-    return json(405, { error: 'Method not allowed' });
-  }
+  if (!checkOrigin(event)) return json(403, { error: 'Origin not allowed' });
+  if (!isAdmin(event)) return json(401, { error: 'Admin key required' });
+  if (event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed' });
 
   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://sljlwvrtwqmhmjunyplr.supabase.co';
   const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const ANON_KEY = process.env.SUPABASE_ANON_KEY;
-
-  if (!SUPABASE_URL || !SERVICE_KEY) {
-    return json(500, { error: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars.' });
-  }
+  if (!SUPABASE_URL || !SERVICE_KEY) return json(500, { error: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY' });
 
   const body = safeJson(event.body) || {};
   const shouldSeed = body.seed !== false; // default true

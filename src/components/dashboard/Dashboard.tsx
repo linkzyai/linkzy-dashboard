@@ -81,16 +81,43 @@ const Dashboard = () => {
   const [finLoading, setFinLoading] = useState(false);
   const [finResult, setFinResult] = useState<any | null>(null);
   const [finError, setFinError] = useState<string | null>(null);
+
+  // Admin key helper (prompt once, cache for session)
+  const getAdminKey = (): string => {
+    let key = sessionStorage.getItem('linkzy_admin_key') || '';
+    if (!key) {
+      key = window.prompt('Enter admin key') || '';
+      if (key) sessionStorage.setItem('linkzy_admin_key', key);
+    }
+    return key;
+  };
+
+  const adminFetch = async (fn: string, payload: any) => {
+    let key = getAdminKey();
+    const make = () => fetch(`/.netlify/functions/${fn}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': key },
+      body: JSON.stringify(payload)
+    });
+    let res = await make();
+    if (res.status === 401 || res.status === 403) {
+      sessionStorage.removeItem('linkzy_admin_key');
+      key = getAdminKey();
+      res = await fetch(`/.netlify/functions/${fn}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': key },
+        body: JSON.stringify(payload)
+      });
+    }
+    return res;
+  };
+
   const runHealthCheck = async () => {
     try {
       setHcLoading(true);
       setHcError(null);
       setHcResult(null);
-      const res = await fetch('/.netlify/functions/ecosystem-health-check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ primaryUserId: user?.id || undefined })
-      });
+      const res = await adminFetch('ecosystem-health-check', { primaryUserId: user?.id || undefined });
       const json = await res.json();
       setHcResult(json);
       if (!res.ok || json?.ok === false) setHcError(json?.error || `HTTP ${res.status}`);
@@ -106,11 +133,7 @@ const Dashboard = () => {
       setApLoading(true);
       setApError(null);
       setApResult(null);
-      const res = await fetch('/.netlify/functions/approve-and-place', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ primaryUserId: user?.id || undefined })
-      });
+      const res = await adminFetch('approve-and-place', { primaryUserId: user?.id || undefined });
       const json = await res.json();
       setApResult(json);
       if (!res.ok || json?.ok === false) setApError(json?.error || `HTTP ${res.status}`);
@@ -126,11 +149,7 @@ const Dashboard = () => {
       setFinLoading(true);
       setFinError(null);
       setFinResult(null);
-      const res = await fetch('/.netlify/functions/finalize-instruction', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUserId: user?.id || undefined })
-      });
+      const res = await adminFetch('finalize-instruction', { targetUserId: user?.id || undefined });
       const json = await res.json();
       setFinResult(json);
       if (!res.ok || json?.ok === false) setFinError(json?.error || `HTTP ${res.status}`);

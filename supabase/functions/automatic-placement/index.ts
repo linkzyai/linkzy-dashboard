@@ -528,6 +528,8 @@ serve(async (req: Request) => {
   }
 
   try {
+    const adminKey = req.headers.get('x-admin-key') || '';
+    const requireAdminKey = Deno.env.get('ADMIN_API_KEY') || '';
     const { opportunityId, userId, manualOverride }: PlacementRequest = await req.json();
     
     if (!opportunityId) {
@@ -535,6 +537,36 @@ serve(async (req: Request) => {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Ownership/admin enforcement
+    const { data: opp } = await supabase
+      .from('placement_opportunities')
+      .select('id, source_user_id, status')
+      .eq('id', opportunityId)
+      .single();
+
+    if (!opp) {
+      return new Response(JSON.stringify({ error: 'Opportunity not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (manualOverride) {
+      if (!requireAdminKey || adminKey !== requireAdminKey) {
+        return new Response(JSON.stringify({ error: 'Admin key required for manualOverride' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } else {
+      if (!userId || userId !== opp.source_user_id) {
+        return new Response(JSON.stringify({ error: 'Unauthorized: user must own the opportunity' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
     
     // Get opportunity details with related data
@@ -679,7 +711,7 @@ serve(async (req: Request) => {
     console.error('Automatic placement error:', error);
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
-      details: error.message 
+      details: (error as any).message 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
