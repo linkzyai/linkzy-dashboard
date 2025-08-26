@@ -69,96 +69,7 @@ const Dashboard = () => {
   const { data: dashboardData, loading, error, refetch } = useDashboardStats();
   const [currentCredits, setCurrentCredits] = useState(user?.credits || 0);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
-  // Admin-only health check state
-  const adminEmails = ['multimatumc@gmail.com', 'michaelcarpenter@multimatum.com'];
-  const isAdmin = !!user?.email && adminEmails.includes(user.email);
-  const [hcLoading, setHcLoading] = useState(false);
-  const [hcResult, setHcResult] = useState<any | null>(null);
-  const [hcError, setHcError] = useState<string | null>(null);
-  const [apLoading, setApLoading] = useState(false);
-  const [apResult, setApResult] = useState<any | null>(null);
-  const [apError, setApError] = useState<string | null>(null);
-  const [finLoading, setFinLoading] = useState(false);
-  const [finResult, setFinResult] = useState<any | null>(null);
-  const [finError, setFinError] = useState<string | null>(null);
-
-  // Admin key helper (prompt once, cache for session)
-  const getAdminKey = (): string => {
-    let key = sessionStorage.getItem('linkzy_admin_key') || '';
-    if (!key) {
-      key = window.prompt('Enter admin key') || '';
-      if (key) sessionStorage.setItem('linkzy_admin_key', key);
-    }
-    return key;
-  };
-
-  const adminFetch = async (fn: string, payload: any) => {
-    let key = getAdminKey();
-    const make = () => fetch(`/.netlify/functions/${fn}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-admin-key': key },
-      body: JSON.stringify(payload)
-    });
-    let res = await make();
-    if (res.status === 401 || res.status === 403) {
-      sessionStorage.removeItem('linkzy_admin_key');
-      key = getAdminKey();
-      res = await fetch(`/.netlify/functions/${fn}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-key': key },
-        body: JSON.stringify(payload)
-      });
-    }
-    return res;
-  };
-
-  const runHealthCheck = async () => {
-    try {
-      setHcLoading(true);
-      setHcError(null);
-      setHcResult(null);
-      const res = await adminFetch('ecosystem-health-check', { primaryUserId: user?.id || undefined });
-      const json = await res.json();
-      setHcResult(json);
-      if (!res.ok || json?.ok === false) setHcError(json?.error || `HTTP ${res.status}`);
-    } catch (e: any) {
-      setHcError(e?.message || 'Failed to run health check');
-    } finally {
-      setHcLoading(false);
-    }
-  };
-
-  const runApprovePlace = async () => {
-    try {
-      setApLoading(true);
-      setApError(null);
-      setApResult(null);
-      const res = await adminFetch('approve-and-place', { primaryUserId: user?.id || undefined });
-      const json = await res.json();
-      setApResult(json);
-      if (!res.ok || json?.ok === false) setApError(json?.error || `HTTP ${res.status}`);
-    } catch (e: any) {
-      setApError(e?.message || 'Failed to approve and place');
-    } finally {
-      setApLoading(false);
-    }
-  };
-
-  const runFinalizeInstruction = async () => {
-    try {
-      setFinLoading(true);
-      setFinError(null);
-      setFinResult(null);
-      const res = await adminFetch('finalize-instruction', { targetUserId: user?.id || undefined });
-      const json = await res.json();
-      setFinResult(json);
-      if (!res.ok || json?.ok === false) setFinError(json?.error || `HTTP ${res.status}`);
-    } catch (e: any) {
-      setFinError(e?.message || 'Failed to finalize instruction');
-    } finally {
-      setFinLoading(false);
-    }
-  };
+  // Admin tools removed for launch
 
   // Listen for credit updates
   useEffect(() => {
@@ -479,57 +390,7 @@ const Dashboard = () => {
             )}
           </div>
 
-          {isAdmin && (
-            <div className="mb-8">
-              <div className="bg-gray-900 border border-orange-500/40 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-white font-semibold">Admin: Ecosystem Health Check</h3>
-                  <button
-                    onClick={runHealthCheck}
-                    disabled={hcLoading}
-                    className="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm"
-                  >
-                    {hcLoading ? 'Running…' : 'Run Health Check'}
-                  </button>
-                </div>
-                {hcError && <div className="text-red-400 text-sm mb-2">{hcError}</div>}
-                {hcResult && (
-                  <pre className="bg-black/60 border border-gray-700 rounded p-3 text-xs text-gray-300 overflow-x-auto">{JSON.stringify(hcResult, null, 2)}</pre>
-                )}
-                {!hcResult && !hcError && (
-                  <p className="text-gray-400 text-sm">Seeds a demo partner (fitness), triggers matcher for your latest content, and reports opportunities created.</p>
-                )}
-                <div className="flex items-center justify-between mt-4">
-                  <h4 className="text-white font-medium">Approve & Place</h4>
-                  <button
-                    onClick={runApprovePlace}
-                    disabled={apLoading}
-                    className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm"
-                  >
-                    {apLoading ? 'Placing…' : 'Approve & Place Latest'}
-                  </button>
-                </div>
-                {apError && <div className="text-red-400 text-sm mt-2">{apError}</div>}
-                {apResult && (
-                  <pre className="bg-black/60 border border-gray-700 rounded p-3 text-xs text-gray-300 overflow-x-auto mt-2">{JSON.stringify(apResult, null, 2)}</pre>
-                )}
-                <div className="flex items-center justify-between mt-4">
-                  <h4 className="text-white font-medium">Finalize Instruction</h4>
-                  <button
-                    onClick={runFinalizeInstruction}
-                    disabled={finLoading}
-                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm"
-                  >
-                    {finLoading ? 'Finalizing…' : 'Mark Executed & Deduct Credit'}
-                  </button>
-                </div>
-                {finError && <div className="text-red-400 text-sm mt-2">{finError}</div>}
-                {finResult && (
-                  <pre className="bg-black/60 border border-gray-700 rounded p-3 text-xs text-gray-300 overflow-x-auto mt-2">{JSON.stringify(finResult, null, 2)}</pre>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Admin tools removed */}
 
           {/* Onboarding Progress Tracker - Show only for new users */}
           {!hasBacklinks && (
