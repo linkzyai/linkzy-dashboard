@@ -20,8 +20,7 @@ exports.handler = async (event, context) => {
         credits: credits?.toString?.() || String(credits || ''),
         plan_name: plan_name,
         user_email: user_email,
-      },
-      return_url: `${process.env.VITE_SITE_URL || 'https://linkzy.ai'}/dashboard`,
+      }
     };
 
     if (coupon_code) paymentIntentConfig.metadata.coupon_code = coupon_code;

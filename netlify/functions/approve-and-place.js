@@ -1,6 +1,7 @@
 const fetch = global.fetch;
 const { corsHeaders, json, isAdmin, checkOrigin, isUUID, safeJson } = require('./_utils');
 const h = (key,j=true)=>({...(j?{'Content-Type':'application/json'}:{}),apikey:key,Authorization:`Bearer ${key}`});
+const ADMIN_KEY = process.env.ADMIN_API_KEY || '';
 
 exports.handler = async (event) => {
   if (event.httpMethod==='OPTIONS') return {statusCode:200,headers:corsHeaders()};
@@ -41,7 +42,7 @@ exports.handler = async (event) => {
 
     const placeRes = await fetch(`${SUPABASE_URL}/functions/v1/automatic-placement`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ANON_KEY}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ANON_KEY}`, 'x-admin-key': ADMIN_KEY },
       body: JSON.stringify({ opportunityId: opp.id, manualOverride: true, userId: opp.source_user_id })
     });
     const placeJson = await placeRes.json().catch(() => ({}));
