@@ -18,9 +18,19 @@ create index if not exists billing_history_created_at_idx on public.billing_hist
 -- RLS
 alter table public.billing_history enable row level security;
 
-create policy if not exists billing_history_own on public.billing_history
-  for select using (auth.uid() = user_id);
-
-create policy if not exists billing_history_insert_service on public.billing_history
-  for insert with check (auth.role() = 'service_role');
+-- Create policies if missing
+DO $block$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'billing_history' AND policyname = 'billing_history_own'
+  ) THEN
+    EXECUTE 'create policy billing_history_own on public.billing_history for select using (auth.uid() = user_id)';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'billing_history' AND policyname = 'billing_history_insert_service'
+  ) THEN
+    EXECUTE 'create policy billing_history_insert_service on public.billing_history for insert with check (auth.role() = ''service_role'')';
+  END IF;
+END
+$block$;
 

@@ -776,7 +776,7 @@ const DashboardAccount = () => {
           <div className="w-24 h-24 rounded-full bg-gray-800 border-4 border-orange-500 flex items-center justify-center text-4xl text-orange-400 font-bold mb-2">
             <User className="w-12 h-12" />
           </div>
-          <button className="mt-2 text-xs text-gray-400 hover:text-orange-400 transition-colors">Change Photo</button>
+          <button className="mt-2 text-xs text-gray-500 cursor-not-allowed" title="Profile photo upload coming soon" disabled>Change Photo</button>
         </div>
         <div className="flex-1 w-full">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -797,7 +797,7 @@ const DashboardAccount = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Member Since</label>
-              <input type="text" value={userData.joinDate} disabled className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white" />
+              <input type="text" value={(user?.created_at ? new Date(user.created_at).toLocaleDateString() : '—')} disabled className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Website</label>
