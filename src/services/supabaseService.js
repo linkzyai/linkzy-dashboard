@@ -1489,10 +1489,13 @@ If you're testing, try these workarounds:
   async hasTrackedContent(userId) {
     try {
       if (!userId) return false;
+      // Use API key to ensure we only count real script-fired events
+      const apiKey = this.getApiKey();
+      if (!apiKey) return false;
       const { count, error } = await supabase
         .from('tracked_content')
         .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId);
+        .eq('api_key', apiKey);
       if (error) {
         console.warn('hasTrackedContent error:', error);
         return false;

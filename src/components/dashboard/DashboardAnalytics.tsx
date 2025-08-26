@@ -30,6 +30,12 @@ const DashboardAnalytics = () => {
   const userDomain = user?.website || 'yourdomain.com';
   const userApiKey = user?.api_key || '';
   const { data: hasTracked, loading: trackedLoading } = useHasTrackedContent(user?.id);
+  const [gateOpen, setGateOpen] = React.useState(true);
+  React.useEffect(() => {
+    if (!trackedLoading) {
+      setGateOpen(!hasTracked);
+    }
+  }, [trackedLoading, hasTracked]);
   const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU';
   const apiSnippet = `<script>(function(){ var lz = window.linkzy = window.linkzy || []; lz.apiKey = '${userApiKey || 'YOUR_API_KEY'}'; lz.track = function(){ fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/track-content', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ${anonKey}' }, body: JSON.stringify({ apiKey: lz.apiKey, url: window.location.href, title: document.title, referrer: document.referrer, timestamp: new Date().toISOString(), content: document.body ? document.body.innerText.slice(0, 1000) : '' }) }); }; lz.track(); })();</script>`;
   const hasTrackedContent = !!hasTracked;
@@ -64,7 +70,7 @@ const DashboardAnalytics = () => {
   }
 
   // Integration gate: show setup state until first tracked page exists
-  if (trackedLoading || !hasTrackedContent) {
+  if (gateOpen) {
     return (
       <DashboardLayout title="Analytics">
         <div className="p-6 max-w-4xl">
