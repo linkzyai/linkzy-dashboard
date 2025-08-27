@@ -1,0 +1,1 @@
+-- Add preferences JSONB column to users\nALTER TABLE public.users ADD COLUMN IF NOT EXISTS preferences jsonb DEFAULT '{}'::jsonb;\nCREATE INDEX IF NOT EXISTS users_preferences_gin ON public.users USING gin (preferences);\n
