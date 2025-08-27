@@ -251,13 +251,14 @@ const SignInModal: React.FC<SignInModalProps> = ({ isOpen, setIsModalOpen }) => 
             <button
               onClick={handleGoogleSignIn}
               disabled={isLoading}
-              className="w-full bg-white hover:bg-gray-50 disabled:bg-gray-100 text-gray-900 font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3 border border-gray-300 shadow-lg hover:shadow-xl disabled:shadow-none"
+              className="w-full relative overflow-hidden group rounded-lg border border-orange-500/40 bg-gray-800 hover:bg-gray-750 text-white font-semibold py-3 px-4 transition-all flex items-center justify-center space-x-3 shadow-lg hover:shadow-orange-500/10 disabled:opacity-70"
             >
+              <span className="absolute inset-0 bg-gradient-to-r from-orange-500/10 via-transparent to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></span>
               {isLoading ? (
-                <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-5 h-5 border-2 border-orange-400 border-t-transparent rounded-full animate-spin"></div>
               ) : (
-                <div className="w-5 h-5 bg-gradient-to-r from-blue-500 via-red-500 via-yellow-500 to-green-500 rounded text-white text-xs font-bold flex items-center justify-center shadow-lg">
-                  G
+                <div className="w-5 h-5 rounded flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-5 h-5"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12  s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24  s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,16.108,19.01,13,24,13c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657  C34.046,6.053,29.268,4,24,4C16.318,4,9.641,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.197l-6.19-5.238C29.211,34.091,26.715,35,24,35c-5.176,0-9.599-3.317-11.258-7.946  l-6.58,5.066C9.565,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.794,2.241-2.231,4.166-4.09,5.571l0.003-0.002l6.19,5.238  C35.271,40.416,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
                 </div>
               )}
               <span className="text-lg">Continue with Google</span>

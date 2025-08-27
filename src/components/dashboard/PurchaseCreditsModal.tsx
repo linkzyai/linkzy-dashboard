@@ -167,34 +167,23 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
         console.log('✅ Payment confirmed successfully');
         
-        // Update credits after successful payment
+        // Light webhook wait: poll billing_history for confirmation (max ~20s)
         try {
-          const { default: supabaseService } = await import('../../services/supabaseService');
-          
-          const paymentDetails = {
-            sessionId: paymentMethod.id,
-            amount: selectedPlan.price,
-            description: `${selectedPlan.name} - ${selectedPlan.credits} Credits`
+          const start = Date.now();
+          const poll = async () => {
+            const res = await fetch(`/rest/v1/billing_history?user_id=eq.${user.id}&select=id,created_at&order=created_at.desc`, {
+              headers: { 'apikey': (window as any).VITE_SUPABASE_ANON_KEY || '' }
+            }).catch(()=>null);
+            return res && res.ok ? res.json() : [];
           };
-          
-          const result = await supabaseService.updateUserCredits(
-            user.id,
-            selectedPlan.credits,
-            paymentDetails
-          );
-          
-          window.dispatchEvent(new CustomEvent('creditsUpdated', { 
-            detail: { 
-              newCredits: result.newCredits,
-              oldCredits: result.oldCredits,
-              creditsAdded: result.creditsAdded,
-              verificationPassed: result.verificationPassed
-            } 
-          }));
-          
-        } catch (creditError) {
-          console.error('❌ Credit update failed:', creditError);
-        }
+          let confirmed = false;
+          while (Date.now() - start < 20000) {
+            const rows = await poll();
+            if (Array.isArray(rows) && rows.length > 0) { confirmed = true; break; }
+            await new Promise(r => setTimeout(r, 2000));
+          }
+          if (!confirmed) console.warn('Webhook confirmation not observed within window');
+        } catch {}
         
       } catch (fetchError) {
         console.error('❌ Failed to create payment intent:', fetchError);

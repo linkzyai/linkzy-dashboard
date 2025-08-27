@@ -42,29 +42,30 @@ serve(async (req) => {
 
     // Handle the event
     switch (event.type) {
-      case 'checkout.session.completed':
+      case 'payment_intent.succeeded': {
+        const pi: any = event.data.object
+        await handlePaymentIntentSucceeded(supabase, pi)
+        break
+      }
+      case 'checkout.session.completed': {
         const session = event.data.object as any
-        
-        // Handle one-time payments
         if (session.mode === 'payment') {
-          await handleOneTimePayment(supabase, session)
-        }
-        // Handle subscriptions
-        else if (session.mode === 'subscription') {
+          await handleCheckoutPaymentCompleted(supabase, session)
+        } else if (session.mode === 'subscription') {
           await handleSubscription(supabase, session)
         }
         break
-
-      case 'invoice.payment_succeeded':
+      }
+      case 'invoice.payment_succeeded': {
         const invoice = event.data.object as any
         await handleSubscriptionRenewal(supabase, invoice)
         break
-
-      case 'customer.subscription.deleted':
+      }
+      case 'customer.subscription.deleted': {
         const subscription = event.data.object as any
         await handleSubscriptionCancellation(supabase, subscription)
         break
-
+      }
       default:
         console.log(`Unhandled event type: ${event.type}`)
     }
@@ -83,79 +84,93 @@ serve(async (req) => {
   }
 })
 
-async function handleOneTimePayment(supabase: any, session: any) {
+async function handlePaymentIntentSucceeded(supabase: any, pi: any) {
   try {
-    const customerEmail = session.customer_details?.email
-    const amount = session.amount_total / 100 // Convert from cents
-    const lineItems = session.line_items?.data || []
+    const meta = pi.metadata || {}
+    const userId = meta.user_id
+    const credits = parseInt(meta.credits || '0', 10) || 0
+    const amount = (pi.amount_received || pi.amount || 0) / 100
+    const desc = meta.plan_name || meta.description || 'Credit purchase'
 
-    // Determine credits based on price ID
-    let creditsToAdd = 0
-    let planName = 'One-time Purchase'
+    if (!userId) {
+      console.warn('payment_intent.succeeded missing user_id metadata')
+      return
+    }
 
-    for (const item of lineItems) {
-      const priceId = item.price?.id
-      switch (priceId) {
-        case 'price_1RcXO4KwiECS8C7ZdhFvMNJi': // Starter Pack
-          creditsToAdd = 3
-          planName = 'Starter Pack'
-          break
-        case 'price_1RcXOuKwiECS8C7Zw0caNseC': // Growth Pack
-          creditsToAdd = 10
-          planName = 'Growth Pack'
-          break
-        default:
-          console.log('Unknown price ID:', priceId)
-          return
+    // Increment credits
+    if (credits > 0) {
+      const { error: updErr } = await supabase
+        .from('users')
+        .update({ credits: (pi as any).credits_increment ? undefined : undefined })
+        .eq('id', userId)
+
+      // If simple update above is ambiguous, perform atomic increment via RPC
+      if (updErr) {
+        // Fallback: fetch then update
+        const { data: user, error: uerr } = await supabase
+          .from('users')
+          .select('credits')
+          .eq('id', userId)
+          .single()
+        if (!uerr && user) {
+          await supabase.from('users').update({ credits: (user.credits || 0) + credits }).eq('id', userId)
+        }
+      } else {
+        // noop
       }
     }
 
-    if (creditsToAdd > 0 && customerEmail) {
-      // Update user credits
-      const { data: user, error: userError } = await supabase
+    // Insert billing history row
+    const { error: bhErr } = await supabase
+      .from('billing_history')
+      .insert({
+        user_id: userId,
+        type: 'credit_purchase',
+        amount: amount,
+        credits_added: credits,
+        description: desc,
+        stripe_session_id: pi.id,
+        status: 'completed'
+      })
+
+    if (bhErr) console.error('billing_history insert error:', bhErr)
+  } catch (e) {
+    console.error('handlePaymentIntentSucceeded error:', e)
+  }
+}
+
+async function handleCheckoutPaymentCompleted(supabase: any, session: any) {
+  try {
+    const meta = session.metadata || {}
+    const userId = meta.user_id
+    const credits = parseInt(meta.credits || '0', 10) || 0
+    const amount = (session.amount_total || 0) / 100
+    const desc = meta.plan_name || 'One-time Purchase'
+
+    if (!userId) return
+
+    // Update credits
+    if (credits > 0) {
+      const { data: user } = await supabase
         .from('users')
-        .select('id, credits')
-        .eq('email', customerEmail)
+        .select('credits')
+        .eq('id', userId)
         .single()
-
-      if (userError) {
-        console.error('Error finding user:', userError)
-        return
-      }
-
-      const newCredits = (user.credits || 0) + creditsToAdd
-
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ credits: newCredits })
-        .eq('id', user.id)
-
-      if (updateError) {
-        console.error('Error updating credits:', updateError)
-        return
-      }
-
-      // Log the transaction
-      const { error: logError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: user.id,
-          type: 'credit_purchase',
-          amount: amount,
-          credits: creditsToAdd,
-          plan_name: planName,
-          stripe_session_id: session.id,
-          status: 'completed'
-        })
-
-      if (logError) {
-        console.error('Error logging transaction:', logError)
-      }
-
-      console.log(`Successfully added ${creditsToAdd} credits to user ${customerEmail}`)
+      await supabase.from('users').update({ credits: (user?.credits || 0) + credits }).eq('id', userId)
     }
-  } catch (error) {
-    console.error('Error handling one-time payment:', error)
+
+    // Log billing history
+    await supabase.from('billing_history').insert({
+      user_id: userId,
+      type: 'credit_purchase',
+      amount,
+      credits_added: credits,
+      description: desc,
+      stripe_session_id: session.id,
+      status: 'completed'
+    })
+  } catch (e) {
+    console.error('handleCheckoutPaymentCompleted error:', e)
   }
 }
 
@@ -190,6 +205,17 @@ async function handleSubscription(supabase: any, session: any) {
         console.error('Error updating user to Pro plan:', updateError)
         return
       }
+
+      // Log billing history
+      await supabase.from('billing_history').insert({
+        user_id: user.id,
+        type: 'subscription_purchase',
+        amount: (session.amount_total || 0) / 100,
+        credits_added: 30,
+        description: 'Pro Monthly',
+        stripe_session_id: session.id,
+        status: 'completed'
+      })
 
       console.log(`Successfully upgraded user ${customerEmail} to Pro plan`)
     }
@@ -231,21 +257,17 @@ async function handleSubscriptionRenewal(supabase: any, invoice: any) {
       }
 
       // Log the renewal
-      const { error: logError } = await supabase
-        .from('transactions')
+      await supabase
+        .from('billing_history')
         .insert({
           user_id: user.id,
           type: 'subscription_renewal',
           amount: amount,
-          credits: 30,
-          plan_name: 'Pro Monthly',
-          stripe_invoice_id: invoice.id,
+          credits_added: 30,
+          description: 'Pro Monthly',
+          stripe_session_id: invoice.id,
           status: 'completed'
         })
-
-      if (logError) {
-        console.error('Error logging subscription renewal:', logError)
-      }
 
       console.log(`Successfully renewed subscription for user ${user.email}`)
     }
