@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { X, CreditCard, Zap, CheckCircle, AlertCircle, Lock } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
-// @ts-expect-error: No type declarations for supabase.js
-import { supabase } from '../../lib/supabase';
 
 // Initialize Stripe with TEST KEY for safe testing
 const stripePromise = loadStripe('pk_test_51RcWy5KwiECS8C7ZPPzXHrxYJzcuDOr3un8pbDcDmQPz3MCaB8ghot0x1zg4WK0zofOC589J120xPaGtUHH4hvDj00nmAd7Jln');
@@ -165,15 +163,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           const start = Date.now();
           let confirmed = false;
           while (Date.now() - start < 20000) {
-            try {
-              const { data: bh } = await supabase
-                .from('billing_history')
-                .select('id, created_at')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false })
-                .limit(1);
-              if (Array.isArray(bh) && bh.length > 0) { confirmed = true; break; }
-            } catch {}
+            const rows = await poll();
+            if (Array.isArray(rows) && rows.length > 0) { confirmed = true; break; }
             await new Promise(r => setTimeout(r, 2000));
           }
           if (!confirmed) console.warn('Webhook confirmation not observed within window');
