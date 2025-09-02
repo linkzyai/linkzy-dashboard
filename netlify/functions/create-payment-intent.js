@@ -10,11 +10,6 @@ exports.handler = async (event, context) => {
   try {
     const { amount, currency, description, user_id, user_email, credits, plan_name, coupon_code } = JSON.parse(event.body);
 
-    if (!user_id || !user_email || !credits || !amount) {
-      console.error('Missing required payment fields', { user_id: !!user_id, user_email: !!user_email, credits, amount });
-      return json(400,{ error: 'Missing required payment fields' });
-    }
-
     const paymentIntentConfig = {
       amount: amount,
       currency: currency,

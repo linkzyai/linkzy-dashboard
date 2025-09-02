@@ -115,22 +115,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       console.log('Processing payment with Stripe Elements...');
       console.log('Selected plan:', selectedPlan);
       
-      // Get user info from Supabase auth (fallback to localStorage)
-      let userId: string | undefined;
-      let userEmail: string | undefined;
-      try {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        userId = authUser?.id;
-        userEmail = authUser?.email || undefined;
-      } catch {}
-      if (!userId || !userEmail) {
-        const stored = JSON.parse(localStorage.getItem('linkzy_user') || '{}');
-        userId = userId || stored?.id;
-        userEmail = userEmail || stored?.email;
-      }
-      if (!userId || !userEmail) {
-        throw new Error('Unable to resolve user identity. Please re-login and try again.');
-      }
+      // Get user info
+      const user = JSON.parse(localStorage.getItem('linkzy_user') || '{}');
       
       // Create payment intent via our Netlify function (no server-side confirm)
       try {
@@ -143,8 +129,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             amount: Math.round(getDiscountedPrice() * 100), // cents
             currency: 'usd',
             description: `${selectedPlan.name} - ${selectedPlan.credits} Credits${discountApplied?.valid ? ` (${discountApplied.code} applied)` : ''}`,
-            user_id: userId,
-            user_email: userEmail,
+            user_id: user.id,
+            user_email: user.email,
             credits: selectedPlan.credits,
             plan_name: selectedPlan.name,
             coupon_code: discountApplied?.valid ? discountApplied.code : undefined
@@ -160,7 +146,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         const confirmPromise = stripe!.confirmCardPayment(client_secret, {
           payment_method: {
             card: elements!.getElement(CardElement)!,
-            billing_details: { email: userEmail }
+            billing_details: { email: user.email }
           }
         });
         // Add a hard timeout so UI never hangs indefinitely
@@ -183,7 +169,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               const { data: bh } = await supabase
                 .from('billing_history')
                 .select('id, created_at')
-                .eq('user_id', userId)
+                .eq('user_id', user.id)
                 .order('created_at', { ascending: false })
                 .limit(1);
               if (Array.isArray(bh) && bh.length > 0) { confirmed = true; break; }
@@ -200,8 +186,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               confirmed
             }
           }));
-          // Proactively refresh credits as well
-          window.dispatchEvent(new CustomEvent('creditsUpdated', { detail: {} }));
         } catch {}
         
       } catch (fetchError) {
@@ -223,7 +207,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             };
             
             const result = await supabaseService.updateUserCredits(
-              userId || '', // Use userId from Supabase auth
+              user.id,
               selectedPlan.credits,
               paymentDetails
             );
