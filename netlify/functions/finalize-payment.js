@@ -5,7 +5,12 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const fetchApi = global.fetch;
 
-const H = (k,j=true)=>({...(j?{'Content-Type':'application/json'}:{}),apikey:k,Authorization:`Bearer ${k}`});
+const H = (k,j=true)=>({
+  ...(j?{'Content-Type':'application/json'}:{}),
+  Accept: 'application/json',
+  apikey: k,
+  Authorization: `Bearer ${k}`
+});
 
 function decodeJwtSub(token) {
   try {
@@ -56,14 +61,14 @@ exports.handler = async (event) => {
     const current = (Array.isArray(users) && users[0]?.credits) || 0;
     await fetchApi(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
       method: 'PATCH',
-      headers: { ...H(SERVICE_KEY) },
+      headers: { ...H(SERVICE_KEY), Prefer: 'return=representation' },
       body: JSON.stringify({ credits: current + credits })
     });
 
     // Insert billing history
     await fetchApi(`${SUPABASE_URL}/rest/v1/billing_history`, {
       method: 'POST',
-      headers: { ...H(SERVICE_KEY) },
+      headers: { ...H(SERVICE_KEY), Prefer: 'return=representation' },
       body: JSON.stringify([{ user_id: userId, type:'credit_purchase', amount, credits_added: credits, description: desc, stripe_session_id: pi.id, status:'completed' }])
     });
 
