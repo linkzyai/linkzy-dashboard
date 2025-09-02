@@ -16,14 +16,7 @@ function decodeJwtSub(token) {
   try {
     const parts = String(token||'').split('.');
     if (parts.length < 2) return '';
-    // Use atob for base64 decoding in Netlify environment
-    const base64 = parts[1].replace(/-/g,'+').replace(/_/g,'/');
-    // Pad base64 string if needed
-    const padded = base64 + '==='.slice(0, (4 - base64.length % 4) % 4);
-    const decoded = typeof Buffer !== 'undefined' 
-      ? Buffer.from(padded, 'base64').toString('utf8')
-      : atob(padded);
-    const payload = JSON.parse(decoded);
+    const payload = JSON.parse(Buffer.from(parts[1].replace(/-/g,'+').replace(/_/g,'/'), 'base64').toString('utf8'));
     return payload.sub || '';
   } catch {
     return '';
@@ -81,7 +74,6 @@ exports.handler = async (event) => {
 
     return json(200,{ ok:true });
   } catch (e) {
-    console.error('finalize-payment error:', e);
     return json(500,{ error: String(e?.message||e) });
   }
 }; 
