@@ -84,6 +84,30 @@ serve(async (req) => {
   }
 })
 
+async function incrementUserCredits(supabase: any, userId: string, creditsToAdd: number) {
+  if (!creditsToAdd || creditsToAdd <= 0) return;
+  try {
+    const { data: user, error: uerr } = await supabase
+      .from('users')
+      .select('credits')
+      .eq('id', userId)
+      .single();
+    if (uerr) {
+      console.error('fetch credits error', uerr);
+      return;
+    }
+    const current = (user?.credits || 0) as number;
+    const next = current + creditsToAdd;
+    const { error: updErr } = await supabase
+      .from('users')
+      .update({ credits: next })
+      .eq('id', userId);
+    if (updErr) console.error('update credits error', updErr);
+  } catch (e) {
+    console.error('incrementUserCredits error', e);
+  }
+}
+
 async function handlePaymentIntentSucceeded(supabase: any, pi: any) {
   try {
     const meta = pi.metadata || {}
@@ -97,28 +121,8 @@ async function handlePaymentIntentSucceeded(supabase: any, pi: any) {
       return
     }
 
-    // Increment credits
-    if (credits > 0) {
-      const { error: updErr } = await supabase
-        .from('users')
-        .update({ credits: (pi as any).credits_increment ? undefined : undefined })
-        .eq('id', userId)
-
-      // If simple update above is ambiguous, perform atomic increment via RPC
-      if (updErr) {
-        // Fallback: fetch then update
-        const { data: user, error: uerr } = await supabase
-          .from('users')
-          .select('credits')
-          .eq('id', userId)
-          .single()
-        if (!uerr && user) {
-          await supabase.from('users').update({ credits: (user.credits || 0) + credits }).eq('id', userId)
-        }
-      } else {
-        // noop
-      }
-    }
+    // Increment credits reliably
+    await incrementUserCredits(supabase, userId, credits)
 
     // Insert billing history row
     const { error: bhErr } = await supabase
@@ -149,15 +153,8 @@ async function handleCheckoutPaymentCompleted(supabase: any, session: any) {
 
     if (!userId) return
 
-    // Update credits
-    if (credits > 0) {
-      const { data: user } = await supabase
-        .from('users')
-        .select('credits')
-        .eq('id', userId)
-        .single()
-      await supabase.from('users').update({ credits: (user?.credits || 0) + credits }).eq('id', userId)
-    }
+    // Update credits reliably
+    await incrementUserCredits(supabase, userId, credits)
 
     // Log billing history
     await supabase.from('billing_history').insert({
@@ -196,8 +193,7 @@ async function handleSubscription(supabase: any, session: any) {
         .from('users')
         .update({ 
           plan: 'Pro',
-          subscription_id: subscriptionId,
-          credits: 30 // Monthly credits for Pro plan
+          subscription_id: subscriptionId
         })
         .eq('id', user.id)
 
@@ -205,6 +201,8 @@ async function handleSubscription(supabase: any, session: any) {
         console.error('Error updating user to Pro plan:', updateError)
         return
       }
+
+      await incrementUserCredits(supabase, user.id, 30)
 
       // Log billing history
       await supabase.from('billing_history').insert({
@@ -219,8 +217,8 @@ async function handleSubscription(supabase: any, session: any) {
 
       console.log(`Successfully upgraded user ${customerEmail} to Pro plan`)
     }
-  } catch (error) {
-    console.error('Error handling subscription:', error)
+  } catch (e) {
+    console.error('handleSubscription error:', e)
   }
 }
 

@@ -410,6 +410,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       refreshUserData();
     };
 
+    const handlePaymentConfirmed = () => {
+      console.log('🔄 paymentConfirmed received - refreshing user data');
+      refreshUserData();
+    };
+
     const handleProfileUpdate = (event: Event) => {
       const customEvent = event as CustomEvent;
       const { user: updatedUser } = customEvent.detail;
@@ -418,10 +423,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     window.addEventListener('creditsUpdated', handleCreditsUpdate);
+    window.addEventListener('paymentConfirmed', handlePaymentConfirmed as any);
     window.addEventListener('profileUpdated', handleProfileUpdate);
     
     return () => {
       window.removeEventListener('creditsUpdated', handleCreditsUpdate);
+      window.removeEventListener('paymentConfirmed', handlePaymentConfirmed as any);
       window.removeEventListener('profileUpdated', handleProfileUpdate);
     };
   }, [user]);
