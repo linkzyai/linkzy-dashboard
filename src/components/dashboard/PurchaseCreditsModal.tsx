@@ -155,8 +155,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const { client_secret, id: piId } = await response.json();
- 
+        const { client_secret } = await response.json();
         // Confirm payment client-side using the CardElement directly
         const confirmPromise = stripe!.confirmCardPayment(client_secret, {
           payment_method: {
@@ -164,23 +163,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             billing_details: { email: userEmail }
           }
         });
-        // In parallel, attempt finalize-payment every 3s for 30s using the PI id (idempotent)
-        (async () => {
-          try {
-            const { data: sessionData } = await supabase.auth.getSession();
-            const jwt = sessionData?.session?.access_token || '';
-            const start = Date.now();
-            while (Date.now() - start < 30000) {
-              const finRes = await fetch('/.netlify/functions/finalize-payment', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
-                body: JSON.stringify({ payment_intent_id: piId })
-              });
-              if (finRes.ok) break;
-              await new Promise(r => setTimeout(r, 3000));
-            }
-          } catch {}
-        })();
         // Add a hard timeout so UI never hangs indefinitely
         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Payment confirmation timed out')), 45000));
         const result: any = await Promise.race([confirmPromise, timeoutPromise]);
@@ -198,7 +180,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           const finRes = await fetch('/.netlify/functions/finalize-payment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
-            body: JSON.stringify({ payment_intent_id: result?.paymentIntent?.id || result?.intent?.id || piId || '' })
+            body: JSON.stringify({ payment_intent_id: result?.paymentIntent?.id || result?.intent?.id || '' })
           });
           if (!finRes.ok) {
             console.warn('finalize-payment returned non-200:', finRes.status);
