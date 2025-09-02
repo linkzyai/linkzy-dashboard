@@ -85,14 +85,6 @@ const DashboardAccount = () => {
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [credits, setCredits] = useState(user?.credits || 3);
   const [billingHistory, setBillingHistory] = useState<any[]>([]);
-  // Preferences state
-  const [notifBacklinks, setNotifBacklinks] = useState(true);
-  const [notifWeekly, setNotifWeekly] = useState(true);
-  const [notifBilling, setNotifBilling] = useState(false);
-  const [prefTimezone, setPrefTimezone] = useState('UTC');
-  const [prefLanguage, setPrefLanguage] = useState('English');
-  const [savingPrefs, setSavingPrefs] = useState(false);
-  const [isGoogleUser, setIsGoogleUser] = useState(false);
 
   // Listen for credit updates from success page
   useEffect(() => {
@@ -164,41 +156,6 @@ const DashboardAccount = () => {
       try {
         // Get fresh data from database
         const authStatus = await supabaseService.getAuthStatus();
-        // Determine provider
-        try {
-          const { data: { user: authUser } } = await supabase.auth.getUser();
-          const prov = (authUser as any)?.identities?.[0]?.provider || '';
-          setIsGoogleUser(prov === 'google');
-        } catch {}
-        // Load preferences from DB if available
-        try {
-          if (authStatus.user?.id) {
-            const { data: prefRow } = await supabase
-              .from('users')
-              .select('preferences')
-              .eq('id', authStatus.user.id)
-              .single();
-            const prefs = (prefRow as any)?.preferences || null;
-            const local = JSON.parse(localStorage.getItem('linkzy_prefs') || 'null');
-            const effective = prefs || local;
-            if (effective) {
-              setNotifBacklinks(!!effective.notifBacklinks);
-              setNotifWeekly(!!effective.notifWeekly);
-              setNotifBilling(!!effective.notifBilling);
-              setPrefTimezone(effective.prefTimezone || 'UTC');
-              setPrefLanguage(effective.prefLanguage || 'English');
-            }
-          }
-        } catch (e) {
-          const local = JSON.parse(localStorage.getItem('linkzy_prefs') || 'null');
-          if (local) {
-            setNotifBacklinks(!!local.notifBacklinks);
-            setNotifWeekly(!!local.notifWeekly);
-            setNotifBilling(!!local.notifBilling);
-            setPrefTimezone(local.prefTimezone || 'UTC');
-            setPrefLanguage(local.prefLanguage || 'English');
-          }
-        }
         if (authStatus.user?.credits !== undefined) {
           setCredits(authStatus.user.credits);
           console.log('✅ Loaded credits from database:', authStatus.user.credits);
@@ -376,57 +333,11 @@ const DashboardAccount = () => {
 
   const handleSubmitPasswordChange = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (isGoogleUser) {
-      notify('warning', 'Google accounts manage passwords via Google.');
-      return;
-    }
-    if (!newPassword || newPassword !== confirmPassword) {
-      notify('error', 'New password and confirmation must match.');
-      return;
-    }
-    (async () => {
-      try {
-        // Optional: verify current password by sign-in attempt
-        if (email && currentPassword) {
-          try {
-            await supabaseService.loginUser(email, currentPassword);
-          } catch {
-            notify('error', 'Current password is incorrect.');
-            return;
-          }
-        }
-        const { error } = await supabase.auth.updateUser({ password: newPassword });
-        if (error) {
-          notify('error', error.message || 'Password update failed');
-        } else {
-          notify('success', 'Password updated successfully');
-          setCurrentPassword('');
-          setNewPassword('');
-          setConfirmPassword('');
-        }
-      } catch (err: any) {
-        notify('error', err.message || 'Password update failed');
-      }
-    })();
-  };
-  const handleSavePreferences = async () => {
-    try {
-      setSavingPrefs(true);
-      const prefs = { notifBacklinks, notifWeekly, notifBilling, prefTimezone, prefLanguage };
-      localStorage.setItem('linkzy_prefs', JSON.stringify(prefs));
-      if (user?.id) {
-        const { error } = await supabase
-          .from('users')
-          .update({ preferences: prefs as any })
-          .eq('id', user.id);
-        if (error && !String(error.message).includes('column "preferences"')) {
-          console.warn('DB preferences update error:', error);
-        }
-      }
-      notify('success', 'Preferences saved');
-    } finally {
-      setSavingPrefs(false);
-    }
+    // Add password change logic here
+    alert('Password change functionality would go here');
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
   };
 
   // Function to check if this is the user's first submission
@@ -996,10 +907,10 @@ const DashboardAccount = () => {
         <div className="bg-gray-900 border border-gray-700 rounded-xl p-6">
           <h3 className="text-xl font-bold text-white mb-4">Change Password</h3>
           <form onSubmit={handleSubmitPasswordChange} className="space-y-4">
-            <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} placeholder="Current Password" className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-4 text-white text-base md:text-lg focus:outline-none focus:border-orange-500 transition-colors" required disabled={isGoogleUser} />
-            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="New Password" className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-4 text-white text-base md:text-lg focus:outline-none focus:border-orange-500 transition-colors" required disabled={isGoogleUser} />
-            <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirm New Password" className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-4 text-white text-base md:text-lg focus:outline-none focus:border-orange-500 transition-colors" required disabled={isGoogleUser} />
-            <button type="submit" disabled={isGoogleUser} className="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-700 text-white px-6 py-4 rounded-lg font-semibold transition-colors w-full min-h-[44px] text-base md:text-lg">{isGoogleUser ? 'Google accounts use Google password' : 'Update Password'}</button>
+            <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} placeholder="Current Password" className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-4 text-white text-base md:text-lg focus:outline-none focus:border-orange-500 transition-colors" required />
+            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="New Password" className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-4 text-white text-base md:text-lg focus:outline-none focus:border-orange-500 transition-colors" required />
+            <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirm New Password" className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-4 text-white text-base md:text-lg focus:outline-none focus:border-orange-500 transition-colors" required />
+            <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-4 rounded-lg font-semibold transition-colors w-full min-h-[44px] text-base md:text-lg">Update Password</button>
           </form>
         </div>
         {/* Email Notifications & Preferences */}
@@ -1009,15 +920,15 @@ const DashboardAccount = () => {
             <h4 className="text-white font-medium mb-2">Email Notifications</h4>
             <div className="space-y-2">
               <label className="flex items-center space-x-3">
-                <input type="checkbox" className="form-checkbox h-5 w-5 text-orange-500" checked={notifBacklinks} onChange={e=>setNotifBacklinks(e.target.checked)} />
+                <input type="checkbox" className="form-checkbox h-5 w-5 text-orange-500" defaultChecked />
                 <span className="text-gray-300">New backlink notifications</span>
               </label>
               <label className="flex items-center space-x-3">
-                <input type="checkbox" className="form-checkbox h-5 w-5 text-orange-500" checked={notifWeekly} onChange={e=>setNotifWeekly(e.target.checked)} />
+                <input type="checkbox" className="form-checkbox h-5 w-5 text-orange-500" defaultChecked />
                 <span className="text-gray-300">Weekly performance reports</span>
               </label>
               <label className="flex items-center space-x-3">
-                <input type="checkbox" className="form-checkbox h-5 w-5 text-orange-500" checked={notifBilling} onChange={e=>setNotifBilling(e.target.checked)} />
+                <input type="checkbox" className="form-checkbox h-5 w-5 text-orange-500" />
                 <span className="text-gray-300">Billing updates</span>
               </label>
             </div>
@@ -1027,7 +938,7 @@ const DashboardAccount = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Timezone</label>
-                <select className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-4 text-white text-base md:text-lg focus:outline-none focus:border-orange-500 transition-colors" value={prefTimezone} onChange={e=>setPrefTimezone(e.target.value)}>
+                <select className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-4 text-white text-base md:text-lg focus:outline-none focus:border-orange-500 transition-colors">
                   <option>UTC</option>
                   <option>PST</option>
                   <option>EST</option>
@@ -1037,18 +948,13 @@ const DashboardAccount = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Language</label>
-                <select className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-4 text-white text-base md:text-lg focus:outline-none focus:border-orange-500 transition-colors" value={prefLanguage} onChange={e=>setPrefLanguage(e.target.value)}>
+                <select className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-4 text-white text-base md:text-lg focus:outline-none focus:border-orange-500 transition-colors">
                   <option>English</option>
                   <option>Spanish</option>
                   <option>French</option>
                   <option>German</option>
                 </select>
               </div>
-            </div>
-            <div className="mt-4">
-              <button onClick={handleSavePreferences} disabled={savingPrefs} className="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold">
-                {savingPrefs ? 'Saving…' : 'Save Preferences'}
-              </button>
             </div>
           </div>
         </div>

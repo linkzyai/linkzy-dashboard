@@ -177,15 +177,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             await new Promise(r => setTimeout(r, 2000));
           }
           if (!confirmed) console.warn('Webhook confirmation not observed within window');
-          // Notify app to refresh credits/billing and show toast
-          window.dispatchEvent(new CustomEvent('paymentConfirmed', {
-            detail: {
-              planName: selectedPlan.name,
-              credits: selectedPlan.credits,
-              amount: selectedPlan.price,
-              confirmed
-            }
-          }));
         } catch {}
         
       } catch (fetchError) {
