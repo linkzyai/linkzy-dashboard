@@ -173,6 +173,21 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         }
 
         console.log('✅ Payment confirmed successfully');
+        // Immediately finalize on server to update credits/billing (idempotent)
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const jwt = sessionData?.session?.access_token || '';
+          const finRes = await fetch('/.netlify/functions/finalize-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
+            body: JSON.stringify({ payment_intent_id: result?.paymentIntent?.id || result?.intent?.id || '' })
+          });
+          if (!finRes.ok) {
+            console.warn('finalize-payment returned non-200:', finRes.status);
+          }
+        } catch (e) {
+          console.warn('finalize-payment call failed:', e);
+        }
         
         // Light webhook wait: poll billing_history for confirmation (max ~20s)
         try {
