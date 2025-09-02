@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import Stripe from 'https://esm.sh/stripe@12.17.0?target=deno'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -109,21 +108,6 @@ async function incrementUserCredits(supabase: any, userId: string, creditsToAdd:
   }
 }
 
-async function alreadyProcessed(supabase: any, sessionId: string) {
-  try {
-    if (!sessionId) return false;
-    const { data, error } = await supabase
-      .from('billing_history')
-      .select('id')
-      .eq('stripe_session_id', sessionId)
-      .limit(1);
-    if (error) return false;
-    return Array.isArray(data) && data.length > 0;
-  } catch {
-    return false;
-  }
-}
-
 async function handlePaymentIntentSucceeded(supabase: any, pi: any) {
   try {
     const meta = pi.metadata || {}
@@ -134,11 +118,6 @@ async function handlePaymentIntentSucceeded(supabase: any, pi: any) {
 
     if (!userId) {
       console.warn('payment_intent.succeeded missing user_id metadata')
-      return
-    }
-
-    if (await alreadyProcessed(supabase, pi.id)) {
-      console.log('payment_intent already processed, skipping:', pi.id)
       return
     }
 
@@ -173,11 +152,6 @@ async function handleCheckoutPaymentCompleted(supabase: any, session: any) {
     const desc = meta.plan_name || 'One-time Purchase'
 
     if (!userId) return
-
-    if (await alreadyProcessed(supabase, session.id)) {
-      console.log('checkout.session already processed, skipping:', session.id)
-      return
-    }
 
     // Update credits reliably
     await incrementUserCredits(supabase, userId, credits)
