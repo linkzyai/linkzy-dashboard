@@ -125,6 +125,17 @@ const DashboardAccount = () => {
       }
     };
 
+    const handlePaymentConfirmed = async () => {
+      if (user?.id) {
+        try {
+          const billing = await supabaseService.getBillingHistory(user.id);
+          setBillingHistory(billing);
+        } catch (e) {
+          console.warn('Failed to refresh billing on paymentConfirmed', e);
+        }
+      }
+    };
+
     const handleProfileUpdate = (event: Event) => {
       const customEvent = event as CustomEvent;
       const { website, niche } = customEvent.detail;
@@ -137,10 +148,12 @@ const DashboardAccount = () => {
     };
 
     window.addEventListener('creditsUpdated', handleCreditsUpdate);
+    window.addEventListener('paymentConfirmed', handlePaymentConfirmed as any);
     window.addEventListener('profileUpdated', handleProfileUpdate);
     
     return () => {
       window.removeEventListener('creditsUpdated', handleCreditsUpdate);
+      window.removeEventListener('paymentConfirmed', handlePaymentConfirmed as any);
       window.removeEventListener('profileUpdated', handleProfileUpdate);
     };
   }, [user?.id]);
