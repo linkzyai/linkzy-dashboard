@@ -32,7 +32,7 @@ exports.handler = async (event, context) => {
 
     const paymentIntent = await stripe.paymentIntents.create(paymentIntentConfig);
 
-    return json(200,{ id: paymentIntent.id, client_secret: paymentIntent.client_secret, status: paymentIntent.status });
+    return json(200,{ client_secret: paymentIntent.client_secret, status: paymentIntent.status });
   } catch (error) {
     console.error('Error creating payment intent:', error);
     return json(500,{ error: error.message });
