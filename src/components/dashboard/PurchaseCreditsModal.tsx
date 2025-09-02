@@ -118,21 +118,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       // Get user info
       const user = JSON.parse(localStorage.getItem('linkzy_user') || '{}');
       
-      // Create payment method using the card element
-      const { error: paymentMethodError, paymentMethod } = await stripe!.createPaymentMethod({
-        type: 'card',
-        card: elements!.getElement(CardElement)!,
-        billing_details: {
-          email: user.email,
-        },
-      });
-
-      if (paymentMethodError) {
-        throw new Error(paymentMethodError.message);
-      }
-
-      console.log('💳 Payment method created:', paymentMethod.id);
-
       // Create payment intent via our Netlify function (no server-side confirm)
       try {
         const response = await fetch('/.netlify/functions/create-payment-intent', {
@@ -157,11 +142,17 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         }
 
         const { client_secret } = await response.json();
-
-        // Confirm payment client-side
-        const { error: confirmError } = await stripe!.confirmCardPayment(client_secret, {
-          payment_method: paymentMethod.id
+        // Confirm payment client-side using the CardElement directly
+        const confirmPromise = stripe!.confirmCardPayment(client_secret, {
+          payment_method: {
+            card: elements!.getElement(CardElement)!,
+            billing_details: { email: user.email }
+          }
         });
+        // Add a hard timeout so UI never hangs indefinitely
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Payment confirmation timed out')), 45000));
+        const result: any = await Promise.race([confirmPromise, timeoutPromise]);
+        const confirmError = result?.error;
 
         if (confirmError) {
           throw new Error(confirmError.message);
@@ -172,12 +163,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         // Light webhook wait: poll billing_history for confirmation (max ~20s)
         try {
           const start = Date.now();
-          const poll = async () => {
-            const res = await fetch(`/rest/v1/billing_history?user_id=eq.${user.id}&select=id,created_at&order=created_at.desc`, {
-              headers: { 'apikey': (window as any).VITE_SUPABASE_ANON_KEY || '' }
-            }).catch(()=>null);
-            return res && res.ok ? res.json() : [];
-          };
           let confirmed = false;
           while (Date.now() - start < 20000) {
             try {
