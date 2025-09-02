@@ -21,9 +21,22 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const [retryCount, setRetryCount] = useState(0);
   const [forceComplete, setForceComplete] = useState(false);
   const MAX_RETRIES = 3;
+  const TIMEOUT_MS = 5000; // shorten timeout to 5s
+  const [banner, setBanner] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   // Debug logs for auth state
   console.log('ProtectedRoute:', { loading, isAuthenticated, checkingEmailVerification });
+
+  useEffect(() => {
+    const onPayment = (e: any) => {
+      const { planName, credits } = e.detail || {};
+      setToast(`Credits added: +${credits} (${planName})`);
+      setTimeout(()=>setToast(null), 3500);
+    };
+    window.addEventListener('paymentConfirmed', onPayment as any);
+    return () => window.removeEventListener('paymentConfirmed', onPayment as any);
+  }, []);
 
   // Check email verification status
   useEffect(() => {
@@ -55,7 +68,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     }
   }, [isAuthenticated, loading]);
 
-  // 10-SECOND TIMEOUT: Force authentication check to complete and redirect to dashboard
+  // 5-SECOND TIMEOUT: Force authentication check to complete and redirect to dashboard
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const isCanceled = urlParams.get('canceled') === 'true';
@@ -65,7 +78,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     const isPaymentInProgress = sessionStorage.getItem('linkzy_payment_processing') === 'true';
     
     // 10-second timeout for authentication checks (but skip during payment)
-    const timeoutDuration = 10000; // 10 seconds
+    const timeoutDuration = TIMEOUT_MS;
     
     const timeout = setTimeout(() => {
       // Don't timeout during payment processing
@@ -138,6 +151,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   // Show loading spinner while checking authentication (unless forced to complete)
   if ((loading || checkingEmailVerification) && !forceComplete) {
+    if (!banner) setBanner('Resuming your session…');
     // If we are logging out, do not show any intermediate UI
     if (sessionStorage.getItem('linkzy_logging_out') === 'true') {
       navigate('/', { replace: true });
@@ -145,11 +159,21 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     }
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
+        {banner && (
+          <div className="fixed top-0 left-0 right-0 z-50">
+            <div className="mx-auto mt-4 w-fit bg-orange-900/30 border border-orange-500/30 text-orange-200 px-4 py-2 rounded-full text-sm">
+              {banner}
+            </div>
+          </div>
+        )}
+        {toast && (
+          <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm">{toast}</div>
+        )}
         <div className="text-center max-w-md px-4">
           <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-white mb-4">{loading ? 'Checking authentication...' : 'Verifying email status...'}</p>
           <p className="text-gray-400 text-sm mb-4">
-            This should only take a few seconds. Automatic redirect in 10 seconds.
+            This should only take a few seconds. Automatic redirect in {Math.round(TIMEOUT_MS/1000)} seconds.
           </p>
           <button 
             onClick={() => {
