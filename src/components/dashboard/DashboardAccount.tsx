@@ -199,6 +199,23 @@ const DashboardAccount = () => {
     }
   }, [user?.id]);
 
+  // Refresh credits and billing immediately after payment
+  useEffect(() => {
+    const onCreditsUpdated = async () => {
+      try {
+        if (!user?.id) return;
+        const authStatus = await supabaseService.getAuthStatus();
+        if (authStatus?.user?.credits !== undefined) {
+          setCredits(authStatus.user.credits);
+        }
+        const billing = await supabaseService.getBillingHistory(user.id);
+        setBillingHistory(billing);
+      } catch {}
+    };
+    window.addEventListener('creditsUpdated', onCreditsUpdated as any);
+    return () => window.removeEventListener('creditsUpdated', onCreditsUpdated as any);
+  }, [user?.id]);
+
   const [requests, setRequests] = useState([
     // Example mock requests
     { id: 1, url: 'https://example.com/page1', keywords: 'seo, marketing', status: 'completed', date: '2025-07-01', details: 'Placed on high DA site.' },

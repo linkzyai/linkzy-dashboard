@@ -99,24 +99,17 @@ async function handlePaymentIntentSucceeded(supabase: any, pi: any) {
 
     // Increment credits
     if (credits > 0) {
-      const { error: updErr } = await supabase
+      const { data: user } = await supabase
         .from('users')
-        .update({ credits: (pi as any).credits_increment ? undefined : undefined })
+        .select('credits')
         .eq('id', userId)
+        .single()
 
-      // If simple update above is ambiguous, perform atomic increment via RPC
-      if (updErr) {
-        // Fallback: fetch then update
-        const { data: user, error: uerr } = await supabase
+      if (user) {
+        await supabase
           .from('users')
-          .select('credits')
+          .update({ credits: (user.credits || 0) + credits })
           .eq('id', userId)
-          .single()
-        if (!uerr && user) {
-          await supabase.from('users').update({ credits: (user.credits || 0) + credits }).eq('id', userId)
-        }
-      } else {
-        // noop
       }
     }
 

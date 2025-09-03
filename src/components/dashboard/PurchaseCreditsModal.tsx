@@ -183,6 +183,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             await new Promise(r => setTimeout(r, 2000));
           }
           if (!confirmed) console.warn('Webhook confirmation not observed within window');
+          // Trigger UI refresh of user credits immediately
+          window.dispatchEvent(new CustomEvent('creditsUpdated'));
         } catch {}
         
       } catch (fetchError) {
