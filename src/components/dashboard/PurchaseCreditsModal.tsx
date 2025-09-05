@@ -185,6 +185,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           if (!confirmed) console.warn('Webhook confirmation not observed within window');
           // Trigger UI refresh of user credits immediately
           window.dispatchEvent(new CustomEvent('creditsUpdated'));
+          // Redirect to payment success page with context
+          const amt = getDiscountedPrice().toFixed(2);
+          window.location.replace(`/payment-success?credits=${encodeURIComponent(selectedPlan.credits)}&amount=${encodeURIComponent(amt)}`);
         } catch {}
         
       } catch (fetchError) {

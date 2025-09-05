@@ -27,6 +27,7 @@ import AuthCallback from './components/AuthCallback';
 
 import ResetPassword from './components/ResetPassword';
 import AdminTools from './components/AdminTools';
+import PaymentSuccess from './components/PaymentSuccess';
 
 const HomePage = () => (
   <>
@@ -51,6 +52,7 @@ function App() {
             <Route path="/privacy" element={<Privacy />} />
 
             <Route path="/success" element={<Success />} />
+            <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/cancel" element={<Cancel />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/dashboard" element={
