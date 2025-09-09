@@ -199,20 +199,40 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           const { default: supabaseService } = await import('../../services/supabaseService');
           console.log('✅ supabaseService imported for real payment');
           
-          // Get fresh user data after webhook processing
-          console.log('🔄 Fetching fresh auth status after real payment...');
-          const freshAuthStatus = await supabaseService.getAuthStatus();
-          console.log('📊 Fresh auth status after real payment:', freshAuthStatus);
+          // Wait for webhook to process and update credits with polling
+          console.log('⏳ Polling for webhook credit update...');
+          const currentCredits = user?.credits || 0;
+          const expectedCredits = currentCredits + selectedPlan.credits;
           
-          const freshCredits = freshAuthStatus.user?.credits || 0;
-          console.log('💳 Fresh credits from real payment:', freshCredits);
+          let freshCredits = currentCredits;
+          let attempts = 0;
+          const maxAttempts = 10; // 10 seconds max
+          
+          while (attempts < maxAttempts && freshCredits < expectedCredits) {
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+            
+            console.log(`🔄 Polling attempt ${attempts + 1}/${maxAttempts}...`);
+            const freshAuthStatus = await supabaseService.getAuthStatus();
+            freshCredits = freshAuthStatus.user?.credits || 0;
+            console.log(`💳 Credits check: current=${freshCredits}, expected=${expectedCredits}`);
+            
+            attempts++;
+          }
+          
+          if (freshCredits >= expectedCredits) {
+            console.log('✅ Webhook processed successfully! Credits updated.');
+          } else {
+            console.warn('⚠️ Webhook polling timed out, using current credits');
+          }
+          
+          console.log('💳 Final fresh credits from real payment:', freshCredits);
           
           // Dispatch event with fresh data
           console.log('📡 Dispatching creditsUpdated event after real payment...');
           window.dispatchEvent(new CustomEvent('creditsUpdated', { 
             detail: { 
               newCredits: freshCredits,
-              oldCredits: user?.credits || 0,
+              oldCredits: currentCredits,
               creditsAdded: selectedPlan.credits,
               verificationPassed: true
             } 
