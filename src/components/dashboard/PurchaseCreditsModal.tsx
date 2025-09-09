@@ -209,9 +209,20 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               paymentDetails
             );
             
+            // Get fresh user data after payment
+            const freshAuthStatus = await supabaseService.getAuthStatus();
+            const freshCredits = freshAuthStatus.user?.credits || result.newCredits;
+            
+            console.log('🔄 Payment completed, dispatching creditsUpdated with fresh data:', {
+              freshCredits,
+              resultCredits: result.newCredits,
+              userCredits: freshAuthStatus.user?.credits
+            });
+            
+            // Dispatch event with fresh data
             window.dispatchEvent(new CustomEvent('creditsUpdated', { 
               detail: { 
-                newCredits: result.newCredits,
+                newCredits: freshCredits,
                 oldCredits: result.oldCredits,
                 creditsAdded: result.creditsAdded,
                 verificationPassed: result.verificationPassed

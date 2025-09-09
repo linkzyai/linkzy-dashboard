@@ -405,9 +405,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Listen for credit updates to refresh user data
   useEffect(() => {
-    const handleCreditsUpdate = (event: Event) => {
+    const handleCreditsUpdate = async (event: Event) => {
       console.log('🔄 Credits updated - refreshing user data...');
-      refreshUserData();
+      await refreshUserData(); // Wait for refresh to complete
     };
 
     const handleProfileUpdate = (event: Event) => {

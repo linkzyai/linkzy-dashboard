@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 // @ts-expect-error: No type declarations for supabase.js
 import { supabase } from '../../lib/supabase';
+import supabaseService from '../../services/supabaseService';
 
 // Types for dashboard data
 export type Backlink = {
@@ -73,11 +74,25 @@ const Dashboard = () => {
 
   // Listen for credit updates
   useEffect(() => {
-    const handleCreditsUpdate = (event: Event) => {
+    const handleCreditsUpdate = async (event: Event) => {
       const customEvent = event as CustomEvent;
-      const { newCredits } = customEvent.detail;
-      setCurrentCredits(newCredits);
-      console.log('✅ Main dashboard credits updated:', newCredits);
+      const { newCredits } = customEvent.detail || {};
+      
+      if (newCredits !== undefined) {
+        setCurrentCredits(newCredits);
+        console.log('✅ Main dashboard credits updated from event:', newCredits);
+      } else {
+        // Fallback: fetch fresh data if event doesn't contain credit data
+        console.log('🔄 No credit data in event, fetching fresh data...');
+        try {
+          const authStatus = await supabaseService.getAuthStatus();
+          const freshCredits = authStatus.user?.credits || 0;
+          setCurrentCredits(freshCredits);
+          console.log('✅ Main dashboard credits updated from fresh fetch:', freshCredits);
+        } catch (error) {
+          console.error('❌ Failed to fetch fresh credits:', error);
+        }
+      }
     };
 
     window.addEventListener('creditsUpdated', handleCreditsUpdate);
