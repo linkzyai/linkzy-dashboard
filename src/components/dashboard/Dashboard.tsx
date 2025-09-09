@@ -75,10 +75,14 @@ const Dashboard = () => {
   // Listen for credit updates
   useEffect(() => {
     const handleCreditsUpdate = async (event: Event) => {
+      console.log('🎯 Dashboard received creditsUpdated event!');
       const customEvent = event as CustomEvent;
+      console.log('📊 Event detail:', customEvent.detail);
       const { newCredits } = customEvent.detail || {};
+      console.log('💳 Extracted newCredits:', newCredits);
       
       if (newCredits !== undefined) {
+        console.log('✅ Setting credits from event:', newCredits);
         setCurrentCredits(newCredits);
         console.log('✅ Main dashboard credits updated from event:', newCredits);
       } else {
@@ -87,6 +91,8 @@ const Dashboard = () => {
         try {
           const authStatus = await supabaseService.getAuthStatus();
           const freshCredits = authStatus.user?.credits || 0;
+          console.log('📊 Fresh auth status:', authStatus);
+          console.log('💳 Fresh credits from fallback:', freshCredits);
           setCurrentCredits(freshCredits);
           console.log('✅ Main dashboard credits updated from fresh fetch:', freshCredits);
         } catch (error) {
@@ -95,9 +101,11 @@ const Dashboard = () => {
       }
     };
 
+    console.log('🔗 Dashboard registering creditsUpdated event listener');
     window.addEventListener('creditsUpdated', handleCreditsUpdate);
     
     return () => {
+      console.log('🔗 Dashboard removing creditsUpdated event listener');
       window.removeEventListener('creditsUpdated', handleCreditsUpdate);
     };
   }, []);

@@ -406,8 +406,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Listen for credit updates to refresh user data
   useEffect(() => {
     const handleCreditsUpdate = async (event: Event) => {
-      console.log('🔄 Credits updated - refreshing user data...');
+      console.log('🔄 AuthContext received creditsUpdated event!');
+      console.log('📊 Event details:', event);
+      console.log('🔄 Starting refreshUserData...');
       await refreshUserData(); // Wait for refresh to complete
+      console.log('✅ AuthContext refreshUserData completed');
     };
 
     const handleProfileUpdate = (event: Event) => {
@@ -417,10 +420,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(updatedUser);
     };
 
+    console.log('🔗 AuthContext registering event listeners');
     window.addEventListener('creditsUpdated', handleCreditsUpdate);
     window.addEventListener('profileUpdated', handleProfileUpdate);
     
     return () => {
+      console.log('🔗 AuthContext removing event listeners');
       window.removeEventListener('creditsUpdated', handleCreditsUpdate);
       window.removeEventListener('profileUpdated', handleProfileUpdate);
     };

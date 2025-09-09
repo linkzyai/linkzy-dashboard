@@ -200,26 +200,40 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         console.log('🔄 Falling back to payment simulation...');
         
         setTimeout(async () => {
-          console.log('Payment simulation completed');
+          console.log('🔄 Payment simulation starting...');
+          console.log('📊 Current user object:', user);
+          console.log('📊 Selected plan:', selectedPlan);
           
           try {
             const { default: supabaseService } = await import('../../services/supabaseService');
+            console.log('✅ supabaseService imported successfully');
             
             const paymentDetails = {
               sessionId: 'simulation_' + Date.now(),
               amount: selectedPlan.price,
               description: `${selectedPlan.name} - ${selectedPlan.credits} Credits`
             };
+            console.log('💰 Payment details:', paymentDetails);
             
+            console.log('📞 Calling updateUserCredits...');
             const result = await supabaseService.updateUserCredits(
               user.id,
               selectedPlan.credits,
               paymentDetails
             );
+            console.log('✅ updateUserCredits result:', result);
             
             // Get fresh user data after payment
+            console.log('🔄 Fetching fresh auth status...');
             const freshAuthStatus = await supabaseService.getAuthStatus();
+            console.log('📊 Fresh auth status:', freshAuthStatus);
+            
             const freshCredits = freshAuthStatus.user?.credits || result.newCredits;
+            console.log('💳 Fresh credits calculated:', {
+              freshCredits,
+              fromAuthStatus: freshAuthStatus.user?.credits,
+              fromResult: result.newCredits
+            });
             
             console.log('🔄 Payment completed, dispatching creditsUpdated with fresh data:', {
               freshCredits,
@@ -228,6 +242,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             });
             
             // Dispatch event with fresh data
+            console.log('📡 Dispatching creditsUpdated event...');
             window.dispatchEvent(new CustomEvent('creditsUpdated', { 
               detail: { 
                 newCredits: freshCredits,
@@ -236,14 +251,23 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                 verificationPassed: result.verificationPassed
               } 
             }));
+            console.log('✅ creditsUpdated event dispatched successfully');
             
-          } catch (creditError) {
+          } catch (creditError: any) {
             console.error('❌ Credit update failed:', creditError);
+            console.error('❌ Error details:', {
+              name: creditError.name,
+              message: creditError.message,
+              stack: creditError.stack
+            });
           }
           
+          console.log('🔄 Calling onSuccess...');
           onSuccess();
+          console.log('🔄 Setting processing to false...');
           setIsProcessing(false);
           sessionStorage.removeItem('linkzy_payment_processing');
+          console.log('✅ Payment simulation completed');
         }, 2000);
         
         return; // Exit early for simulation
