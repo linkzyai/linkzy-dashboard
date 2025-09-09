@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, CreditCard, Zap, CheckCircle, AlertCircle, Lock } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Initialize Stripe with TEST KEY for safe testing
 const stripePromise = loadStripe('pk_test_51RcWy5KwiECS8C7ZPPzXHrxYJzcuDOr3un8pbDcDmQPz3MCaB8ghot0x1zg4WK0zofOC589J120xPaGtUHH4hvDj00nmAd7Jln');
@@ -31,6 +32,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 }) => {
   const stripe = useStripe();
   const elements = useElements();
+  const { user } = useAuth(); // Add this line to get the user object
   const [discountCode, setDiscountCode] = useState('');
   const [discountApplied, setDiscountApplied] = useState<{
     code: string;
@@ -100,6 +102,12 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     event.preventDefault();
 
     if (!stripe || !elements || !selectedPlan) {
+      return;
+    }
+
+    // Safety check for user object
+    if (!user || !user.id) {
+      onError('User not authenticated. Please log in and try again.');
       return;
     }
 
