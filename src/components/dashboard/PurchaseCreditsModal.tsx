@@ -201,10 +201,18 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           
           // Wait for webhook to process and update credits with polling
           console.log('⏳ Polling for webhook credit update...');
-          const currentCredits = user?.credits || 0;
-          const expectedCredits = currentCredits + selectedPlan.credits;
           
-          let freshCredits = currentCredits;
+          // Small delay to allow webhook to start processing
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Get the ORIGINAL credits before this payment (not potentially updated ones)
+          const prePaymentAuthStatus = await supabaseService.getAuthStatus();
+          const originalCredits = prePaymentAuthStatus.user?.credits || 0;
+          const expectedCredits = originalCredits + selectedPlan.credits;
+          
+          console.log(`💰 Payment math: original=${originalCredits} + purchased=${selectedPlan.credits} = expected=${expectedCredits}`);
+          
+          let freshCredits = originalCredits;
           let attempts = 0;
           const maxAttempts = 10; // 10 seconds max
           
@@ -232,7 +240,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           window.dispatchEvent(new CustomEvent('creditsUpdated', { 
             detail: { 
               newCredits: freshCredits,
-              oldCredits: currentCredits,
+              oldCredits: originalCredits, // Use originalCredits here
               creditsAdded: selectedPlan.credits,
               verificationPassed: true
             } 
