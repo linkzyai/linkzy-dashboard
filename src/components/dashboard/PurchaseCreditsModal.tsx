@@ -193,6 +193,36 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           if (!confirmed) console.warn('Webhook confirmation not observed within window');
         } catch {}
         
+        // 🔥 CRITICAL FIX: Add credit update logic for real payments
+        console.log('💳 Real payment completed - updating credits...');
+        try {
+          const { default: supabaseService } = await import('../../services/supabaseService');
+          console.log('✅ supabaseService imported for real payment');
+          
+          // Get fresh user data after webhook processing
+          console.log('🔄 Fetching fresh auth status after real payment...');
+          const freshAuthStatus = await supabaseService.getAuthStatus();
+          console.log('📊 Fresh auth status after real payment:', freshAuthStatus);
+          
+          const freshCredits = freshAuthStatus.user?.credits || 0;
+          console.log('💳 Fresh credits from real payment:', freshCredits);
+          
+          // Dispatch event with fresh data
+          console.log('📡 Dispatching creditsUpdated event after real payment...');
+          window.dispatchEvent(new CustomEvent('creditsUpdated', { 
+            detail: { 
+              newCredits: freshCredits,
+              oldCredits: user?.credits || 0,
+              creditsAdded: selectedPlan.credits,
+              verificationPassed: true
+            } 
+          }));
+          console.log('✅ creditsUpdated event dispatched after real payment');
+          
+        } catch (realPaymentError: any) {
+          console.error('❌ Real payment credit update failed:', realPaymentError);
+        }
+        
       } catch (fetchError) {
         console.error('❌ Failed to create payment intent:', fetchError);
         
