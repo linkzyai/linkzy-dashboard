@@ -1348,26 +1348,19 @@ If you're testing, try these workarounds:
       const currentCredits = user.credits || 0;
       const newCredits = currentCredits + creditsToAdd;
       
-      // Check if this purchase should grant Pro status (30+ credits = Pro Monthly plan)
-      const shouldGrantPro = creditsToAdd >= 30 || newCredits >= 30; // Check both added credits AND total credits
-      const planUpdate = shouldGrantPro ? { plan: 'Pro Monthly' } : {};
-      
       console.log('🧮 Credit calculation:', { 
         currentCredits, 
         creditsToAdd, 
         newCredits,
-        userIdForUpdate: user.id,
-        shouldGrantPro,
-        planUpdate
+        userIdForUpdate: user.id
       });
       
-      // Update user credits and potentially Pro status in database with detailed logging
+      // Update user credits in database with detailed logging
       console.log('💾 Attempting database update...');
       const { data: updateData, error: updateError } = await supabase
         .from('users')
         .update({ 
-          credits: newCredits,
-          ...planUpdate
+          credits: newCredits
         })
         .eq('id', userId)
         .select(); // Add select to see what was actually updated
