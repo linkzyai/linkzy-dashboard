@@ -201,45 +201,69 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           
           // Wait for webhook to process and update credits with polling
           console.log('⏳ Polling for webhook credit update...');
+          console.log('👤 Current user data for polling:', user);
           
           // Small delay to allow webhook to start processing
           await new Promise(resolve => setTimeout(resolve, 500));
           
           // Get the ORIGINAL credits before this payment (not potentially updated ones)
+          console.log('🔄 Fetching pre-payment auth status...');
           const prePaymentAuthStatus = await supabaseService.getAuthStatus();
+          console.log('📊 Pre-payment auth status:', prePaymentAuthStatus);
+          
+          if (!prePaymentAuthStatus.user) {
+            console.error('❌ No user found in auth status during polling');
+            throw new Error('User not found during credit polling');
+          }
+          
           const originalCredits = prePaymentAuthStatus.user?.credits || 0;
           const expectedCredits = originalCredits + selectedPlan.credits;
           
           console.log(`💰 Payment math: original=${originalCredits} + purchased=${selectedPlan.credits} = expected=${expectedCredits}`);
           
-          let freshCredits = originalCredits;
-          let attempts = 0;
-          const maxAttempts = 10; // 10 seconds max
-          
-          while (attempts < maxAttempts && freshCredits < expectedCredits) {
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-            
-            console.log(`🔄 Polling attempt ${attempts + 1}/${maxAttempts}...`);
-            const freshAuthStatus = await supabaseService.getAuthStatus();
-            freshCredits = freshAuthStatus.user?.credits || 0;
-            console.log(`💳 Credits check: current=${freshCredits}, expected=${expectedCredits}`);
-            
-            attempts++;
-          }
-          
-          if (freshCredits >= expectedCredits) {
-            console.log('✅ Webhook processed successfully! Credits updated.');
+          if (originalCredits === expectedCredits) {
+            console.log('⚡ Credits already match expected amount - webhook was very fast!');
           } else {
-            console.warn('⚠️ Webhook polling timed out, using current credits');
+            let freshCredits = originalCredits;
+            let attempts = 0;
+            const maxAttempts = 10; // 10 seconds max
+            
+            while (attempts < maxAttempts && freshCredits < expectedCredits) {
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+              
+              console.log(`🔄 Polling attempt ${attempts + 1}/${maxAttempts}...`);
+              try {
+                const freshAuthStatus = await supabaseService.getAuthStatus();
+                freshCredits = freshAuthStatus.user?.credits || 0;
+                console.log(`💳 Credits check: current=${freshCredits}, expected=${expectedCredits}`);
+                
+                if (freshCredits >= expectedCredits) {
+                  console.log('✅ Credits updated by webhook!');
+                  break;
+                }
+              } catch (pollError: any) {
+                console.error(`❌ Polling attempt ${attempts + 1} failed:`, pollError);
+              }
+              
+              attempts++;
+            }
+            
+            if (attempts >= maxAttempts && freshCredits < expectedCredits) {
+              console.warn('⚠️ Webhook polling timed out, but continuing with current credits');
+            }
           }
           
-          console.log('💳 Final fresh credits from real payment:', freshCredits);
+          // Get final fresh credits for the event
+          const finalAuthStatus = await supabaseService.getAuthStatus();
+          const finalCredits = finalAuthStatus.user?.credits || originalCredits;
+          
+          console.log('💳 Final fresh credits from real payment:', finalCredits);
           
           // Dispatch event with fresh data
           console.log('📡 Dispatching creditsUpdated event after real payment...');
           window.dispatchEvent(new CustomEvent('creditsUpdated', { 
             detail: { 
-              newCredits: freshCredits,
+              newCredits: finalCredits,
               oldCredits: originalCredits, // Use originalCredits here
               creditsAdded: selectedPlan.credits,
               verificationPassed: true
