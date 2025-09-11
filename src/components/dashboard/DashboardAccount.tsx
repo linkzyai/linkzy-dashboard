@@ -207,6 +207,7 @@ const DashboardAccount = () => {
   
   // Assume userData.apiKey or user?.api_key is available for snippet personalization
   const userApiKey = user?.api_key || userData.apiKey || 'demo_api_key_123';
+  const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU';
   const apiSnippet = `<script>
 (function(){
   var lz = window.linkzy = window.linkzy || {};
@@ -214,7 +215,10 @@ const DashboardAccount = () => {
   lz.track = function(){
     fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/track-content', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${anonKey}'
+      },
       body: JSON.stringify({
         apiKey: lz.apiKey,
         url: window.location.href,
