@@ -833,15 +833,19 @@ If you're testing, try these workarounds:
             .single();
           
           if (!userError && userData) {
+            // Always use API key from database
+            const apiKey = userData.api_key;
+            
             // Combine auth user with database data
             const combinedUser = {
               ...sessionData.session.user,
-              ...userData
+              ...userData,
+              api_key: apiKey
             };
             
-            // Store API key if available
-            if (userData.api_key) {
-              this.setApiKey(userData.api_key);
+            // Store API key
+            if (apiKey) {
+              this.setApiKey(apiKey);
             }
             
             // Cache user data

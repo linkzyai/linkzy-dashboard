@@ -740,53 +740,75 @@ const DashboardAccount = () => {
   const renderProfileAndBillingTab = () => (
     <>
     <div className="space-y-6 md:space-y-8">
-      {/* Profile Section with avatar */}
-      <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8 flex flex-col md:flex-row items-center md:items-start space-y-6 md:space-y-0 md:space-x-8">
-        <div className="flex-shrink-0 flex flex-col items-center">
-          <div className="w-24 h-24 rounded-full bg-gray-800 border-4 border-orange-500 flex items-center justify-center text-4xl text-orange-400 font-bold mb-2">
-            <User className="w-12 h-12" />
-          </div>
-          <button className="mt-2 text-xs text-gray-500 cursor-not-allowed" title="Profile photo upload coming soon" disabled>Change Photo</button>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
+          <input
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            value={userData.email}
+            disabled
+            className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white opacity-75"
+          />
         </div>
-        <div className="flex-1 w-full">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
-              <input
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                value={userData.email}
-                disabled
-                className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-4 text-white text-base md:text-lg focus:outline-none focus:border-orange-500 transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Account Type</label>
-              <input type="text" value={userData.isPro ? 'Pro' : 'Free'} disabled className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Member Since</label>
-              <input type="text" value={(user?.created_at ? new Date(user.created_at).toLocaleDateString() : '—')} disabled className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Website</label>
-              <input
-                type="url"
-                inputMode="url"
-                autoComplete="url"
-                value={userData.website}
-                className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-4 text-white text-base md:text-lg focus:outline-none focus:border-orange-500 transition-colors"
-              />
-            </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Account Type</label>
+          <div className="p-3 bg-gray-800 border border-gray-700 rounded-lg text-white opacity-75">
+            {userData.isPro ? 'Pro' : 'Free'}
           </div>
-          <button className="mt-6 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg flex items-center space-x-2">
-            <Save className="w-4 h-4" />
-            <span>Save Profile Changes</span>
-          </button>
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-300 mb-2">Member Since</label>
+          <input
+            type="text"
+            value={userData.joinDate}
+            disabled
+            className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white opacity-75"
+          />
         </div>
       </div>
 
+      {/* API Test Button */}
+      <div className="mb-8 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+        <h3 className="text-lg font-semibold text-blue-400 mb-2">Test Your API Connection</h3>
+        <p className="text-gray-300 text-sm mb-3">
+          Click below to test if your API key can successfully connect to Supabase
+        </p>
+        <button
+          onClick={async () => {
+            try {
+              const response = await fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/track-content', {
+                method: 'POST',
+                headers: { 
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU'
+                },
+                body: JSON.stringify({
+                  apiKey: user?.api_key,
+                  url: 'https://test.example.com',
+                  title: 'API Test',
+                  timestamp: new Date().toISOString(),
+                  content: 'Test content for API validation'
+                })
+              });
+              const result = await response.json();
+              if (response.ok) {
+                alert('✅ API Test Successful! Your tracking script will work.');
+              } else {
+                alert(`❌ API Test Failed: ${result.error}`);
+              }
+            } catch (error: any) {
+              alert(`❌ API Test Failed: ${error.message}`);
+            }
+          }}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors"
+        >
+          Test API Connection
+        </button>
+      </div>
       {/* Billing & Credits Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Credits Card */}

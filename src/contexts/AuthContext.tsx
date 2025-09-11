@@ -203,20 +203,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     profile.credits = 3;
                   }
                 } catch (_) {}
+                
+                // Always use the API key from the database, don't generate new ones
+                let apiKey = profile.api_key;
+                if (!apiKey) {
+                  // Only generate if truly missing, then update database
+                  apiKey = `linkzy_${session.user.email?.replace('@', '_').replace('.', '_')}_${Date.now()}`;
+                  await supabase.from('users').update({ api_key: apiKey }).eq('id', session.user.id);
+                }
+                
                 const userObj = {
                   id: session.user.id,
                   email: session.user.email,
                   website: profile.website,
                   niche: profile.niche,
-                  api_key: session.user.user_metadata?.api_key || `linkzy_${session.user.email?.replace('@', '_').replace('.', '_')}_${Date.now()}`,
+                  api_key: apiKey,
                   plan: profile.plan,
                   credits: profile.credits,
                 };
                 setIsAuthenticated(true);
                 setUser(userObj);
-                supabaseService.setApiKey(
-                  session.user.user_metadata?.api_key || `linkzy_${session.user.email?.replace('@', '_').replace('.', '_')}_${Date.now()}`
-                );
+                supabaseService.setApiKey(apiKey);
                 localStorage.setItem('linkzy_user', JSON.stringify(userObj));
               } else {
                 setIsAuthenticated(true);
