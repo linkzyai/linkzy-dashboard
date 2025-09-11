@@ -780,6 +780,13 @@ const DashboardAccount = () => {
         <button
           onClick={async () => {
             try {
+              console.log('🔍 API Test Debug:', {
+                user: user,
+                userApiKey: user?.api_key,
+                userId: user?.id,
+                userEmail: user?.email
+              });
+              
               const response = await fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/track-content', {
                 method: 'POST',
                 headers: { 
@@ -794,13 +801,18 @@ const DashboardAccount = () => {
                   content: 'Test content for API validation'
                 })
               });
+              
+              console.log('🔍 API Response Status:', response.status);
               const result = await response.json();
+              console.log('🔍 API Response:', result);
+              
               if (response.ok) {
                 alert('✅ API Test Successful! Your tracking script will work.');
               } else {
                 alert(`❌ API Test Failed: ${result.error}`);
               }
             } catch (error: any) {
+              console.error('🔍 API Test Error:', error);
               alert(`❌ API Test Failed: ${error.message}`);
             }
           }}
