@@ -777,49 +777,78 @@ const DashboardAccount = () => {
         <p className="text-gray-300 text-sm mb-3">
           Click below to test if your API key can successfully connect to Supabase
         </p>
-        <button
-          onClick={async () => {
-            try {
-              console.log('🔍 API Test Debug:', {
-                user: user,
-                userApiKey: user?.api_key,
-                userId: user?.id,
-                userEmail: user?.email
-              });
-              
-              const response = await fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/track-content', {
-                method: 'POST',
-                headers: { 
-                  'Content-Type': 'application/json',
-                  'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU'
-                },
-                body: JSON.stringify({
-                  apiKey: user?.api_key,
-                  url: 'https://test.example.com',
-                  title: 'API Test',
-                  timestamp: new Date().toISOString(),
-                  content: 'Test content for API validation'
-                })
-              });
-              
-              console.log('🔍 API Response Status:', response.status);
-              const result = await response.json();
-              console.log('🔍 API Response:', result);
-              
-              if (response.ok) {
-                alert('✅ API Test Successful! Your tracking script will work.');
-              } else {
-                alert(`❌ API Test Failed: ${result.error}`);
+        
+        {/* Show current API key for debugging */}
+        <div className="mb-3 p-2 bg-gray-800 rounded text-xs font-mono text-gray-300">
+          <strong>Current API Key:</strong> {user?.api_key || 'Not loaded'}
+        </div>
+        
+        <div className="flex gap-2">
+          <button
+            onClick={async () => {
+              try {
+                console.log('🔍 API Test Debug:', {
+                  user: user,
+                  userApiKey: user?.api_key,
+                  userId: user?.id,
+                  userEmail: user?.email
+                });
+                
+                const response = await fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/track-content', {
+                  method: 'POST',
+                  headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU'
+                  },
+                  body: JSON.stringify({
+                    apiKey: user?.api_key,
+                    url: 'https://test.example.com',
+                    title: 'API Test',
+                    timestamp: new Date().toISOString(),
+                    content: 'Test content for API validation'
+                  })
+                });
+                
+                console.log('🔍 API Response Status:', response.status);
+                const result = await response.json();
+                console.log('🔍 API Response:', result);
+                
+                if (response.ok) {
+                  alert('✅ API Test Successful! Your tracking script will work.');
+                } else {
+                  alert(`❌ API Test Failed: ${result.error}`);
+                }
+              } catch (error: any) {
+                console.error('🔍 API Test Error:', error);
+                alert(`❌ API Test Failed: ${error.message}`);
               }
-            } catch (error: any) {
-              console.error('🔍 API Test Error:', error);
-              alert(`❌ API Test Failed: ${error.message}`);
-            }
-          }}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors"
-        >
-          Test API Connection
-        </button>
+            }}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors"
+          >
+            Test API Connection
+          </button>
+          
+          <button
+            onClick={async () => {
+              try {
+                // Get fresh user data from database
+                const authStatus = await supabaseService.getAuthStatus();
+                console.log('🔄 Fresh auth status:', authStatus);
+                
+                if (authStatus.user?.api_key) {
+                  alert(`Database API Key: ${authStatus.user.api_key}`);
+                } else {
+                  alert('❌ No API key found in database');
+                }
+              } catch (error: any) {
+                alert(`❌ Error fetching API key: ${error.message}`);
+              }
+            }}
+            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition-colors"
+          >
+            Check Database API Key
+          </button>
+        </div>
       </div>
       {/* Billing & Credits Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
