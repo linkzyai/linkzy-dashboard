@@ -848,6 +848,35 @@ const DashboardAccount = () => {
           >
             Check Database API Key
           </button>
+          
+          <button
+            onClick={async () => {
+              try {
+                // Force refresh user data and sync API keys
+                console.log('🔄 Forcing user data refresh...');
+                const authStatus = await supabaseService.getAuthStatus();
+                
+                if (authStatus.user?.api_key) {
+                  // Dispatch a custom event to update the auth context
+                  window.dispatchEvent(new CustomEvent('forceUserRefresh', { 
+                    detail: { user: authStatus.user } 
+                  }));
+                  
+                  alert(`✅ User data refreshed! New API Key: ${authStatus.user.api_key}`);
+                  
+                  // Force page refresh to update the UI
+                  setTimeout(() => window.location.reload(), 1000);
+                } else {
+                  alert('❌ No API key found in database');
+                }
+              } catch (error: any) {
+                alert(`❌ Error refreshing user data: ${error.message}`);
+              }
+            }}
+            className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition-colors"
+          >
+            Sync API Key
+          </button>
         </div>
       </div>
       {/* Billing & Credits Section */}
