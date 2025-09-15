@@ -29,13 +29,23 @@ const DashboardAnalytics = () => {
   const { user } = useAuth();
   const userDomain = user?.website || 'yourdomain.com';
   const userApiKey = user?.api_key || '';
-  const { data: hasTracked, loading: trackedLoading } = useHasTrackedContent(user?.id);
+  const { data: hasTracked, loading: trackedLoading, refetch: refetchTracked } = useHasTrackedContent(user?.id);
   const [gateOpen, setGateOpen] = React.useState(true);
+  
   React.useEffect(() => {
-    if (!trackedLoading) {
+    if (!trackedLoading && hasTracked !== null) {
+      console.log('🔍 Analytics gate check:', { hasTracked, trackedLoading, userId: user?.id });
       setGateOpen(!hasTracked);
     }
-  }, [trackedLoading, hasTracked]);
+  }, [trackedLoading, hasTracked, user?.id]);
+  
+  // Force refresh tracked content check on component mount
+  React.useEffect(() => {
+    if (user?.id && !trackedLoading) {
+      console.log('🔄 Analytics: Refreshing tracked content check for user:', user.id);
+      refetchTracked();
+    }
+  }, [user?.id]);
   const hasTrackedContent = !!hasTracked;
   
   // Check if user has Pro access (either pro plan OR has 30+ credits from Pro Monthly purchase)

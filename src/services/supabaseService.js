@@ -1485,19 +1485,42 @@ If you're testing, try these workarounds:
   // Check if any tracked content exists for a user (integration gate)
   async hasTrackedContent(userId) {
     try {
-      if (!userId) return false;
-      // Use API key to ensure we only count real script-fired events
-      const apiKey = this.getApiKey();
-      if (!apiKey) return false;
-      const { count, error } = await supabase
-        .from('tracked_content')
-        .select('id', { count: 'exact', head: true })
-        .eq('api_key', apiKey);
-      if (error) {
-        console.warn('hasTrackedContent error:', error);
+      if (!userId) {
+        console.log('🔍 hasTrackedContent: No userId provided');
         return false;
       }
-      return (count || 0) > 0;
+      
+      // Primary check: Use user_id for reliable detection
+      const { count: userCount, error: userError } = await supabase
+        .from('tracked_content')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId);
+        
+      if (userError) {
+        console.warn('hasTrackedContent user_id error:', userError);
+      } else if (userCount && userCount > 0) {
+        console.log('✅ hasTrackedContent: Found', userCount, 'entries by user_id');
+        return true;
+      }
+      
+      // Fallback check: Use API key for additional verification
+      const apiKey = this.getApiKey();
+      if (apiKey) {
+        const { count: keyCount, error: keyError } = await supabase
+          .from('tracked_content')
+          .select('id', { count: 'exact', head: true })
+          .eq('api_key', apiKey);
+          
+        if (keyError) {
+          console.warn('hasTrackedContent api_key error:', keyError);
+        } else if (keyCount && keyCount > 0) {
+          console.log('✅ hasTrackedContent: Found', keyCount, 'entries by api_key');
+          return true;
+        }
+      }
+      
+      console.log('❌ hasTrackedContent: No tracked content found');
+      return false;
     } catch (e) {
       console.warn('hasTrackedContent exception:', e);
       return false;
