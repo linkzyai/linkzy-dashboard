@@ -356,13 +356,13 @@ const DashboardAnalytics = () => {
                         <span className="text-gray-400">This Month</span>
                         <div className="flex items-center space-x-1">
                           <ArrowUp className="w-3 h-3 text-green-400" />
-                          <span className="text-green-400 text-sm font-medium">
-                            {((analyticsData as any)?.trafficGrowth || '+24%')}
+                          <span className="text-gray-400 text-sm font-medium">
+                            {((analyticsData as any)?.trafficGrowth || '0%')}
                           </span>
                         </div>
                       </div>
                       <p className="text-3xl font-bold text-white">
-                        {((analyticsData as any)?.monthlyVisitors || '1,247')}
+                        {((analyticsData as any)?.monthlyVisitors || '0')}
                       </p>
                       <p className="text-gray-400 text-sm">visitors from backlinks</p>
                     </div>
@@ -371,11 +371,11 @@ const DashboardAnalytics = () => {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-gray-400">Estimated Value</span>
                         <div className="flex items-center space-x-1">
-                          <DollarSign className="w-3 h-3 text-green-400" />
-                          <span className="text-green-400 text-sm font-medium">+$457</span>
+                          <DollarSign className="w-3 h-3 text-gray-400" />
+                          <span className="text-gray-400 text-sm font-medium">$0</span>
                         </div>
                       </div>
-                      <p className="text-2xl font-bold text-white">$1,870</p>
+                      <p className="text-2xl font-bold text-white">$0</p>
                       <p className="text-gray-400 text-sm">traffic value</p>
                     </div>
                     
@@ -383,11 +383,11 @@ const DashboardAnalytics = () => {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-gray-400">Organic Growth</span>
                         <div className="flex items-center space-x-1">
-                          <TrendingUp className="w-3 h-3 text-green-400" />
-                          <span className="text-green-400 text-sm font-medium">+32%</span>
+                          <TrendingUp className="w-3 h-3 text-gray-400" />
+                          <span className="text-gray-400 text-sm font-medium">0%</span>
                         </div>
                       </div>
-                      <p className="text-2xl font-bold text-white">42%</p>
+                      <p className="text-2xl font-bold text-white">0%</p>
                       <p className="text-gray-400 text-sm">of total traffic</p>
                     </div>
                   </div>
@@ -434,27 +434,27 @@ const DashboardAnalytics = () => {
                         <span className="text-green-400 text-xs">+18%</span>
                       </div>
                     </div>
-                    <p className="text-xl font-bold text-white">2:47</p>
+                    <p className="text-xl font-bold text-white">0:00</p>
                   </div>
                   <div className="bg-gray-800 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-gray-400 text-sm">Pages/Session</span>
                       <div className="flex items-center space-x-1">
-                        <ArrowUp className="w-3 h-3 text-green-400" />
-                        <span className="text-green-400 text-xs">+12%</span>
+                        <ArrowUp className="w-3 h-3 text-gray-400" />
+                        <span className="text-gray-400 text-xs">0%</span>
                       </div>
                     </div>
-                    <p className="text-xl font-bold text-white">3.2</p>
+                    <p className="text-xl font-bold text-white">0</p>
                   </div>
                   <div className="bg-gray-800 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-gray-400 text-sm">Bounce Rate</span>
                       <div className="flex items-center space-x-1">
-                        <ArrowDown className="w-3 h-3 text-green-400" />
-                        <span className="text-green-400 text-xs">-14%</span>
+                        <ArrowDown className="w-3 h-3 text-gray-400" />
+                        <span className="text-gray-400 text-xs">0%</span>
                       </div>
                     </div>
-                    <p className="text-xl font-bold text-white">41%</p>
+                    <p className="text-xl font-bold text-white">0%</p>
                   </div>
                 </div>
               </div>
@@ -549,15 +549,15 @@ const DashboardAnalytics = () => {
                 {/* Domain Authority Metrics */}
                 <div className="grid grid-cols-3 gap-2 md:gap-4">
                   <div className="bg-gray-800 rounded-lg p-4 text-center">
-                    <div className="text-2xl font-bold text-orange-500">42</div>
+                    <div className="text-2xl font-bold text-gray-400">0</div>
                     <div className="text-gray-400 text-xs">Current DA</div>
                   </div>
                   <div className="bg-gray-800 rounded-lg p-4 text-center">
-                    <div className="text-2xl font-bold text-green-400">+12</div>
+                    <div className="text-2xl font-bold text-gray-400">0</div>
                     <div className="text-gray-400 text-xs">DA Growth</div>
                   </div>
                   <div className="bg-gray-800 rounded-lg p-4 text-center">
-                    <div className="text-2xl font-bold text-blue-400">63%</div>
+                    <div className="text-2xl font-bold text-gray-400">0%</div>
                     <div className="text-gray-400 text-xs">Percentile</div>
                   </div>
                 </div>
@@ -584,39 +584,26 @@ const DashboardAnalytics = () => {
                     <div>Change</div>
                   </div>
                   
-                  {/* Keyword Rows */}
-                  {[
-                    { keyword: "business automation", prev: 28, current: 4, change: 24 },
-                    { keyword: "SEO tools 2025", prev: 15, current: 2, change: 13 },
-                    { keyword: "marketing software", prev: 42, current: 11, change: 31 },
-                    { keyword: "AI content marketing", prev: 22, current: 7, change: 15 },
-                    { keyword: "best business tools", prev: 9, current: 3, change: 6 }
-                  ].map((keyword, i) => (
-                    <div key={i} className="grid grid-cols-5 min-w-[500px] gap-2 p-3 text-sm border-b border-gray-700 last:border-b-0 hover:bg-gray-750">
-                      <div className="col-span-2 text-white font-medium">{keyword.keyword}</div>
-                      <div className="text-gray-400">{keyword.prev}</div>
-                      <div className="text-white">{keyword.current}</div>
-                      <div className="flex items-center text-green-400">
-                        <ChevronUp className="w-3 h-3 mr-1" />
-                        {keyword.change}
-                      </div>
-                    </div>
-                  ))}
+                  {/* No keyword data yet */}
+                  <div className="p-8 text-center text-gray-400">
+                    <p className="text-sm">No keyword ranking data yet.</p>
+                    <p className="text-xs mt-1">Rankings will appear once you have active backlinks.</p>
+                  </div>
                 </div>
                 
                 {/* Quick Stats */}
                 <div className="grid grid-cols-3 gap-2 md:gap-4">
-                  <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-3 text-center">
-                    <div className="text-xl font-bold text-green-400">92%</div>
-                    <div className="text-green-400 text-xs">Keywords Improved</div>
+                  <div className="bg-gray-800 rounded-lg p-3 text-center">
+                    <div className="text-xl font-bold text-gray-400">0%</div>
+                    <div className="text-gray-400 text-xs">Keywords Improved</div>
                   </div>
                   <div className="bg-gray-800 rounded-lg p-3 text-center">
-                    <div className="text-xl font-bold text-white">14.8</div>
+                    <div className="text-xl font-bold text-gray-400">0</div>
                     <div className="text-gray-400 text-xs">Avg. Position Gain</div>
                   </div>
-                  <div className="bg-orange-900/20 border border-orange-500/30 rounded-lg p-3 text-center">
-                    <div className="text-xl font-bold text-orange-500">3</div>
-                    <div className="text-orange-400 text-xs">New Page 1 Rankings</div>
+                  <div className="bg-gray-800 rounded-lg p-3 text-center">
+                    <div className="text-xl font-bold text-gray-400">0</div>
+                    <div className="text-gray-400 text-xs">New Page 1 Rankings</div>
                   </div>
                 </div>
               </div>
@@ -640,20 +627,20 @@ const DashboardAnalytics = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-6">
                   <div className="bg-gray-800 rounded-xl p-4 text-center">
                     <div className="text-sm text-gray-400 mb-1">Total Investment</div>
-                    <div className="text-2xl font-bold text-white">$125</div>
-                    <div className="text-xs text-gray-500 mt-1">5 Backlinks @ $25 each</div>
+                    <div className="text-2xl font-bold text-white">$0</div>
+                    <div className="text-xs text-gray-500 mt-1">0 Backlinks</div>
                   </div>
                   
                   <div className="bg-gray-800 rounded-xl p-4 text-center">
                     <div className="text-sm text-gray-400 mb-1">Traffic Value</div>
-                    <div className="text-2xl font-bold text-green-400">$1,870</div>
-                    <div className="text-xs text-gray-500 mt-1">Based on 1,247 visitors</div>
+                    <div className="text-2xl font-bold text-gray-400">$0</div>
+                    <div className="text-xs text-gray-500 mt-1">Based on 0 visitors</div>
                   </div>
                   
-                  <div className="bg-green-900/20 border border-green-500/30 rounded-xl p-4 text-center">
-                    <div className="text-sm text-green-400 mb-1">ROI</div>
-                    <div className="text-2xl font-bold text-green-400">1,496%</div>
-                    <div className="text-xs text-green-400 mt-1">15x Return</div>
+                  <div className="bg-gray-800 rounded-xl p-4 text-center">
+                    <div className="text-sm text-gray-400 mb-1">ROI</div>
+                    <div className="text-2xl font-bold text-gray-400">0%</div>
+                    <div className="text-xs text-gray-400 mt-1">No return yet</div>
                   </div>
                 </div>
                 
@@ -662,29 +649,28 @@ const DashboardAnalytics = () => {
                   <div className="bg-gray-800 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-white">Payback Period</span>
-                      <span className="text-green-400 font-semibold">7 days</span>
+                      <span className="text-gray-400 font-semibold">No data</span>
                     </div>
                     <div className="w-full bg-gray-700 rounded-full h-2">
-                      <div className="bg-green-500 h-2 rounded-full" style={{width: '100%'}}></div>
+                      <div className="bg-gray-500 h-2 rounded-full" style={{width: '0%'}}></div>
                     </div>
-                    <div className="text-xs text-gray-400 mt-1">Investment recovered</div>
+                    <div className="text-xs text-gray-400 mt-1">No investment yet</div>
                   </div>
                   
                   <div className="bg-gray-800 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-white">Monthly ROI Breakdown</span>
                       <div className="flex items-center space-x-1">
-                        <ArrowUp className="w-3 h-3 text-green-400" />
-                        <span className="text-green-400 text-xs">+24%</span>
+                        <ArrowUp className="w-3 h-3 text-gray-400" />
+                        <span className="text-gray-400 text-xs">0%</span>
                       </div>
                     </div>
-                    <div className="flex h-10 w-full overflow-hidden rounded-lg">
-                      <div className="bg-blue-500 w-1/5 flex items-center justify-center text-xs text-white">Cost</div>
-                      <div className="bg-green-500 w-4/5 flex items-center justify-center text-xs text-white">Value</div>
+                    <div className="flex h-10 w-full overflow-hidden rounded-lg bg-gray-700">
+                      <div className="flex items-center justify-center text-xs text-gray-400 w-full">No data available</div>
                     </div>
                     <div className="text-xs text-gray-400 mt-2 flex justify-between">
-                      <span>$125 Investment</span>
-                      <span>$1,870 Value Generated</span>
+                      <span>$0 Investment</span>
+                      <span>$0 Value Generated</span>
                     </div>
                   </div>
                 </div>
@@ -706,10 +692,10 @@ const DashboardAnalytics = () => {
                 <div className="mb-6">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-gray-400 text-sm">Overall Quality Score</span>
-                    <span className="text-green-400 text-sm font-medium">87/100</span>
+                    <span className="text-gray-400 text-sm font-medium">0/100</span>
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-3">
-                    <div className="bg-gradient-to-r from-orange-500 to-green-500 h-3 rounded-full" style={{width: '87%'}}></div>
+                    <div className="bg-gray-500 h-3 rounded-full" style={{width: '0%'}}></div>
                   </div>
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
                     <span>Poor</span>
@@ -719,50 +705,9 @@ const DashboardAnalytics = () => {
                 </div>
                 
                 {/* Quality Breakdown */}
-                <div className="space-y-3 md:space-y-4">
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-white text-sm">Authority Distribution</span>
-                      <span className="text-green-400 text-sm">92/100</span>
-                    </div>
-                    <div className="w-full bg-gray-700 rounded-full h-2">
-                      <div className="bg-green-500 h-2 rounded-full" style={{width: '92%'}}></div>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-1">Excellent variety of high DA sites</p>
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-white text-sm">Relevance Score</span>
-                      <span className="text-green-400 text-sm">89/100</span>
-                    </div>
-                    <div className="w-full bg-gray-700 rounded-full h-2">
-                      <div className="bg-green-500 h-2 rounded-full" style={{width: '89%'}}></div>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-1">Links from highly relevant niche sites</p>
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-white text-sm">Anchor Text Optimization</span>
-                      <span className="text-orange-400 text-sm">76/100</span>
-                    </div>
-                    <div className="w-full bg-gray-700 rounded-full h-2">
-                      <div className="bg-orange-500 h-2 rounded-full" style={{width: '76%'}}></div>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-1">Good variety, could use more brand anchors</p>
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-white text-sm">Link Placement Quality</span>
-                      <span className="text-green-400 text-sm">94/100</span>
-                    </div>
-                    <div className="w-full bg-gray-700 rounded-full h-2">
-                      <div className="bg-green-500 h-2 rounded-full" style={{width: '94%'}}></div>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-1">Excellent content placement with context</p>
-                  </div>
+                <div className="p-8 text-center text-gray-400">
+                  <p className="text-sm">No backlink quality data yet.</p>
+                  <p className="text-xs mt-1">Quality metrics will appear once you have active backlinks.</p>
                 </div>
               </div>
             </div>
