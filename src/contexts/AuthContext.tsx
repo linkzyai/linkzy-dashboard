@@ -207,9 +207,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 // Always use the API key from the database, don't generate new ones
                 let apiKey = profile.api_key;
                 if (!apiKey) {
-                  // Only generate if truly missing, then update database
-                  apiKey = `linkzy_${session.user.email?.replace('@', '_').replace('.', '_')}_${Date.now()}`;
-                  await supabase.from('users').update({ api_key: apiKey }).eq('id', session.user.id);
+                  console.error('❌ User missing API key in database! This should not happen for existing users.');
+                  // For existing users, this is a critical error - don't auto-generate
+                  // New users should get API keys during registration
                 }
                 
                 const userObj = {
@@ -226,20 +226,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 supabaseService.setApiKey(apiKey);
                 localStorage.setItem('linkzy_user', JSON.stringify(userObj));
               } else {
-                setIsAuthenticated(true);
-                setUser({
-                  id: session.user.id,
-                  email: session.user.email,
-                  api_key: session.user.user_metadata?.api_key || `linkzy_${session.user.email?.replace('@', '_').replace('.', '_')}_${Date.now()}`,
-                });
-                supabaseService.setApiKey(
-                  session.user.user_metadata?.api_key || `linkzy_${session.user.email?.replace('@', '_').replace('.', '_')}_${Date.now()}`
-                );
-                localStorage.setItem('linkzy_user', JSON.stringify({
-                  id: session.user.id,
-                  email: session.user.email,
-                  api_key: session.user.user_metadata?.api_key || `linkzy_${session.user.email?.replace('@', '_').replace('.', '_')}_${Date.now()}`,
-                }));
+                // New user from Google OAuth with no database record yet
+                // Only use API key from user_metadata, don't generate new ones
+                const existingApiKey = session.user.user_metadata?.api_key;
+                if (existingApiKey) {
+                  setIsAuthenticated(true);
+                  setUser({
+                    id: session.user.id,
+                    email: session.user.email,
+                    api_key: existingApiKey,
+                  });
+                  supabaseService.setApiKey(existingApiKey);
+                  localStorage.setItem('linkzy_user', JSON.stringify({
+                    id: session.user.id,
+                    email: session.user.email,
+                    api_key: existingApiKey,
+                  }));
+                } else {
+                  console.error('❌ New Google user missing API key in metadata');
+                  setIsAuthenticated(false);
+                }
               }
             }
           } else if (event === 'SIGNED_OUT') {

@@ -858,8 +858,15 @@ If you're testing, try these workarounds:
         }
         
         // If database query fails, just use auth user
-        const apiKey = this.getApiKey() || `linkzy_${sessionData.session.user.email.replace('@', '_').replace(/\./g, '_')}_${Date.now()}`;
-        this.setApiKey(apiKey);
+        const existingApiKey = this.getApiKey();
+        if (!existingApiKey) {
+          console.error('❌ No API key found in database or localStorage for authenticated user');
+          // Don't generate a new one, this should not happen for existing users
+        }
+        const apiKey = existingApiKey;
+        if (apiKey) {
+          this.setApiKey(apiKey);
+        }
         
         const authUser = {
           ...sessionData.session.user,
