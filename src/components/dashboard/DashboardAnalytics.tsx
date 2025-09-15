@@ -36,12 +36,7 @@ const DashboardAnalytics = () => {
       setGateOpen(!hasTracked);
     }
   }, [trackedLoading, hasTracked]);
-  const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU';
-  const apiSnippet = `<script>(function(){ var lz = window.linkzy = window.linkzy || []; lz.apiKey = '${userApiKey || 'YOUR_API_KEY'}'; lz.track = function(){ fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/track-content', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ${anonKey}' }, body: JSON.stringify({ apiKey: lz.apiKey, url: window.location.href, title: document.title, referrer: document.referrer, timestamp: new Date().toISOString(), content: document.body ? document.body.innerText.slice(0, 1000) : '' }) }); }; lz.track(); })();</script>`;
   const hasTrackedContent = !!hasTracked;
-  const [copied, setCopied] = React.useState(false);
-  const copySnippet = async () => { try { await navigator.clipboard.writeText(apiSnippet); setCopied(true); setTimeout(()=>setCopied(false),2000);} catch {}
-  };
   
   // Check if user has Pro access (either pro plan OR has 30+ credits from Pro Monthly purchase)
   const hasProAccess = (user?.plan && user.plan !== 'free') || (user?.credits && user.credits >= 30);
@@ -76,21 +71,46 @@ const DashboardAnalytics = () => {
         <div className="p-6 max-w-4xl">
           <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-6">
             <h2 className="text-2xl font-bold text-white mb-2">Connect your website to see Analytics</h2>
-            <p className="text-gray-300 mb-4">Install the universal tracking script on your site. As soon as it fires once, your analytics will appear here automatically.</p>
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-300">Universal Tracking Script</span>
-                <button onClick={copySnippet} className="text-orange-400 hover:text-orange-300 text-xs">{copied ? 'Copied' : 'Copy'}</button>
+            <p className="text-gray-300 mb-4">To view your analytics data, you need to install the tracking script on your website first.</p>
+            
+            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-4">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">1</div>
+                <h3 className="text-lg font-semibold text-blue-400">Get Your Tracking Script</h3>
               </div>
-              <code className="text-green-400 text-xs block bg-gray-900 p-3 rounded border overflow-x-auto">{apiSnippet}</code>
+              <p className="text-gray-300 mb-3">
+                Go to <strong>Account → Integrations</strong> to copy your personalized tracking script.
+              </p>
+              <button
+                onClick={() => window.location.href = '/dashboard/account'}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors"
+              >
+                Go to Account → Integrations
+              </button>
             </div>
-            <ul className="list-disc pl-5 text-gray-300 text-sm space-y-1">
-              <li>Paste into your global &lt;head&gt; (theme or layout template)</li>
-              <li>Publish your site, then browse a couple of pages</li>
-              <li>Return here and refresh — your analytics will load automatically</li>
-            </ul>
+
+            <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4 mb-4">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">2</div>
+                <h3 className="text-lg font-semibold text-green-400">Install on Your Website</h3>
+              </div>
+              <ul className="list-disc pl-5 text-gray-300 text-sm space-y-1">
+                <li>Paste the script into your website's &lt;head&gt; section</li>
+                <li>Deploy/publish your website changes</li>
+                <li>Browse a couple of pages to generate tracking data</li>
+              </ul>
+            </div>
+
+            <div className="bg-orange-900/20 border border-orange-500/30 rounded-lg p-4">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="bg-orange-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">3</div>
+                <h3 className="text-lg font-semibold text-orange-400">View Your Analytics</h3>
+              </div>
+              <p className="text-gray-300">
+                Return here and refresh — your analytics will appear automatically once tracking data is detected.
+              </p>
+            </div>
           </div>
-          <div className="text-gray-400 text-sm">Tip: You can also find this script any time under Account → Integrations.</div>
         </div>
       </DashboardLayout>
     );
