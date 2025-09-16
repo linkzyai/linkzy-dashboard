@@ -227,6 +227,8 @@ const DashboardAccount = () => {
 (function(){
   var lz = window.linkzy = window.linkzy || {};
   lz.apiKey = '${userApiKey}';
+  
+  // Track content function
   lz.track = function(){
     fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/track-content', {
       method: 'POST',
@@ -244,7 +246,71 @@ const DashboardAccount = () => {
       })
     });
   };
+  
+  // Check for and execute placement instructions
+  lz.executePlacements = function(){
+    fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/get-placement-instructions', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${anonKey}'
+      },
+      body: JSON.stringify({
+        apiKey: lz.apiKey
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success && data.instructions && data.instructions.length > 0) {
+        data.instructions.forEach(function(instruction) {
+          try {
+            // Execute the placement
+            var instructionData = instruction.instruction_data;
+            if (instructionData.type === 'backlink_placement') {
+              // Find a good spot to insert the paragraph
+              var contentArea = document.querySelector('main, .content, article, .post, body');
+              if (contentArea && instructionData.paragraph) {
+                var newPara = document.createElement('p');
+                newPara.innerHTML = instructionData.paragraph;
+                newPara.style.margin = '16px 0';
+                
+                // Insert after the first paragraph if possible
+                var firstPara = contentArea.querySelector('p');
+                if (firstPara && firstPara.parentNode) {
+                  firstPara.parentNode.insertBefore(newPara, firstPara.nextSibling);
+                } else {
+                  contentArea.appendChild(newPara);
+                }
+                
+                // Mark instruction as completed
+                fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/update-placement-instruction', {
+                  method: 'POST',
+                  headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ${anonKey}'
+                  },
+                  body: JSON.stringify({
+                    instructionId: instruction.id,
+                    status: 'completed',
+                    apiKey: lz.apiKey
+                  })
+                });
+              }
+            }
+          } catch (e) {
+            console.log('Linkzy placement error:', e);
+          }
+        });
+      }
+    })
+    .catch(function(e) {
+      console.log('Linkzy instructions error:', e);
+    });
+  };
+  
+  // Execute on page load
   lz.track();
+  setTimeout(function() { lz.executePlacements(); }, 1000);
 })();
 </script>`;
   const [snippetCopied, setSnippetCopied] = useState(false);
