@@ -56,6 +56,21 @@ import { supabase } from '../../lib/supabase';
 
 const DashboardAccount = () => {
   const { user, logout, isAuthenticated, login } = useAuth();
+  
+  // Load API key from localStorage as fallback if user.api_key is missing
+  const getApiKey = () => {
+    if (user?.api_key) {
+      return user.api_key;
+    }
+    // Fallback to localStorage
+    const storedApiKey = localStorage.getItem('linkzy_api_key');
+    if (storedApiKey) {
+      console.log('🔑 Using API key from localStorage:', storedApiKey);
+      return storedApiKey;
+    }
+    console.warn('⚠️ No API key found in user object or localStorage');
+    return 'demo_api_key_123';
+  };
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
@@ -199,14 +214,14 @@ const DashboardAccount = () => {
     email: user?.email || 'user@example.com',
     website: user?.website || 'https://example.com',
     niche: user?.niche || 'Technology',
-    apiKey: user?.api_key || 'demo_api_key_123',
+    apiKey: getApiKey(),
     credits: user?.credits || 3,
     isPro: user?.plan && user.plan !== 'free',
     joinDate: 'December 2024'
   };
   
-  // Assume userData.apiKey or user?.api_key is available for snippet personalization
-  const userApiKey = user?.api_key || userData.apiKey || 'demo_api_key_123';
+  // Get API key using the robust fallback function
+  const userApiKey = getApiKey();
   const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU';
   const apiSnippet = `<script>
 (function(){
