@@ -56,7 +56,6 @@ serve(async (req: Request) => {
       .select('*')
       .eq('target_user_id', user.id)
       .eq('status', 'pending')
-      .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: true })
       .limit(5); // Process max 5 at a time
 

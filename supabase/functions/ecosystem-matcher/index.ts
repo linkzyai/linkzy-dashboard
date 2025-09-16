@@ -45,14 +45,50 @@ async function createSimpleOpportunity(contentId: string, userId: string): Promi
     
     console.log(`✅ Found ${otherUsers.length} other users`);
     
-    // Create one opportunity with the first other user
-    const targetUser = otherUsers[0];
+    // ANTI-RECIPROCAL LOGIC: Find a user who hasn't already linked back to us
+    let targetUser = null;
     
+    for (const user of otherUsers) {
+      // Check if this user has already created a backlink TO the source user
+      const { data: existingBacklink } = await supabase
+        .from('placement_opportunities')
+        .select('id')
+        .eq('source_user_id', user.id)
+        .eq('target_user_id', userId)
+        .limit(1);
+      
+      if (!existingBacklink || existingBacklink.length === 0) {
+        // This user hasn't backlinked to us, so it's safe to link to them
+        targetUser = user;
+        console.log(`✅ Selected non-reciprocal target: ${user.id}`);
+        break;
+      } else {
+        console.log(`⚠️ Skipping user ${user.id} - would create reciprocal link`);
+      }
+    }
+    
+    if (!targetUser) {
+      console.log('⚠️ No non-reciprocal targets found');
+      return { success: true, opportunities_created: 0, message: 'No non-reciprocal targets available' };
+    }
+    
+         // Generate proper target URL based on actual website
+         let targetUrl = targetUser.website;
+         if (!targetUrl || targetUrl === 'https://example.com') {
+           // Fallback to actual test sites based on user
+           const testSites = [
+             'https://vulgar-magic.surge.sh',
+             'https://nutriwise-test.surge.sh', 
+             'https://wellnesshub-test.surge.sh'
+           ];
+           targetUrl = testSites[Math.floor(Math.random() * testSites.length)];
+         }
+         
          const opportunity = {
        source_user_id: userId,
        source_content_id: contentId,
        target_user_id: targetUser.id,
-       target_url: targetUser.website || 'https://example.com',
+       target_url: targetUrl,
        anchor_text: 'health and wellness',
        match_score: 0.75,
        keyword_overlap: ['health', 'wellness', 'fitness'],
