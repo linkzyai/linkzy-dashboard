@@ -103,10 +103,10 @@ async function getNicheProximityScore(sourceNiche: string, targetNiche: string):
 async function findMatchingOpportunities(contentId: string, userId: string): Promise<any[]> {
   console.log(`🔍 Finding matches for content ${contentId} by user ${userId}`);
   
-  // Get source content and user details
+  // Get source content and user details (simplified)
   const { data: sourceContent } = await supabase
     .from('tracked_content')
-    .select('*, users!inner(niche, website)')
+    .select('*')
     .eq('id', contentId)
     .single();
   
@@ -114,20 +114,50 @@ async function findMatchingOpportunities(contentId: string, userId: string): Pro
     throw new Error('Source content not found');
   }
   
-  console.log(`📄 Source content: ${sourceContent.title}, niche: ${sourceContent.users.niche}`);
+  // Get source user details separately
+  const { data: sourceUser } = await supabase
+    .from('users')
+    .select('niche, website')
+    .eq('id', sourceContent.user_id)
+    .single();
+  
+  if (!sourceUser) {
+    throw new Error('Source user not found');
+  }
+  
+  console.log(`📄 Source content: ${sourceContent.title}, niche: ${sourceUser.niche}`);
   
   // Domain metrics table doesn't exist in current schema - skip geographic scoring
   
-  // Find potential target users (exclude the source user)
-  const { data: potentialTargets } = await supabase
+  // Find potential target users (exclude the source user) - simplified
+  const { data: potentialUsers } = await supabase
     .from('users')
-    .select(`
-      id, niche, website, credits,
-      tracked_content!inner (id, title, keywords, url, created_at)
-    `)
+    .select('id, niche, website, credits')
     .neq('id', userId)
     .gte('credits', 1) // Must have credits for placement
-    .limit(50); // Limit for performance
+    .limit(10); // Reduced limit for performance
+  
+  if (!potentialUsers?.length) {
+    console.log('⚠️ No potential target users found');
+    return [];
+  }
+  
+  // Get tracked content for each user separately
+  const potentialTargets = [];
+  for (const user of potentialUsers) {
+    const { data: userContent } = await supabase
+      .from('tracked_content')
+      .select('id, title, keywords, url, created_at')
+      .eq('user_id', user.id)
+      .limit(5); // Max 5 content items per user
+    
+    if (userContent?.length) {
+      potentialTargets.push({
+        ...user,
+        tracked_content: userContent
+      });
+    }
+  }
   
   if (!potentialTargets?.length) {
     console.log('⚠️ No potential targets found');
@@ -164,7 +194,7 @@ async function findMatchingOpportunities(contentId: string, userId: string): Pro
         
         // 2. Niche proximity score (25% weight)
         scores.nicheProximity = await getNicheProximityScore(
-          sourceContent.users.niche,
+          sourceUser.niche,
           target.niche
         );
         
@@ -186,8 +216,8 @@ async function findMatchingOpportunities(contentId: string, userId: string): Pro
           scores.partnerQuality * 0.10
         );
         
-        // Only create opportunities above minimum threshold
-        if (scores.overall >= 0.3) {
+        // Only create opportunities above minimum threshold (temporarily lowered for debugging)
+        if (scores.overall >= 0.1) {
           const anchorSuggestions = generateAnchorTextSuggestions(
             targetContent.keywords || [],
             sourceContent.users.website
@@ -204,7 +234,7 @@ async function findMatchingOpportunities(contentId: string, userId: string): Pro
             partner_quality_score: scores.partnerQuality,
             overall_match_score: scores.overall,
             suggested_anchor_text: anchorSuggestions[0],
-            suggested_target_url: sourceContent.users.website,
+            suggested_target_url: sourceUser.website,
             suggested_placement_context: `Natural placement opportunity in content about "${targetContent.title}"`,
             estimated_value: Math.ceil(scores.overall * 3), // 1-3 credits based on quality
             auto_approved: scores.overall >= 0.7, // Auto-approve if score is high enough
