@@ -116,19 +116,13 @@ async function findMatchingOpportunities(contentId: string, userId: string): Pro
   
   console.log(`📄 Source content: ${sourceContent.title}, niche: ${sourceContent.users.niche}`);
   
-  // Get source user's domain metrics for geographic reference
-  const { data: sourceDomainMetrics } = await supabase
-    .from('domain_metrics')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
+  // Domain metrics table doesn't exist in current schema - skip geographic scoring
   
   // Find potential target users (exclude the source user)
   const { data: potentialTargets } = await supabase
     .from('users')
     .select(`
       id, niche, website, credits,
-      domain_metrics (domain_authority, geographic_location, latitude, longitude, placement_success_rate),
       tracked_content!inner (id, title, keywords, url, created_at)
     `)
     .neq('id', userId)
@@ -147,14 +141,8 @@ async function findMatchingOpportunities(contentId: string, userId: string): Pro
   for (const target of potentialTargets) {
     if (!target.tracked_content?.length) continue;
     
-    // Check existing partner relationship
-    const { data: partnerRelation } = await supabase
-      .from('partner_relationships')
-      .select('quality_score, blocked, auto_approve_threshold')
-      .or(`and(user_a_id.eq.${userId},user_b_id.eq.${target.id}),and(user_a_id.eq.${target.id},user_b_id.eq.${userId})`)
-      .single();
-    
-    if (partnerRelation?.blocked) continue; // Skip blocked partners
+    // Partner relationship check removed - table doesn't exist in current schema
+    // All users are considered potential partners for now
     
     // For each piece of target content, calculate match scores
     for (const targetContent of target.tracked_content) {
@@ -180,27 +168,14 @@ async function findMatchingOpportunities(contentId: string, userId: string): Pro
           target.niche
         );
         
-        // 3. Domain Authority score (20% weight)
-        const targetDA = target.domain_metrics?.[0]?.domain_authority || 0;
-        scores.domainAuthority = Math.min(targetDA / 100, 1.0); // Normalize to 0-1
+        // 3. Domain Authority score (20% weight) - Default since domain_metrics table doesn't exist
+        scores.domainAuthority = 0.5; // Default neutral DA score
         
-        // 4. Geographic relevance score (15% weight)
-        if (sourceDomainMetrics?.latitude && sourceDomainMetrics?.longitude && 
-            target.domain_metrics?.[0]?.latitude && target.domain_metrics?.[0]?.longitude) {
-          const distance = calculateDistance(
-            sourceDomainMetrics.latitude,
-            sourceDomainMetrics.longitude,
-            target.domain_metrics[0].latitude,
-            target.domain_metrics[0].longitude
-          );
-          // Higher score for closer proximity (within 50 miles = 1.0, diminishing returns)
-          scores.geographicRelevance = Math.max(0, 1 - (distance / 500));
-        } else {
-          scores.geographicRelevance = 0.5; // Neutral if no location data
-        }
+        // 4. Geographic relevance score (15% weight) - Default since domain_metrics table doesn't exist
+        scores.geographicRelevance = 0.5; // Neutral score since no geographic data available
         
         // 5. Partner quality score (10% weight)
-        scores.partnerQuality = partnerRelation ? (partnerRelation.quality_score / 10) : 0.5;
+        scores.partnerQuality = 0.5; // Default neutral score since partner_relationships table doesn't exist
         
         // Calculate overall weighted score
         scores.overall = (
@@ -232,7 +207,7 @@ async function findMatchingOpportunities(contentId: string, userId: string): Pro
             suggested_target_url: sourceContent.users.website,
             suggested_placement_context: `Natural placement opportunity in content about "${targetContent.title}"`,
             estimated_value: Math.ceil(scores.overall * 3), // 1-3 credits based on quality
-            auto_approved: partnerRelation && scores.overall >= (partnerRelation.auto_approve_threshold / 10),
+            auto_approved: scores.overall >= 0.7, // Auto-approve if score is high enough
             target_content_title: targetContent.title,
             target_content_url: targetContent.url
           });
