@@ -186,19 +186,25 @@ serve(async (req: Request) => {
     .single();
 
   // 🚀 REAL-TIME ECOSYSTEM MATCHING: Trigger automatic opportunity generation
+  let ecosystemResult = null;
   if (insertedContent?.id) {
     console.log(`🔄 Triggering real-time ecosystem matching for content ${insertedContent.id}`);
     
-    // Trigger ecosystem matching asynchronously (don't wait for it to complete)
-    triggerEcosystemMatching(insertedContent.id, userData.id).catch(error => {
-      console.error('⚠️ Ecosystem matching failed (non-blocking):', error);
-    });
+    try {
+      // Make ecosystem matching synchronous to see results
+      ecosystemResult = await triggerEcosystemMatching(insertedContent.id, userData.id);
+      console.log('✅ Ecosystem matching completed:', ecosystemResult);
+    } catch (error) {
+      console.error('⚠️ Ecosystem matching failed:', error);
+      ecosystemResult = { error: error.message };
+    }
   }
 
   return new Response(JSON.stringify({ 
     success: true, 
     message: 'Content tracked successfully',
     realTimeMatching: insertedContent?.id ? 'triggered' : 'skipped',
+    ecosystemResult: ecosystemResult,
     analytics: {
       keywordsExtracted: keywordList.length,
       topKeywords: keywordList.slice(0, 5).map(k => k.word),
