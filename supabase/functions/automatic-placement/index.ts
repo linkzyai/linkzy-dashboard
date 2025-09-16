@@ -65,6 +65,31 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+// Website validation function
+async function validateWebsite(url: string): Promise<boolean> {
+  try {
+    if (!url || !url.startsWith('http') || url === 'https://example.com') {
+      return false;
+    }
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch(url, {
+      method: 'HEAD',
+      signal: controller.signal,
+      headers: { 'User-Agent': 'Linkzy-Bot/1.0' }
+    });
+    
+    clearTimeout(timeoutId);
+    return response.status < 500;
+    
+  } catch (error) {
+    console.log(`Website validation failed for ${url}:`, error.message);
+    return false;
+  }
+}
+
 // Platform detection function
 async function detectPlatform(websiteUrl: string): Promise<PlatformDetection> {
   try {
@@ -145,21 +170,21 @@ async function attemptJavaScriptPlacement(opportunity: any, targetDomainMetrics:
     // Default to dofollow (no 'nofollow'); switch to nofollow for low-quality/experimental cases later if needed
     const rel = 'noopener';
     const paragraph = generateContextualParagraph(
-      opportunity.suggested_anchor_text || 'this guide',
-      opportunity.suggested_target_url,
+      opportunity.anchor_text || 'this guide',
+      opportunity.target_url,
       niche,
-      opportunity.source_content?.keywords || [],
+      opportunity.tracked_content?.keywords || [],
       rel
     );
     
     // Create the placement instruction that will be sent to the tracking script
     const placementInstruction: PlacementInstructionData = {
       type: 'backlink_placement',
-      targetUrl: opportunity.suggested_target_url,
-      anchorText: opportunity.suggested_anchor_text,
+      targetUrl: opportunity.target_url,
+      anchorText: opportunity.anchor_text,
       opportunityId: opportunity.id,
-      placementContext: opportunity.suggested_placement_context,
-      keywords: opportunity.source_content?.keywords || [],
+      placementContext: opportunity.placement_context,
+      keywords: opportunity.tracked_content?.keywords || [],
       injectionMethod: 'dom_manipulation',
       paragraph,
       rel
@@ -609,6 +634,20 @@ serve(async (req: Request) => {
     // Detect target platform to choose placement method
     const targetWebsite = opportunity.target_user?.website || targetDomainMetrics?.website || 'https://example.com';
     console.log(`🔍 Target website: ${targetWebsite}`);
+    
+    // Validate target website first
+    const websiteValidation = await validateWebsite(targetWebsite);
+    if (!websiteValidation) {
+      return new Response(JSON.stringify({ 
+        error: 'Target website is not reachable or invalid',
+        target_url: targetWebsite,
+        validation_failed: true
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
     console.log(`🔍 Opportunity data:`, JSON.stringify(opportunity, null, 2));
     
     const platformInfo = await detectPlatform(targetWebsite);
@@ -631,11 +670,18 @@ serve(async (req: Request) => {
       });
     }
     
-    // Hold credits before attempting placement
-    const creditsHeld = await holdCredits(opportunity.source_user_id, opportunity.estimated_value);
-    if (!creditsHeld) {
+    // Check if user has sufficient credits (but don't deduct yet)
+    const { data: user } = await supabase
+      .from('users')
+      .select('credits')
+      .eq('id', opportunity.source_user_id)
+      .single();
+    
+    if (!user || user.credits < opportunity.estimated_value) {
       return new Response(JSON.stringify({ 
-        error: 'Insufficient credits for placement' 
+        error: 'Insufficient credits for placement',
+        required: opportunity.estimated_value,
+        available: user?.credits || 0
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -672,35 +718,11 @@ serve(async (req: Request) => {
     } else {
       await processFailedPlacement(opportunityId, placementResult.errorMessage!, placementResult.responseTime);
       
-      // Refund held credits on failure
-      const { data: user } = await supabase
-        .from('users')
-        .select('credits')
-        .eq('id', opportunity.source_user_id)
-        .single();
-      
-      if (user) {
-        await supabase.from('credit_transactions').insert({
-          user_id: opportunity.source_user_id,
-          transaction_type: 'credit',
-          amount: opportunity.estimated_value,
-          balance_before: user.credits,
-          balance_after: user.credits + opportunity.estimated_value,
-          description: 'Credits refunded for failed placement',
-          refund_reason: placementResult.errorMessage
-        });
-        
-        await supabase
-          .from('users')
-          .update({ credits: user.credits + opportunity.estimated_value })
-          .eq('id', opportunity.source_user_id);
-      }
-      
       return new Response(JSON.stringify({
         success: false,
         error: placementResult.errorMessage,
         response_time_ms: placementResult.responseTime,
-        credits_refunded: opportunity.estimated_value
+        credits_charged: 0 // No credits charged for failed placements
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

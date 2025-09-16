@@ -14,6 +14,38 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+// Website validation function
+async function validateWebsite(url: string): Promise<boolean> {
+  try {
+    // Basic URL validation
+    if (!url || !url.startsWith('http')) {
+      return false;
+    }
+    
+    // Try to fetch the website with a timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    const response = await fetch(url, {
+      method: 'HEAD', // Only check headers, don't download content
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Linkzy-Bot/1.0 (Website Validation)'
+      }
+    });
+    
+    clearTimeout(timeoutId);
+    
+    // Consider 200, 301, 302, 403 as valid (website exists)
+    // 403 means site exists but blocks HEAD requests
+    return response.status < 500;
+    
+  } catch (error) {
+    console.log(`Website validation failed for ${url}:`, error.message);
+    return false;
+  }
+}
+
 // SIMPLE working function - just create opportunities
 async function createSimpleOpportunity(contentId: string, userId: string): Promise<any> {
   console.log(`🎯 SIMPLE: Creating opportunity for content ${contentId} by user ${userId}`);
@@ -84,12 +116,78 @@ async function createSimpleOpportunity(contentId: string, userId: string): Promi
            targetUrl = testSites[Math.floor(Math.random() * testSites.length)];
          }
          
+         // Validate target website exists and is reachable
+         const isValidWebsite = await validateWebsite(targetUrl);
+         if (!isValidWebsite) {
+           console.log(`⚠️ Target website ${targetUrl} is not reachable - skipping opportunity creation`);
+           return { success: true, opportunities_created: 0, message: 'Target website not reachable' };
+         }
+         
+         // Generate contextual anchor text for ANY niche dynamically
+         function generateAnchorText(targetUrl: string, niche: string): string {
+           
+           // Dynamic templates that work for any niche
+           const templates = [
+             'professional {niche} services',
+             'expert {niche} guidance', 
+             'specialized {niche} solutions',
+             '{niche} expertise and consulting',
+             'comprehensive {niche} strategies',
+             'proven {niche} approaches',
+             'innovative {niche} methods',
+             '{niche} professionals',
+             'quality {niche} resources',
+             'trusted {niche} specialists'
+           ];
+           
+           // Clean and format the niche
+           let cleanNiche = (niche || 'business').toLowerCase().trim();
+           
+           // Handle common niche mappings and pluralization
+           const nicheMap: { [key: string]: string } = {
+             'fitness': 'fitness training',
+             'nutrition': 'nutrition coaching',
+             'wellness': 'wellness programs',
+             'health': 'health optimization',
+             'technology': 'tech solutions',
+             'creative-services': 'creative design',
+             'arts': 'artistic services',
+             'restaurants': 'culinary expertise',
+             'travel': 'travel planning',
+             'real-estate': 'real estate services',
+             'automotive': 'automotive services',
+             'education': 'educational resources',
+             'finance': 'financial planning',
+             'legal': 'legal services',
+             'marketing': 'marketing strategies',
+             'consulting': 'business consulting',
+             'ecommerce': 'e-commerce solutions',
+             'healthcare': 'healthcare services',
+             'beauty': 'beauty and wellness',
+             'photography': 'photography services',
+             'music': 'music production',
+             'fashion': 'fashion design',
+             'home-services': 'home improvement',
+             'pets': 'pet care services',
+             'sports': 'sports training'
+           };
+           
+           // Use mapped version if available, otherwise use the niche as-is
+           const formattedNiche = nicheMap[cleanNiche] || cleanNiche;
+           
+           // Select random template and replace {niche}
+           const template = templates[Math.floor(Math.random() * templates.length)];
+           return template.replace('{niche}', formattedNiche);
+         }
+         
+         const contextualAnchorText = generateAnchorText(targetUrl, targetUser.niche || 'health');
+         
          const opportunity = {
        source_user_id: userId,
        source_content_id: contentId,
        target_user_id: targetUser.id,
        target_url: targetUrl,
-       anchor_text: 'health and wellness',
+       anchor_text: contextualAnchorText,
        match_score: 0.75,
        keyword_overlap: ['health', 'wellness', 'fitness'],
        status: 'auto_approved',
