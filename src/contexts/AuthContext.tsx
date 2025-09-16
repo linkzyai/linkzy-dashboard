@@ -192,7 +192,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               // Fetch the user's profile from Supabase users table (not auth.users)
               const { data: profile, error } = await supabase
                 .from('users')
-                .select('id, email, website, niche, plan, credits')
+                .select('id, email, website, niche, plan, credits, api_key')
                 .eq('id', session.user.id)
                 .single();
               if (profile) {
