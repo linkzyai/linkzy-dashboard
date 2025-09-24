@@ -244,7 +244,121 @@ const DashboardAccount = () => {
       })
     });
   };
+  
+  // Check for and execute placement instructions
+  lz.executePlacements = function(){
+    fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/get-placement-instructions', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${anonKey}'
+      },
+      body: JSON.stringify({
+        apiKey: lz.apiKey
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success && data.instructions && data.instructions.length > 0) {
+        data.instructions.forEach(function(instruction) {
+          try {
+            // Execute the placement
+            var instructionData = instruction.instruction_data;
+            if (instructionData.type === 'backlink_placement') {
+              
+              // SMART PAGE DETECTION: Only place on appropriate pages
+              var currentUrl = window.location.href.toLowerCase();
+              var currentPath = window.location.pathname.toLowerCase();
+              
+              // Skip homepage and root pages
+              if (currentPath === '/' || currentPath === '/index.html' || currentPath === '' || 
+                  currentUrl.endsWith('/#') || currentUrl.endsWith('/index.html')) {
+                console.log('Linkzy: Skipping homepage placement');
+                return;
+              }
+              
+              // Only place on content-rich pages
+              var validPages = currentPath.includes('/blog') || 
+                             currentPath.includes('/article') || 
+                             currentPath.includes('/post') || 
+                             currentPath.includes('/about') || 
+                             currentPath.includes('/service') || 
+                             currentPath.includes('/page') ||
+                             document.querySelector('article') ||
+                             document.querySelector('.blog-post') ||
+                             document.querySelector('.post-content') ||
+                             (document.body && document.body.innerText.length > 500); // Long content pages
+              
+              if (!validPages) {
+                console.log('Linkzy: Page not suitable for placement:', currentPath);
+                return;
+              }
+              
+              // Find the best content area for placement
+              var contentArea = document.querySelector('article .content') ||
+                               document.querySelector('.post-content') ||
+                               document.querySelector('.blog-content') ||
+                               document.querySelector('article') ||
+                               document.querySelector('.content') ||
+                               document.querySelector('main');
+              
+              if (contentArea && instructionData.paragraph) {
+                // Look for existing paragraphs with substantial content
+                var paragraphs = contentArea.querySelectorAll('p');
+                var targetParagraph = null;
+                
+                // Find a paragraph with substantial content (not just a title or short text)
+                for (var i = 0; i < paragraphs.length; i++) {
+                  if (paragraphs[i].innerText.length > 100) {
+                    targetParagraph = paragraphs[i];
+                    break;
+                  }
+                }
+                
+                // If we found a good spot, insert after a substantial paragraph
+                if (targetParagraph) {
+                  var newPara = document.createElement('p');
+                  newPara.innerHTML = instructionData.paragraph;
+                  newPara.style.margin = '16px 0';
+                  newPara.style.lineHeight = '1.6';
+                  
+                  // Insert after the found paragraph
+                  targetParagraph.parentNode.insertBefore(newPara, targetParagraph.nextSibling);
+                  
+                  console.log('Linkzy: Backlink placed successfully on', currentPath);
+                  
+                  // Mark instruction as completed
+                  fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/update-placement-instruction', {
+                    method: 'POST',
+                    headers: { 
+                      'Content-Type': 'application/json',
+                      'Authorization': 'Bearer ${anonKey}'
+                    },
+                    body: JSON.stringify({
+                      instructionId: instruction.id,
+                      status: 'completed',
+                      apiKey: lz.apiKey
+                    })
+                  });
+                } else {
+                  console.log('Linkzy: No suitable content area found for placement');
+                }
+              }
+            }
+          } catch (e) {
+            console.log('Linkzy placement error:', e);
+          }
+        });
+      }
+    })
+    .catch(function(e) {
+      console.log('Linkzy instructions error:', e);
+    });
+  };
+  
+  // Execute on page load
   lz.track();
+  lz.executePlacements();
 })();
 </script>`;
   const [snippetCopied, setSnippetCopied] = useState(false);
