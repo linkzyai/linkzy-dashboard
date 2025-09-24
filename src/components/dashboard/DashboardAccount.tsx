@@ -297,41 +297,88 @@ const DashboardAccount = () => {
             var instructionData = instruction.instruction_data;
             if (instructionData.type === 'backlink_placement') {
               
-              // SMART PAGE DETECTION: Only place on appropriate pages
+              // SMART PAGE DETECTION: Enhanced for SPAs
               var currentUrl = window.location.href.toLowerCase();
               var currentPath = window.location.pathname.toLowerCase();
+              var currentHash = window.location.hash.toLowerCase();
               
-              // Skip homepage and root pages
-              if (currentPath === '/' || currentPath === '/index.html' || currentPath === '' || 
-                  currentUrl.endsWith('/#') || currentUrl.endsWith('/index.html')) {
+              // Enhanced homepage detection (SPA-aware)
+              // For SPAs, we need to be more intelligent about homepage detection
+              var isRealHomepage = (currentPath === '/' && (currentHash === '' || currentHash === '#')) ||
+                                 currentPath === '/index.html' ||
+                                 currentHash === '#/' ||
+                                 currentHash === '#/home' ||
+                                 currentHash === '#/index';
+              
+              // Additional check: if there's substantial content, it's probably not a homepage
+              var bodyTextLength = document.body ? document.body.innerText.length : 0;
+              var hasSubstantialContent = bodyTextLength > 500;
+              
+              // Override homepage detection if there's content and active elements
+              var hasActiveContent = document.querySelector('.page.active') && 
+                                   document.querySelector('.page.active').innerText.length > 300;
+              
+              var isHomepage = isRealHomepage && !hasSubstantialContent && !hasActiveContent;
+              
+              if (isHomepage) {
                 console.log('Linkzy: Skipping homepage placement');
                 return;
               }
               
-              // Only place on content-rich pages
-              var validPages = currentPath.includes('/blog') || 
-                             currentPath.includes('/article') || 
-                             currentPath.includes('/post') || 
-                             currentPath.includes('/about') || 
-                             currentPath.includes('/service') || 
-                             currentPath.includes('/page') ||
-                             document.querySelector('article') ||
-                             document.querySelector('.blog-post') ||
-                             document.querySelector('.post-content') ||
-                             (document.body && document.body.innerText.length > 500); // Long content pages
+              // SPA Route Detection
+              var spaContentRoutes = [
+                '/blog', '/article', '/post', '/about', '/service', '/page', '/content',
+                '#/blog', '#/article', '#/post', '#/about', '#/service', '#/page'
+              ];
               
-              if (!validPages) {
+              var hasContentRoute = spaContentRoutes.some(function(route) {
+                return currentPath.includes(route) || currentHash.includes(route);
+              });
+              
+              // DOM-based content detection (enhanced for SPAs)
+              var hasContentElement = !!
+                (document.querySelector('article') ||
+                 document.querySelector('.blog-post') ||
+                 document.querySelector('.post-content') ||
+                 document.querySelector('.article-content') ||
+                 document.querySelector('.content-area') ||
+                 document.querySelector('.page.active article') ||
+                 document.querySelector('.page.active .content'));
+              
+              // Content length already checked above in homepage detection
+              
+              // Active page detection for SPAs
+              var activePageElement = document.querySelector('.page.active');
+              var hasActivePage = !!activePageElement;
+              var hasActivePageContent = false;
+              
+              if (hasActivePage && activePageElement) {
+                var activePageText = activePageElement.innerText.length;
+                if (activePageText > 300) {
+                  hasActivePageContent = true;
+                }
+              }
+              
+              // Final decision (more permissive for SPAs)
+              var validPage = hasContentRoute || hasContentElement || hasSubstantialContent || hasActivePageContent;
+              
+              if (!validPage) {
                 console.log('Linkzy: Page not suitable for placement:', currentPath);
                 return;
               }
               
-              // Find the best content area for placement
-              var contentArea = document.querySelector('article .content') ||
+              // Find the best content area for placement (enhanced for SPAs)
+              var contentArea = document.querySelector('.page.active article .content') ||
+                               document.querySelector('.page.active .post-content') ||
+                               document.querySelector('.page.active .content') ||
+                               document.querySelector('.page.active article') ||
+                               document.querySelector('article .content') ||
                                document.querySelector('.post-content') ||
                                document.querySelector('.blog-content') ||
                                document.querySelector('article') ||
                                document.querySelector('.content') ||
-                               document.querySelector('main');
+                               document.querySelector('main') ||
+                               document.querySelector('.page.active'); // Last resort: active page
               
               if (contentArea && instructionData.paragraph) {
                 // Look for existing paragraphs with substantial content
