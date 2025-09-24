@@ -445,46 +445,211 @@ class ApiService {
     }
   }
 
-  // Get JavaScript tracking snippet
+  // Get JavaScript tracking snippet with automatic ecosystem integration
   getTrackingSnippet(apiKey: string): string {
-    return `(function() {
-    // Linkzy Content Tracking Snippet
-    const LINKZY_API_KEY = '${apiKey}';
-    const LINKZY_API_URL = 'https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/track-content';
+    return `(function(){
+  var lz = window.linkzy = window.linkzy || {};
+  lz.apiKey = '${apiKey}';
+  
+  // Track content and trigger automatic ecosystem matching
+  lz.track = function(){
+    fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/track-content', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU'
+      },
+      body: JSON.stringify({
+        apiKey: lz.apiKey,
+        url: window.location.href,
+        title: document.title,
+        referrer: document.referrer,
+        timestamp: new Date().toISOString(),
+        content: document.body ? document.body.innerText.slice(0, 1000) : ''
+      })
+    })
+    .then(function(response) {
+      if (!response.ok) {
+        throw new Error('HTTP ' + response.status);
+      }
+      return response.json();
+    })
+    .then(function(data) {
+      if (data.success) {
+        console.log('Linkzy: Content tracked, ecosystem matching triggered automatically');
+        if (data.realTimeMatching === 'triggered') {
+          console.log('Linkzy: Real-time ecosystem matching in progress...');
+          // Check for new opportunities after a delay
+          setTimeout(lz.checkForOpportunities, 3000);
+        }
+      } else {
+        console.warn('Linkzy: Content tracking failed:', data.error);
+      }
+    })
+    .catch(function(error) {
+      console.warn('Linkzy: Content tracking error:', error.message);
+      // Silently fail - don't break the website
+    });
+  };
+  
+  // Check for approved placement opportunities from the ecosystem
+  lz.checkForOpportunities = function(){
+    // Get current user ID from API key (simplified - in production you'd have a proper endpoint)
+    fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/rest/v1/placement_opportunities?api_key=eq.' + encodeURIComponent(lz.apiKey) + '&status=eq.approved&select=*', {
+      method: 'GET',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU',
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU'
+      }
+    })
+    .then(function(response) {
+      if (!response.ok) {
+        throw new Error('HTTP ' + response.status);
+      }
+      return response.json();
+    })
+    .then(function(opportunities) {
+      if (opportunities && opportunities.length > 0) {
+        console.log('Linkzy: Found', opportunities.length, 'approved placement opportunities');
+        lz.executePlacement(opportunities[0]); // Execute the first opportunity
+      } else {
+        console.log('Linkzy: No approved opportunities found yet - ecosystem is still matching');
+      }
+    })
+    .catch(function(error) {
+      console.warn('Linkzy: Error checking opportunities:', error.message);
+    });
+  };
+  
+  // Execute automatic placement using the ecosystem's placement system
+  lz.executePlacement = function(opportunity){
+    if (!opportunity) return;
     
-    function trackContent() {
-        const content = document.body.innerText || '';
-        const title = document.title || '';
-        const url = window.location.href;
-        const referrer = document.referrer || '';
-        
-        const payload = {
-            apiKey: LINKZY_API_KEY,
-            url: url,
-            title: title,
-            referrer: referrer,
-            timestamp: new Date().toISOString(),
-            content: content.substring(0, 5000) // Limit content size
-        };
-        
-        fetch(LINKZY_API_URL, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU'
-            },
-            body: JSON.stringify(payload)
-        }).then(response => response.json())
-          .then(data => console.log('✅ Content tracked:', data))
-          .catch(error => console.warn('⚠️ Tracking failed:', error));
+    // Check if placement is suitable for current page
+    if (!lz.isPlacementSuitable()) {
+      console.log('Linkzy: Current page not suitable for placement');
+      return;
     }
     
-    // Track when page loads
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', trackContent);
+    console.log('Linkzy: Executing automatic placement for opportunity', opportunity.id);
+    
+    // Create the contextual backlink placement
+    var anchorText = opportunity.suggested_anchor_text || 'this resource';
+    var targetUrl = opportunity.suggested_target_url;
+    var context = opportunity.suggested_placement_context || 'Check out this relevant resource';
+    
+    // Generate natural paragraph with backlink
+    var backlinkParagraph = lz.generateNaturalPlacement(anchorText, targetUrl, context);
+    
+    // Find best placement spot on current page
+    var placementSpot = lz.findPlacementSpot();
+    if (placementSpot) {
+      // Insert the backlink
+      var newPara = document.createElement('p');
+      newPara.innerHTML = backlinkParagraph;
+      newPara.style.margin = '16px 0';
+      newPara.style.lineHeight = '1.6';
+      newPara.setAttribute('data-linkzy-placement', opportunity.id);
+      
+      placementSpot.parentNode.insertBefore(newPara, placementSpot.nextSibling);
+      
+      console.log('Linkzy: Backlink placed successfully!');
+      
+      // Mark opportunity as completed
+      lz.markOpportunityCompleted(opportunity.id);
     } else {
-        trackContent();
+      console.log('Linkzy: No suitable placement spot found on current page');
     }
+  };
+  
+  // Check if current page is suitable for backlink placement
+  lz.isPlacementSuitable = function(){
+    var currentPath = window.location.pathname.toLowerCase();
+    var bodyTextLength = document.body ? document.body.innerText.length : 0;
+    
+    // Skip homepage
+    if (currentPath === '/' || currentPath === '/index.html') {
+      return false;
+    }
+    
+    // Ensure page has substantial content
+    if (bodyTextLength < 500) {
+      return false;
+    }
+    
+    return true;
+  };
+  
+  // Find the best spot to place a backlink
+  lz.findPlacementSpot = function(){
+    var contentArea = document.querySelector('main') ||
+                     document.querySelector('.content') ||
+                     document.querySelector('article') ||
+                     document.querySelector('.blog-content') ||
+                     document.querySelector('.post-content');
+    
+    if (!contentArea) {
+      contentArea = document.body;
+    }
+    
+    // Find paragraphs with substantial content
+    var paragraphs = contentArea.querySelectorAll('p');
+    for (var i = 0; i < paragraphs.length; i++) {
+      if (paragraphs[i].innerText.length > 100) {
+        return paragraphs[i];
+      }
+    }
+    
+    return null;
+  };
+  
+  // Generate natural contextual placement
+  lz.generateNaturalPlacement = function(anchorText, targetUrl, context){
+    var templates = [
+      'For more insights on this topic, check out <a href="' + targetUrl + '" target="_blank" rel="noopener">' + anchorText + '</a>.',
+      'If you\'re looking for additional resources, <a href="' + targetUrl + '" target="_blank" rel="noopener">' + anchorText + '</a> provides valuable information.',
+      'To learn more about this subject, visit <a href="' + targetUrl + '" target="_blank" rel="noopener">' + anchorText + '</a>.',
+      'For a comprehensive guide, see <a href="' + targetUrl + '" target="_blank" rel="noopener">' + anchorText + '</a>.',
+      'You might also find <a href="' + targetUrl + '" target="_blank" rel="noopener">' + anchorText + '</a> helpful.'
+    ];
+    
+    return templates[Math.floor(Math.random() * templates.length)];
+  };
+  
+  // Mark opportunity as completed in the ecosystem
+  lz.markOpportunityCompleted = function(opportunityId){
+    fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/rest/v1/placement_opportunities?id=eq.' + opportunityId, {
+      method: 'PATCH',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU',
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU'
+      },
+      body: JSON.stringify({ 
+        status: 'placed',
+        placement_success: true,
+        placement_attempted_at: new Date().toISOString()
+      })
+    })
+    .then(function(response) {
+      if (response.ok) {
+        console.log('Linkzy: Opportunity marked as completed');
+      }
+    })
+    .catch(function(error) {
+      console.warn('Linkzy: Failed to mark opportunity as completed:', error);
+    });
+  };
+  
+  // Initialize the system
+  lz.track(); // Track content and trigger ecosystem matching
+  lz.checkForOpportunities(); // Check for existing opportunities
+  
+  // Set up periodic checking for new opportunities (every 24 hours)
+  setInterval(function() {
+    lz.checkForOpportunities();
+  }, 24 * 60 * 60 * 1000); // 24 hours
 })();`;
   }
 }
