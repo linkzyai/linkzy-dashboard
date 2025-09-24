@@ -242,6 +242,23 @@ const DashboardAccount = () => {
         timestamp: new Date().toISOString(),
         content: document.body ? document.body.innerText.slice(0, 1000) : ''
       })
+    })
+    .then(function(response) {
+      if (!response.ok) {
+        throw new Error('HTTP ' + response.status);
+      }
+      return response.json();
+    })
+    .then(function(data) {
+      if (data.success) {
+        console.log('Linkzy: Content tracked successfully');
+      } else {
+        console.warn('Linkzy: Content tracking failed:', data.error);
+      }
+    })
+    .catch(function(error) {
+      console.warn('Linkzy: Content tracking error:', error.message);
+      // Silently fail - don't break the website
     });
   };
   
@@ -257,9 +274,23 @@ const DashboardAccount = () => {
         apiKey: lz.apiKey
       })
     })
-    .then(response => response.json())
-    .then(data => {
+    .then(function(response) {
+      if (!response.ok) {
+        throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+      }
+      return response.json();
+    })
+    .then(function(data) {
+      if (data.error) {
+        console.warn('Linkzy placement service unavailable:', data.error);
+        return;
+      }
+      
       if (data.success && data.instructions && data.instructions.length > 0) {
+        console.log('Linkzy: Found', data.instructions.length, 'placement instructions');
+        var successCount = 0;
+        var errorCount = 0;
+        
         data.instructions.forEach(function(instruction) {
           try {
             // Execute the placement
@@ -326,8 +357,9 @@ const DashboardAccount = () => {
                   targetParagraph.parentNode.insertBefore(newPara, targetParagraph.nextSibling);
                   
                   console.log('Linkzy: Backlink placed successfully on', currentPath);
+                  successCount++;
                   
-                  // Mark instruction as completed
+                  // Mark instruction as completed with error handling
                   fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/update-placement-instruction', {
                     method: 'POST',
                     headers: { 
@@ -339,20 +371,38 @@ const DashboardAccount = () => {
                       status: 'completed',
                       apiKey: lz.apiKey
                     })
+                  })
+                  .then(function(response) {
+                    if (!response.ok) {
+                      console.warn('Linkzy: Failed to mark instruction as completed');
+                    }
+                  })
+                  .catch(function(error) {
+                    console.warn('Linkzy: Error updating placement status:', error.message);
                   });
                 } else {
                   console.log('Linkzy: No suitable content area found for placement');
+                  errorCount++;
                 }
               }
             }
           } catch (e) {
-            console.log('Linkzy placement error:', e);
+            console.warn('Linkzy placement error:', e.message);
+            errorCount++;
           }
         });
+        
+        // Summary report
+        if (successCount > 0 || errorCount > 0) {
+          console.log('Linkzy placement summary:', successCount, 'successful,', errorCount, 'failed');
+        }
+      } else {
+        console.log('Linkzy: No placement instructions found');
       }
     })
     .catch(function(e) {
-      console.log('Linkzy instructions error:', e);
+      console.warn('Linkzy instructions error:', e.message);
+      // Gracefully handle service unavailability
     });
   };
   
