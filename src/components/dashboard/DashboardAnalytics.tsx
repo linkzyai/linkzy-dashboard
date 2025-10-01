@@ -1,67 +1,107 @@
-import React from 'react';
-import DashboardLayout from './DashboardLayout';
-import LoadingSpinner from '../LoadingSpinner';
-import ErrorMessage from '../ErrorMessage';
-import { useAnalytics, useKeywordAnalytics, useHasTrackedContent } from '../../hooks/useApi'; 
-import { 
-  Gauge, BarChart, Users, Calendar, Download, Filter, ArrowUp, ArrowDown, Shield, Plus, Trash2, CheckCircle, DollarSign, TrendingUp, ArrowRight, ChevronUp, Award 
-} from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import LockedFeature from '../LockedFeature';
+import React from "react";
+import { Link } from "react-router-dom";
+import DashboardLayout from "./DashboardLayout";
+import LoadingSpinner from "../LoadingSpinner";
+import ErrorMessage from "../ErrorMessage";
+import {
+  useAnalytics,
+  useKeywordAnalytics,
+  useHasTrackedContent,
+} from "../../hooks/useApi";
+import {
+  Gauge,
+  BarChart,
+  Users,
+  Calendar,
+  Download,
+  Filter,
+  ArrowUp,
+  ArrowDown,
+  Shield,
+  Plus,
+  Trash2,
+  CheckCircle,
+  DollarSign,
+  TrendingUp,
+  ArrowRight,
+  ChevronUp,
+  Award,
+} from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
+import LockedFeature from "../LockedFeature";
 
 const DashboardAnalytics = () => {
   const { data: analyticsData, loading, error, refetch } = useAnalytics();
-  const { data: keywordData, loading: keywordLoading, error: keywordError, refetch: refetchKeywords } = useKeywordAnalytics();
-  const [timeframe, setTimeframe] = React.useState('30d');
-  const [keywordFilter, setKeywordFilter] = React.useState('');
+  const {
+    data: keywordData,
+    loading: keywordLoading,
+    error: keywordError,
+    refetch: refetchKeywords,
+  } = useKeywordAnalytics();
+  const [timeframe, setTimeframe] = React.useState("30d");
+  const [keywordFilter, setKeywordFilter] = React.useState("");
   // Competitor management state
   const [competitors, setCompetitors] = React.useState<string[]>(() => {
     // Try to load from localStorage for now
     try {
-      return JSON.parse(localStorage.getItem('linkzy_competitors') || '[]');
+      return JSON.parse(localStorage.getItem("linkzy_competitors") || "[]");
     } catch {
       return [];
     }
   });
-  const [newCompetitor, setNewCompetitor] = React.useState('');
-  const [activeTab, setActiveTab] = React.useState('Overview');
+  const [newCompetitor, setNewCompetitor] = React.useState("");
+  const [activeTab, setActiveTab] = React.useState("Overview");
 
   const { user } = useAuth();
-  const userDomain = user?.website || 'yourdomain.com';
-  const userApiKey = user?.api_key || '';
-  const { data: hasTracked, loading: trackedLoading, refetch: refetchTracked } = useHasTrackedContent(user?.id);
+  const userDomain = user?.website || "yourdomain.com";
+  const userApiKey = user?.api_key || "";
+  const {
+    data: hasTracked,
+    loading: trackedLoading,
+    refetch: refetchTracked,
+  } = useHasTrackedContent(user?.id);
   const [gateOpen, setGateOpen] = React.useState(true);
-  
+
   React.useEffect(() => {
     if (!trackedLoading && hasTracked !== null) {
-      console.log('🔍 Analytics gate check:', { hasTracked, trackedLoading, userId: user?.id });
+      console.log("🔍 Analytics gate check:", {
+        hasTracked,
+        trackedLoading,
+        userId: user?.id,
+      });
       setGateOpen(!hasTracked);
     }
   }, [trackedLoading, hasTracked, user?.id]);
-  
+
   // Force refresh tracked content check on component mount
   React.useEffect(() => {
     if (user?.id && !trackedLoading) {
-      console.log('🔄 Analytics: Refreshing tracked content check for user:', user.id);
+      console.log(
+        "🔄 Analytics: Refreshing tracked content check for user:",
+        user.id
+      );
       refetchTracked();
     }
   }, [user?.id]);
   const hasTrackedContent = !!hasTracked;
-  
+
   // Check if user has Pro access (either pro plan OR has 30+ credits from Pro Monthly purchase)
-  const hasProAccess = (user?.plan && user.plan !== 'free') || (user?.credits && user.credits >= 30);
+  const hasProAccess =
+    (user?.plan && user.plan !== "free") ||
+    (user?.credits && user.credits >= 30);
 
   const addCompetitor = () => {
-    if (!newCompetitor.trim() || competitors.includes(newCompetitor.trim())) return;
+    if (!newCompetitor.trim() || competitors.includes(newCompetitor.trim()))
+      return;
     const updated = [...competitors, newCompetitor.trim()];
     setCompetitors(updated);
-    localStorage.setItem('linkzy_competitors', JSON.stringify(updated));
-    setNewCompetitor('');
+    localStorage.setItem("linkzy_competitors", JSON.stringify(updated));
+    setNewCompetitor("");
   };
   const removeCompetitor = (domain: string) => {
     const updated = competitors.filter((c: string) => c !== domain);
     setCompetitors(updated);
-    localStorage.setItem('linkzy_competitors', JSON.stringify(updated));
+    localStorage.setItem("linkzy_competitors", JSON.stringify(updated));
   };
 
   if (loading) {
@@ -80,32 +120,47 @@ const DashboardAnalytics = () => {
       <DashboardLayout title="Analytics">
         <div className="p-6 max-w-4xl">
           <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-6">
-            <h2 className="text-2xl font-bold text-white mb-2">Connect your website to see Analytics</h2>
-            <p className="text-gray-300 mb-4">To view your analytics data, you need to install the tracking script on your website first.</p>
-            
+            <h2 className="text-2xl font-bold text-white mb-2">
+              Connect your website to see Analytics
+            </h2>
+            <p className="text-gray-300 mb-4">
+              To view your analytics data, you need to install the tracking
+              script on your website first.
+            </p>
+
             <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-4">
               <div className="flex items-center space-x-3 mb-3">
-                <div className="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">1</div>
-                <h3 className="text-lg font-semibold text-blue-400">Get Your Tracking Script</h3>
+                <div className="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+                  1
+                </div>
+                <h3 className="text-lg font-semibold text-blue-400">
+                  Get Your Tracking Script
+                </h3>
               </div>
               <p className="text-gray-300 mb-3">
-                Go to <strong>Account → Integrations</strong> to copy your personalized tracking script.
+                Go to <strong>Account → Integrations</strong> to copy your
+                personalized tracking script.
               </p>
-              <button
-                onClick={() => window.location.href = '/dashboard/account'}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors"
-              >
-                Go to Account → Integrations
-              </button>
+              <Link to="/dashboard/account">
+                <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                  Go to Account → Integrations
+                </button>
+              </Link>
             </div>
 
             <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4 mb-4">
               <div className="flex items-center space-x-3 mb-3">
-                <div className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">2</div>
-                <h3 className="text-lg font-semibold text-green-400">Install on Your Website</h3>
+                <div className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+                  2
+                </div>
+                <h3 className="text-lg font-semibold text-green-400">
+                  Install on Your Website
+                </h3>
               </div>
               <ul className="list-disc pl-5 text-gray-300 text-sm space-y-1">
-                <li>Paste the script into your website's &lt;head&gt; section</li>
+                <li>
+                  Paste the script into your website's &lt;head&gt; section
+                </li>
                 <li>Deploy/publish your website changes</li>
                 <li>Browse a couple of pages to generate tracking data</li>
               </ul>
@@ -113,11 +168,16 @@ const DashboardAnalytics = () => {
 
             <div className="bg-orange-900/20 border border-orange-500/30 rounded-lg p-4">
               <div className="flex items-center space-x-3 mb-3">
-                <div className="bg-orange-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">3</div>
-                <h3 className="text-lg font-semibold text-orange-400">View Your Analytics</h3>
+                <div className="bg-orange-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+                  3
+                </div>
+                <h3 className="text-lg font-semibold text-orange-400">
+                  View Your Analytics
+                </h3>
               </div>
               <p className="text-gray-300">
-                Return here and refresh — your analytics will appear automatically once tracking data is detected.
+                Return here and refresh — your analytics will appear
+                automatically once tracking data is detected.
               </p>
             </div>
           </div>
@@ -130,9 +190,12 @@ const DashboardAnalytics = () => {
     return (
       <DashboardLayout title="Analytics">
         <div className="p-6">
-          <ErrorMessage 
-            message={error || "We couldn't load your analytics data. Please check your account permissions or try again later."} 
-            onRetry={refetch} 
+          <ErrorMessage
+            message={
+              error ||
+              "We couldn't load your analytics data. Please check your account permissions or try again later."
+            }
+            onRetry={refetch}
           />
         </div>
       </DashboardLayout>
@@ -140,7 +203,12 @@ const DashboardAnalytics = () => {
   }
 
   // Use real data or fallback to defaults
-  type Metric = { name: string; value: string; change: string; trend: 'up' | 'down' };
+  type Metric = {
+    name: string;
+    value: string;
+    change: string;
+    trend: "up" | "down";
+  };
   type AnalyticsData = {
     metrics?: Metric[];
     topSites?: any[];
@@ -149,16 +217,17 @@ const DashboardAnalytics = () => {
     recommendations?: any[];
   };
   const metrics = (analyticsData as AnalyticsData)?.metrics || [
-    { name: 'Total Clicks', value: '0', change: '+0%', trend: 'up' },
-    { name: 'Unique Visitors', value: '0', change: '+0%', trend: 'up' },
-    { name: 'Conversion Rate', value: '0%', change: '+0%', trend: 'up' },
-    { name: 'Avg. Time on Site', value: '0s', change: '+0%', trend: 'up' },
+    { name: "Total Clicks", value: "0", change: "+0%", trend: "up" },
+    { name: "Unique Visitors", value: "0", change: "+0%", trend: "up" },
+    { name: "Conversion Rate", value: "0%", change: "+0%", trend: "up" },
+    { name: "Avg. Time on Site", value: "0s", change: "+0%", trend: "up" },
   ];
 
   const topPerformingSites = (analyticsData as AnalyticsData)?.topSites || [];
   const recentActivity = (analyticsData as AnalyticsData)?.recentActivity || [];
   const seoHealthScore = (analyticsData as AnalyticsData)?.seoScore || 0;
-  const recommendations = (analyticsData as AnalyticsData)?.recommendations || [];
+  const recommendations =
+    (analyticsData as AnalyticsData)?.recommendations || [];
 
   // Keyword Opportunity Suggestions (simple example)
   const keywordOpportunities = ((keywordData as any)?.topKeywords || [])
@@ -167,12 +236,12 @@ const DashboardAnalytics = () => {
 
   // Filtered tracked content by keyword
   const filteredTrackedContent = keywordFilter
-    ? ((keywordData as any)?.trackedContent || []).filter((row: any) => (row.keywords || []).includes(keywordFilter))
-    : ((keywordData as any)?.trackedContent || []);
+    ? ((keywordData as any)?.trackedContent || []).filter((row: any) =>
+        (row.keywords || []).includes(keywordFilter)
+      )
+    : (keywordData as any)?.trackedContent || [];
 
-  const analyticsTabs = [
-    { id: 'Overview', name: 'Overview', icon: Gauge },
-  ];
+  const analyticsTabs = [{ id: "Overview", name: "Overview", icon: Gauge }];
 
   return (
     <DashboardLayout title="Analytics">
@@ -186,8 +255,8 @@ const DashboardAnalytics = () => {
                   onClick={() => setActiveTab(tab.id)}
                   className={`${
                     activeTab === tab.id
-                      ? 'border-orange-500 text-orange-500'
-                      : 'border-transparent text-gray-400 hover:text-white hover:border-gray-300'
+                      ? "border-orange-500 text-orange-500"
+                      : "border-transparent text-gray-400 hover:text-white hover:border-gray-300"
                   } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2`}
                 >
                   <tab.icon className="w-4 h-4" />
@@ -198,24 +267,28 @@ const DashboardAnalytics = () => {
           </div>
         </div>
         {/* Tab Content */}
-        {activeTab === 'Overview' && (
+        {activeTab === "Overview" && (
           <>
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 md:mb-8">
               <div>
-                <h1 className="text-3xl font-bold text-white mb-2">Analytics</h1>
-                <p className="text-gray-400">Track your backlink performance and SEO impact.</p>
+                <h1 className="text-3xl font-bold text-white mb-2">
+                  Analytics
+                </h1>
+                <p className="text-gray-400">
+                  Track your backlink performance and SEO impact.
+                </p>
               </div>
-              
+
               <div className="flex flex-wrap items-center gap-2 md:space-x-3">
                 <button className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center space-x-2 border border-gray-600 min-h-[48px]">
                   <Filter className="w-4 h-4" />
                   <span>Filter</span>
-                </button> 
+                </button>
                 <button className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center space-x-2 border border-gray-600 min-h-[48px]">
                   <Calendar className="w-4 h-4" />
-                  <select 
-                    value={timeframe} 
+                  <select
+                    value={timeframe}
                     onChange={(e) => setTimeframe(e.target.value)}
                     className="bg-transparent text-white focus:outline-none"
                   >
@@ -235,17 +308,28 @@ const DashboardAnalytics = () => {
             {/* Key Metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
               {metrics.map((metric: any) => (
-                <div key={metric.name} className="bg-gray-900 border border-gray-700 rounded-xl p-4 md:p-6 hover:border-orange-500/50 transition-colors">
+                <div
+                  key={metric.name}
+                  className="bg-gray-900 border border-gray-700 rounded-xl p-4 md:p-6 hover:border-orange-500/50 transition-colors"
+                >
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-medium text-gray-400">{metric.name}</h3>
-                    {metric.trend === 'up' ? (
+                    <h3 className="text-sm font-medium text-gray-400">
+                      {metric.name}
+                    </h3>
+                    {metric.trend === "up" ? (
                       <ArrowUp className="w-4 h-4 text-green-400" />
                     ) : (
                       <ArrowDown className="w-4 h-4 text-red-400" />
                     )}
                   </div>
-                  <p className="text-3xl font-bold text-white mb-2">{metric.value}</p>
-                  <p className={`text-sm ${metric.trend === 'up' ? 'text-green-400' : 'text-red-400'}`}>
+                  <p className="text-3xl font-bold text-white mb-2">
+                    {metric.value}
+                  </p>
+                  <p
+                    className={`text-sm ${
+                      metric.trend === "up" ? "text-green-400" : "text-red-400"
+                    }`}
+                  >
                     {metric.change}
                   </p>
                 </div>
@@ -261,14 +345,21 @@ const DashboardAnalytics = () => {
                     <Shield className="w-5 h-5 text-orange-500" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">SEO Health Score</h3>
-                    <p className="text-gray-400 text-sm">Overall backlink profile health</p>
+                    <h3 className="text-xl font-bold text-white">
+                      SEO Health Score
+                    </h3>
+                    <p className="text-gray-400 text-sm">
+                      Overall backlink profile health
+                    </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-center mb-6">
                   <div className="relative w-32 h-32">
-                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                    <svg
+                      className="w-full h-full transform -rotate-90"
+                      viewBox="0 0 100 100"
+                    >
                       <circle
                         cx="50"
                         cy="50"
@@ -284,53 +375,86 @@ const DashboardAnalytics = () => {
                         fill="none"
                         stroke="#10b981"
                         strokeWidth="8"
-                        strokeDasharray={`${seoHealthScore * 2.513} ${(100 - seoHealthScore) * 2.513}`}
+                        strokeDasharray={`${seoHealthScore * 2.513} ${
+                          (100 - seoHealthScore) * 2.513
+                        }`}
                         strokeDashoffset="0"
                         className="transition-all duration-1000"
                       />
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="text-center">
-                        <span className="text-3xl font-bold text-white">{seoHealthScore}</span>
+                        <span className="text-3xl font-bold text-white">
+                          {seoHealthScore}
+                        </span>
                         <p className="text-gray-400 text-xs">/ 100</p>
                       </div>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="text-center mb-4">
-                  <p className={`font-semibold text-lg ${
-                    seoHealthScore >= 80 ? 'text-green-400' : 
-                    seoHealthScore >= 60 ? 'text-orange-400' : 'text-red-400'
-                  }`}>
-                    {seoHealthScore >= 80 ? 'Excellent' : seoHealthScore >= 60 ? 'Good' : 'Needs Improvement'}
+                  <p
+                    className={`font-semibold text-lg ${
+                      seoHealthScore >= 80
+                        ? "text-green-400"
+                        : seoHealthScore >= 60
+                        ? "text-orange-400"
+                        : "text-red-400"
+                    }`}
+                  >
+                    {seoHealthScore >= 80
+                      ? "Excellent"
+                      : seoHealthScore >= 60
+                      ? "Good"
+                      : "Needs Improvement"}
                   </p>
-                  <p className="text-gray-400 text-sm">Based on current backlink profile</p>
+                  <p className="text-gray-400 text-sm">
+                    Based on current backlink profile
+                  </p>
                 </div>
-                
-                <div className={`border rounded-lg p-4 ${
-                  seoHealthScore >= 80 ? 'bg-green-900/20 border-green-500/30' :
-                  seoHealthScore >= 60 ? 'bg-orange-900/20 border-orange-500/30' :
-                  'bg-red-900/20 border-red-500/30'
-                }`}>
+
+                <div
+                  className={`border rounded-lg p-4 ${
+                    seoHealthScore >= 80
+                      ? "bg-green-900/20 border-green-500/30"
+                      : seoHealthScore >= 60
+                      ? "bg-orange-900/20 border-orange-500/30"
+                      : "bg-red-900/20 border-red-500/30"
+                  }`}
+                >
                   <div className="flex items-center space-x-2 mb-1">
-                    <CheckCircle className={`w-4 h-4 ${
-                      seoHealthScore >= 80 ? 'text-green-400' :
-                      seoHealthScore >= 60 ? 'text-orange-400' : 'text-red-400'
-                    }`} />
-                    <span className={`font-medium ${
-                      seoHealthScore >= 80 ? 'text-green-400' :
-                      seoHealthScore >= 60 ? 'text-orange-400' : 'text-red-400'
-                    }`}>
-                      {seoHealthScore >= 80 ? 'Above Industry Average' :
-                       seoHealthScore >= 60 ? 'Meeting Standards' : 'Below Standards'}
+                    <CheckCircle
+                      className={`w-4 h-4 ${
+                        seoHealthScore >= 80
+                          ? "text-green-400"
+                          : seoHealthScore >= 60
+                          ? "text-orange-400"
+                          : "text-red-400"
+                      }`}
+                    />
+                    <span
+                      className={`font-medium ${
+                        seoHealthScore >= 80
+                          ? "text-green-400"
+                          : seoHealthScore >= 60
+                          ? "text-orange-400"
+                          : "text-red-400"
+                      }`}
+                    >
+                      {seoHealthScore >= 80
+                        ? "Above Industry Average"
+                        : seoHealthScore >= 60
+                        ? "Meeting Standards"
+                        : "Below Standards"}
                     </span>
                   </div>
                   <p className="text-white text-sm">
-                    {seoHealthScore >= 80 
-                      ? `Your SEO health is ${seoHealthScore - 70}% better than competitors`
-                      : `Focus on improving link quality and diversity`
-                    }
+                    {seoHealthScore >= 80
+                      ? `Your SEO health is ${
+                          seoHealthScore - 70
+                        }% better than competitors`
+                      : `Focus on improving link quality and diversity`}
                   </p>
                 </div>
               </div>
@@ -340,13 +464,17 @@ const DashboardAnalytics = () => {
                 <div className="flex items-center space-x-3 mb-6">
                   <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
                     <Users className="w-5 h-5 text-orange-500" />
-                  </div> 
+                  </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">Traffic Impact & Growth</h3>
-                    <p className="text-gray-400 text-sm">Visitors from backlinks</p>
+                    <h3 className="text-xl font-bold text-white">
+                      Traffic Impact & Growth
+                    </h3>
+                    <p className="text-gray-400 text-sm">
+                      Visitors from backlinks
+                    </p>
                   </div>
                 </div>
-                
+
                 {/* Traffic Before/After Chart */}
                 <div className="flex space-x-8 mb-6">
                   {/* Traffic Stats */}
@@ -357,41 +485,47 @@ const DashboardAnalytics = () => {
                         <div className="flex items-center space-x-1">
                           <ArrowUp className="w-3 h-3 text-green-400" />
                           <span className="text-gray-400 text-sm font-medium">
-                            {((analyticsData as any)?.trafficGrowth || '0%')}
+                            {(analyticsData as any)?.trafficGrowth || "0%"}
                           </span>
                         </div>
                       </div>
                       <p className="text-3xl font-bold text-white">
-                        {((analyticsData as any)?.monthlyVisitors || '0')}
+                        {(analyticsData as any)?.monthlyVisitors || "0"}
                       </p>
-                      <p className="text-gray-400 text-sm">visitors from backlinks</p>
+                      <p className="text-gray-400 text-sm">
+                        visitors from backlinks
+                      </p>
                     </div>
-                    
+
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-gray-400">Estimated Value</span>
                         <div className="flex items-center space-x-1">
                           <DollarSign className="w-3 h-3 text-gray-400" />
-                          <span className="text-gray-400 text-sm font-medium">$0</span>
+                          <span className="text-gray-400 text-sm font-medium">
+                            $0
+                          </span>
                         </div>
                       </div>
                       <p className="text-2xl font-bold text-white">$0</p>
                       <p className="text-gray-400 text-sm">traffic value</p>
                     </div>
-                    
+
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-gray-400">Organic Growth</span>
                         <div className="flex items-center space-x-1">
                           <TrendingUp className="w-3 h-3 text-gray-400" />
-                          <span className="text-gray-400 text-sm font-medium">0%</span>
+                          <span className="text-gray-400 text-sm font-medium">
+                            0%
+                          </span>
                         </div>
                       </div>
                       <p className="text-2xl font-bold text-white">0%</p>
                       <p className="text-gray-400 text-sm">of total traffic</p>
                     </div>
                   </div>
-                  
+
                   {/* Traffic Before/After Chart */}
                   <div className="w-2/3 bg-gray-800 rounded-lg p-4 relative">
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -399,36 +533,50 @@ const DashboardAnalytics = () => {
                       <div className="w-full h-full flex items-end px-6 py-4">
                         {/* Before section */}
                         <div className="w-3/12 flex flex-col items-center">
-                          <div className="w-full bg-blue-500/20 rounded-t-lg" style={{height: '90px'}}></div>
-                          <span className="text-gray-400 text-xs mt-2">Before</span>
+                          <div
+                            className="w-full bg-blue-500/20 rounded-t-lg"
+                            style={{ height: "90px" }}
+                          ></div>
+                          <span className="text-gray-400 text-xs mt-2">
+                            Before
+                          </span>
                         </div>
-                        
+
                         {/* Divider */}
                         <div className="w-1/12 flex justify-center items-center h-full">
                           <div className="h-full w-px bg-gray-700 relative">
                             <ArrowRight className="w-4 h-4 text-gray-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-800 rounded-full p-0.5" />
                           </div>
                         </div>
-                        
+
                         {/* After section - Significantly taller */}
                         <div className="w-8/12 flex flex-col items-center">
-                          <div className="w-full bg-gradient-to-t from-orange-500/40 to-orange-500/20 rounded-t-lg relative" style={{height: '150px'}}>
+                          <div
+                            className="w-full bg-gradient-to-t from-orange-500/40 to-orange-500/20 rounded-t-lg relative"
+                            style={{ height: "150px" }}
+                          >
                             <div className="absolute top-0 left-0 right-0 flex justify-center">
-                              <div className="px-3 py-1 bg-green-500/20 text-green-400 text-xs rounded-full border border-green-500/30">+67% Growth</div>
+                              <div className="px-3 py-1 bg-green-500/20 text-green-400 text-xs rounded-full border border-green-500/30">
+                                +67% Growth
+                              </div>
                             </div>
                           </div>
-                          <span className="text-gray-400 text-xs mt-2">After Linkzy</span>
+                          <span className="text-gray-400 text-xs mt-2">
+                            After Linkzy
+                          </span>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Key Traffic Metrics */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-gray-800 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-gray-400 text-sm">Avg. Time on Site</span>
+                      <span className="text-gray-400 text-sm">
+                        Avg. Time on Site
+                      </span>
                       <div className="flex items-center space-x-1">
                         <ArrowUp className="w-3 h-3 text-green-400" />
                         <span className="text-green-400 text-xs">+18%</span>
@@ -438,7 +586,9 @@ const DashboardAnalytics = () => {
                   </div>
                   <div className="bg-gray-800 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-gray-400 text-sm">Pages/Session</span>
+                      <span className="text-gray-400 text-sm">
+                        Pages/Session
+                      </span>
                       <div className="flex items-center space-x-1">
                         <ArrowUp className="w-3 h-3 text-gray-400" />
                         <span className="text-gray-400 text-xs">0%</span>
@@ -469,11 +619,15 @@ const DashboardAnalytics = () => {
                     <Gauge className="w-5 h-5 text-orange-500" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">Domain Authority Progression</h3>
-                    <p className="text-gray-400 text-sm">Track your website's authority growth</p>
+                    <h3 className="text-xl font-bold text-white">
+                      Domain Authority Progression
+                    </h3>
+                    <p className="text-gray-400 text-sm">
+                      Track your website's authority growth
+                    </p>
                   </div>
                 </div>
-                
+
                 {/* DA Chart */}
                 <div className="bg-gray-800 rounded-lg p-4 h-40 md:h-52 mb-4 relative overflow-hidden">
                   {/* Chart placeholder - Simple Line Chart visualization */}
@@ -487,65 +641,125 @@ const DashboardAnalytics = () => {
                       <span>10</span>
                       <span>0</span>
                     </div>
-                    
+
                     {/* Chart area */}
                     <div className="flex-1 h-full relative">
                       {/* Horizontal grid lines */}
                       {[0, 20, 40, 60, 80, 100].map((_, i) => (
-                        <div key={i} className="absolute w-full h-px bg-gray-700" style={{ top: `${20 * i}%` }}></div>
+                        <div
+                          key={i}
+                          className="absolute w-full h-px bg-gray-700"
+                          style={{ top: `${20 * i}%` }}
+                        ></div>
                       ))}
-                      
+
                       {/* Line Chart - using a simple SVG for the line */}
                       <svg className="absolute inset-0 w-full h-full">
                         <defs>
-                          <linearGradient id="lineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stopColor="rgba(249, 115, 22, 0.5)" />
-                            <stop offset="100%" stopColor="rgba(249, 115, 22, 0.1)" />
+                          <linearGradient
+                            id="lineGradient"
+                            x1="0%"
+                            y1="0%"
+                            x2="0%"
+                            y2="100%"
+                          >
+                            <stop
+                              offset="0%"
+                              stopColor="rgba(249, 115, 22, 0.5)"
+                            />
+                            <stop
+                              offset="100%"
+                              stopColor="rgba(249, 115, 22, 0.1)"
+                            />
                           </linearGradient>
                         </defs>
-                        
+
                         {/* Gradient area under the line */}
-                        <path 
-                          d="M0,120 L40,115 L80,100 L120,85 L160,70 L200,58 L240,45 L280,40 L320,30 L360,20 L400,15 L400,140 L0,140 Z" 
-                          fill="url(#lineGradient)" 
+                        <path
+                          d="M0,120 L40,115 L80,100 L120,85 L160,70 L200,58 L240,45 L280,40 L320,30 L360,20 L400,15 L400,140 L0,140 Z"
+                          fill="url(#lineGradient)"
                         />
-                        
+
                         {/* Actual line */}
-                        <path 
-                          d="M0,120 L40,115 L80,100 L120,85 L160,70 L200,58 L240,45 L280,40 L320,30 L360,20 L400,15" 
-                          stroke="#f97316" 
-                          strokeWidth="2" 
+                        <path
+                          d="M0,120 L40,115 L80,100 L120,85 L160,70 L200,58 L240,45 L280,40 L320,30 L360,20 L400,15"
+                          stroke="#f97316"
+                          strokeWidth="2"
                           fill="none"
                         />
-                        
+
                         {/* Data points */}
                         {[
-                          { x: 0, y: 120 }, { x: 40, y: 115 }, { x: 80, y: 100 }, 
-                          { x: 120, y: 85 }, { x: 160, y: 70 }, { x: 200, y: 58 },
-                          { x: 240, y: 45 }, { x: 280, y: 40 }, { x: 320, y: 30 },
-                          { x: 360, y: 20 }, { x: 400, y: 15 }
+                          { x: 0, y: 120 },
+                          { x: 40, y: 115 },
+                          { x: 80, y: 100 },
+                          { x: 120, y: 85 },
+                          { x: 160, y: 70 },
+                          { x: 200, y: 58 },
+                          { x: 240, y: 45 },
+                          { x: 280, y: 40 },
+                          { x: 320, y: 30 },
+                          { x: 360, y: 20 },
+                          { x: 400, y: 15 },
                         ].map((point, i) => (
-                          <circle key={i} cx={point.x} cy={point.y} r="3" fill="#f97316" />
+                          <circle
+                            key={i}
+                            cx={point.x}
+                            cy={point.y}
+                            r="3"
+                            fill="#f97316"
+                          />
                         ))}
-                        
+
                         {/* Current data point highlighted */}
-                        <circle cx="400" cy="15" r="5" fill="#f97316" stroke="#fff" strokeWidth="2" />
+                        <circle
+                          cx="400"
+                          cy="15"
+                          r="5"
+                          fill="#f97316"
+                          stroke="#fff"
+                          strokeWidth="2"
+                        />
                       </svg>
-                      
+
                       {/* X-axis labels */}
                       <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[10px] md:text-xs text-gray-500 -mb-6 px-2">
-                        <span>6 Months<br/>Ago</span>
-                        <span>5 Months<br/>Ago</span>
-                        <span>4 Months<br/>Ago</span>
-                        <span>3 Months<br/>Ago</span>
-                        <span>2 Months<br/>Ago</span>
-                        <span>1 Month<br/>Ago</span>
+                        <span>
+                          6 Months
+                          <br />
+                          Ago
+                        </span>
+                        <span>
+                          5 Months
+                          <br />
+                          Ago
+                        </span>
+                        <span>
+                          4 Months
+                          <br />
+                          Ago
+                        </span>
+                        <span>
+                          3 Months
+                          <br />
+                          Ago
+                        </span>
+                        <span>
+                          2 Months
+                          <br />
+                          Ago
+                        </span>
+                        <span>
+                          1 Month
+                          <br />
+                          Ago
+                        </span>
                         <span>Now</span>
                       </div>
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Domain Authority Metrics */}
                 <div className="grid grid-cols-3 gap-2 md:gap-4">
                   <div className="bg-gray-800 rounded-lg p-4 text-center">
@@ -570,8 +784,12 @@ const DashboardAnalytics = () => {
                     <ArrowUp className="w-5 h-5 text-orange-500" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">Keyword Ranking Improvements</h3>
-                    <p className="text-gray-400 text-sm">Positive ranking changes since backlinks</p>
+                    <h3 className="text-xl font-bold text-white">
+                      Keyword Ranking Improvements
+                    </h3>
+                    <p className="text-gray-400 text-sm">
+                      Positive ranking changes since backlinks
+                    </p>
                   </div>
                 </div>
 
@@ -583,27 +801,35 @@ const DashboardAnalytics = () => {
                     <div>Current</div>
                     <div>Change</div>
                   </div>
-                  
+
                   {/* No keyword data yet */}
                   <div className="p-8 text-center text-gray-400">
                     <p className="text-sm">No keyword ranking data yet.</p>
-                    <p className="text-xs mt-1">Rankings will appear once you have active backlinks.</p>
+                    <p className="text-xs mt-1">
+                      Rankings will appear once you have active backlinks.
+                    </p>
                   </div>
                 </div>
-                
+
                 {/* Quick Stats */}
                 <div className="grid grid-cols-3 gap-2 md:gap-4">
                   <div className="bg-gray-800 rounded-lg p-3 text-center">
                     <div className="text-xl font-bold text-gray-400">0%</div>
-                    <div className="text-gray-400 text-xs">Keywords Improved</div>
+                    <div className="text-gray-400 text-xs">
+                      Keywords Improved
+                    </div>
                   </div>
                   <div className="bg-gray-800 rounded-lg p-3 text-center">
                     <div className="text-xl font-bold text-gray-400">0</div>
-                    <div className="text-gray-400 text-xs">Avg. Position Gain</div>
+                    <div className="text-gray-400 text-xs">
+                      Avg. Position Gain
+                    </div>
                   </div>
                   <div className="bg-gray-800 rounded-lg p-3 text-center">
                     <div className="text-xl font-bold text-gray-400">0</div>
-                    <div className="text-gray-400 text-xs">New Page 1 Rankings</div>
+                    <div className="text-gray-400 text-xs">
+                      New Page 1 Rankings
+                    </div>
                   </div>
                 </div>
               </div>
@@ -618,45 +844,66 @@ const DashboardAnalytics = () => {
                     <DollarSign className="w-5 h-5 text-orange-500" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">ROI Calculator</h3>
-                    <p className="text-gray-400 text-sm">Track your backlink investment returns</p>
+                    <h3 className="text-xl font-bold text-white">
+                      ROI Calculator
+                    </h3>
+                    <p className="text-gray-400 text-sm">
+                      Track your backlink investment returns
+                    </p>
                   </div>
                 </div>
-                
+
                 {/* ROI Overview */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-6">
                   <div className="bg-gray-800 rounded-xl p-4 text-center">
-                    <div className="text-sm text-gray-400 mb-1">Total Investment</div>
+                    <div className="text-sm text-gray-400 mb-1">
+                      Total Investment
+                    </div>
                     <div className="text-2xl font-bold text-white">$0</div>
-                    <div className="text-xs text-gray-500 mt-1">0 Backlinks</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      0 Backlinks
+                    </div>
                   </div>
-                  
+
                   <div className="bg-gray-800 rounded-xl p-4 text-center">
-                    <div className="text-sm text-gray-400 mb-1">Traffic Value</div>
+                    <div className="text-sm text-gray-400 mb-1">
+                      Traffic Value
+                    </div>
                     <div className="text-2xl font-bold text-gray-400">$0</div>
-                    <div className="text-xs text-gray-500 mt-1">Based on 0 visitors</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Based on 0 visitors
+                    </div>
                   </div>
-                  
+
                   <div className="bg-gray-800 rounded-xl p-4 text-center">
                     <div className="text-sm text-gray-400 mb-1">ROI</div>
                     <div className="text-2xl font-bold text-gray-400">0%</div>
-                    <div className="text-xs text-gray-400 mt-1">No return yet</div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      No return yet
+                    </div>
                   </div>
                 </div>
-                
+
                 {/* Payback Period and Value Visualization */}
                 <div className="grid grid-cols-1 gap-3 md:gap-4">
                   <div className="bg-gray-800 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-white">Payback Period</span>
-                      <span className="text-gray-400 font-semibold">No data</span>
+                      <span className="text-gray-400 font-semibold">
+                        No data
+                      </span>
                     </div>
                     <div className="w-full bg-gray-700 rounded-full h-2">
-                      <div className="bg-gray-500 h-2 rounded-full" style={{width: '0%'}}></div>
+                      <div
+                        className="bg-gray-500 h-2 rounded-full"
+                        style={{ width: "0%" }}
+                      ></div>
                     </div>
-                    <div className="text-xs text-gray-400 mt-1">No investment yet</div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      No investment yet
+                    </div>
                   </div>
-                  
+
                   <div className="bg-gray-800 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-white">Monthly ROI Breakdown</span>
@@ -666,7 +913,9 @@ const DashboardAnalytics = () => {
                       </div>
                     </div>
                     <div className="flex h-10 w-full overflow-hidden rounded-lg bg-gray-700">
-                      <div className="flex items-center justify-center text-xs text-gray-400 w-full">No data available</div>
+                      <div className="flex items-center justify-center text-xs text-gray-400 w-full">
+                        No data available
+                      </div>
                     </div>
                     <div className="text-xs text-gray-400 mt-2 flex justify-between">
                       <span>$0 Investment</span>
@@ -675,7 +924,7 @@ const DashboardAnalytics = () => {
                   </div>
                 </div>
               </div>
-              
+
               {/* Backlink Quality Score */}
               <div className="bg-gray-900 border border-gray-700 rounded-xl p-6">
                 <div className="flex items-center space-x-3 mb-6">
@@ -683,19 +932,30 @@ const DashboardAnalytics = () => {
                     <Award className="w-5 h-5 text-orange-500" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">Backlink Quality Score</h3>
-                    <p className="text-gray-400 text-sm">Measure the quality of your backlink profile</p>
+                    <h3 className="text-xl font-bold text-white">
+                      Backlink Quality Score
+                    </h3>
+                    <p className="text-gray-400 text-sm">
+                      Measure the quality of your backlink profile
+                    </p>
                   </div>
                 </div>
-                
+
                 {/* Quality Score Meter */}
                 <div className="mb-6">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-400 text-sm">Overall Quality Score</span>
-                    <span className="text-gray-400 text-sm font-medium">0/100</span>
+                    <span className="text-gray-400 text-sm">
+                      Overall Quality Score
+                    </span>
+                    <span className="text-gray-400 text-sm font-medium">
+                      0/100
+                    </span>
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-3">
-                    <div className="bg-gray-500 h-3 rounded-full" style={{width: '0%'}}></div>
+                    <div
+                      className="bg-gray-500 h-3 rounded-full"
+                      style={{ width: "0%" }}
+                    ></div>
                   </div>
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
                     <span>Poor</span>
@@ -703,11 +963,13 @@ const DashboardAnalytics = () => {
                     <span>Excellent</span>
                   </div>
                 </div>
-                
+
                 {/* Quality Breakdown */}
                 <div className="p-8 text-center text-gray-400">
                   <p className="text-sm">No backlink quality data yet.</p>
-                  <p className="text-xs mt-1">Quality metrics will appear once you have active backlinks.</p>
+                  <p className="text-xs mt-1">
+                    Quality metrics will appear once you have active backlinks.
+                  </p>
                 </div>
               </div>
             </div>
