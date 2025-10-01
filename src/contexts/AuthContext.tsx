@@ -1,461 +1,241 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 // @ts-ignore
-import supabaseService from '../services/supabaseService';
+import { supabase } from "../lib/supabase";
 // @ts-ignore
-import { supabase } from '../lib/supabase';
+import supabaseService from "../services/supabaseService";
+
+type AppProfile = {
+  id: string;
+  email: string | null;
+  website?: string | null;
+  niche?: string | null;
+  plan?: string | null;
+  credits?: number | null;
+  api_key?: string | null; // keep in memory only
+};
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  user: any | null;
-  login: (apiKey: string, userProfile?: any) => void;
-  logout: () => void;
+  user: AppProfile | null;
   loading: boolean;
+  // legacy helper if you still support API-key-only mode
+  login: (apiKey: string, userProfile?: Partial<AppProfile>) => AppProfile;
+  logout: () => Promise<void>;
   refreshUserData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
+  return ctx;
 };
 
-interface AuthProviderProps {
-  children: React.ReactNode;
+async function fetchProfile(userId: string): Promise<AppProfile | null> {
+  const { data, error } = await supabase
+    .from("users") // consider 'profiles' to avoid confusion with auth.users
+    .select("id, email, website, niche, plan, credits, api_key")
+    .eq("id", userId)
+    .single();
+
+  if (error) {
+    console.warn("[auth] fetchProfile error:", error.message);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    email: data.email ?? null,
+    website: data.website ?? null,
+    niche: data.niche ?? null,
+    plan: data.plan ?? null,
+    credits: data.credits ?? null,
+    api_key: data.api_key ?? null,
+  };
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<any | null>(null);
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [user, setUser] = useState<AppProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sessionRefreshing, setSessionRefreshing] = useState(false);
-  const [authInitialized, setAuthInitialized] = useState(false);
 
+  // Initial hydrate: session first (instant), then background profile fetch
   useEffect(() => {
-    // Check if user is already logged in on app start
-    let isMounted = true;
-    let authTimeout: NodeJS.Timeout;
-    
-    const initAuth = async () => {
+    let cancelled = false;
+    (async () => {
       try {
-        // Check if we're in a payment flow - if so, be more patient with auth checks
-        const urlParams = new URLSearchParams(window.location.search);
-        const isPaymentFlow = urlParams.get('canceled') === 'true' || urlParams.get('success') === 'true';
-        const timeoutDuration = isPaymentFlow ? 15000 : 8000;
-        
-        // Set timeout for authentication check
-        authTimeout = setTimeout(() => {
-          if (isMounted && loading) {
-            console.warn(`Authentication check timed out after ${timeoutDuration/1000} seconds`);
-            
-            // Try to preserve existing auth state from localStorage (not just in payment flow)
-            const existingUser = localStorage.getItem('linkzy_user');
-            const existingApiKey = localStorage.getItem('linkzy_api_key');
-            if (existingUser && existingApiKey) {
-              try {
-                const userData = JSON.parse(existingUser);
-                console.log('Restoring auth from localStorage due to timeout');
-                setIsAuthenticated(true);
-                setUser(userData);
-                setLoading(false);
-                return;
-              } catch (e) {
-                console.error('Failed to restore auth from localStorage:', e);
-              }
-            }
-            
-            setLoading(false);
-            setIsAuthenticated(false);
+        const { data } = await supabase.auth.getSession(); // in-memory
+        const supaUser = data.session?.user;
+
+        if (!supaUser) {
+          if (!cancelled) {
             setUser(null);
+            setLoading(false);
           }
-        }, timeoutDuration);
-        
-        // Use the new robust auth status checker
-        const { isAuthenticated: authStatus, user: authUser } = await supabaseService.getAuthStatus();
-        
-        if (!isMounted) return;
-        
-        if (authStatus && authUser) {
-          // Fetch the user's profile from Supabase users table (not auth.users)
-          const { data: profile, error } = await supabase
-            .from('users')
-            .select('id, email, website, niche, plan, credits')
-            .eq('id', authUser.id)
-            .single();
+          return;
+        }
+
+        // Step 1: reflect session ASAP (stop spinner)
+        if (!cancelled) {
+          setUser({ id: supaUser.id, email: supaUser.email ?? null });
+          setLoading(false);
+        }
+
+        // Step 2: fetch app profile in background
+        const profile = await fetchProfile(supaUser.id);
+        if (!cancelled && profile) {
+          setUser({
+            id: supaUser.id,
+            email: supaUser.email ?? null,
+            website: profile.website,
+            niche: profile.niche,
+            plan: profile.plan,
+            credits: profile.credits,
+            api_key: profile.api_key,
+          });
+          if (profile.api_key) supabaseService.setApiKey(profile.api_key);
+        }
+      } catch (e: any) {
+        console.error("[auth] init error:", e?.message || e);
+        if (!cancelled) {
+          setUser(null);
+          setLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Keep in sync with Supabase auth events
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      async (event: AuthChangeEvent, session: Session | null) => {
+        try {
+          if (event === "SIGNED_OUT") {
+            supabaseService.clearApiKey();
+            setUser(null);
+            return;
+          }
+
+          const supaUser = session?.user;
+          if (!supaUser) return;
+
+          // reflect session immediately
+          setUser((prev) => ({
+            id: supaUser.id,
+            email: supaUser.email ?? prev?.email ?? null,
+            website: prev?.website ?? null,
+            niche: prev?.niche ?? null,
+            plan: prev?.plan ?? null,
+            credits: prev?.credits ?? null,
+            api_key: prev?.api_key ?? null,
+          }));
+
+          // background profile refresh
+          const profile = await fetchProfile(supaUser.id);
           if (profile) {
-            // Ensure free users start with minimum 3 credits
-            try {
-              if ((!profile.plan || profile.plan === 'free') && (profile.credits ?? 0) < 3) {
-                await supabase.from('users').update({ credits: 3 }).eq('id', authUser.id);
-                profile.credits = 3;
-              }
-            } catch (_) {}
-            setIsAuthenticated(true);
             setUser({
-              ...authUser,
+              id: supaUser.id,
+              email: supaUser.email ?? null,
               website: profile.website,
               niche: profile.niche,
               plan: profile.plan,
               credits: profile.credits,
+              api_key: profile.api_key,
             });
-          } else {
-            setIsAuthenticated(true);
-            setUser(authUser);
+            if (profile.api_key) supabaseService.setApiKey(profile.api_key);
           }
-
-          // Ensure API key is set
-          if (authUser.api_key) {
-            supabaseService.setApiKey(authUser.api_key);
-          } else if (authUser.user_metadata?.api_key) {
-            supabaseService.setApiKey(authUser.user_metadata.api_key);
-          }
-        } else {
-          // Supabase auth failed, try localStorage fallback
-          console.log('Supabase auth failed, attempting localStorage fallback...');
-          const localUser = localStorage.getItem('linkzy_user');
-          const localApiKey = localStorage.getItem('linkzy_api_key');
-          
-          if (localUser && localApiKey) {
-            try {
-              const userData = JSON.parse(localUser);
-              console.log('Successfully restored user from localStorage');
-              setIsAuthenticated(true);
-              setUser(userData);
-              supabaseService.setApiKey(localApiKey);
-            } catch (e) {
-              console.error('Failed to parse localStorage user data:', e);
-              setIsAuthenticated(false);
-              setUser(null);
-            }
-          } else {
-            setIsAuthenticated(false);
-            setUser(null);
-          }
-        }
-      } catch (error) {
-        console.error('Authentication error:', error);
-        
-        // Try localStorage fallback before giving up
-        const localUser = localStorage.getItem('linkzy_user');
-        const localApiKey = localStorage.getItem('linkzy_api_key');
-        
-        if (localUser && localApiKey) {
-          try {
-            const userData = JSON.parse(localUser);
-            console.log('Auth error - falling back to localStorage user data');
-            setIsAuthenticated(true);
-            setUser(userData);
-            supabaseService.setApiKey(localApiKey);
-          } catch (e) {
-            console.error('Failed to parse localStorage user data:', e);
-            // Clear any invalid stored data
-            localStorage.removeItem('linkzy_user');
-            localStorage.removeItem('linkzy_api_key');
-            supabaseService.clearApiKey();
-            setIsAuthenticated(false);
-            setUser(null);
-          }
-        } else {
-          // Clear any invalid stored data
-          supabaseService.clearApiKey();
-          setIsAuthenticated(false);
-          setUser(null);
-        }
-      } finally {
-        if (authTimeout) clearTimeout(authTimeout);
-        setLoading(false);
-        setAuthInitialized(true);
-      }
-    };
-
-    // Only run once
-    if (!authInitialized) {
-      initAuth();
-    }
-    
-    return () => {
-      isMounted = false;
-      if (authTimeout) clearTimeout(authTimeout);
-    };
-  }, [authInitialized]);
-
-  // Set up auth state change listener
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: string, session: any) => {
-        try {
-          if (event === 'SIGNED_IN') {
-            if (session?.user) {
-              // Fetch the user's profile from Supabase users table (not auth.users)
-              const { data: profile, error } = await supabase
-                .from('users')
-                .select('id, email, website, niche, plan, credits, api_key')
-                .eq('id', session.user.id)
-                .single();
-              if (profile) {
-                // Ensure free users start with minimum 3 credits
-                try {
-                  if ((!profile.plan || profile.plan === 'free') && (profile.credits ?? 0) < 3) {
-                    await supabase.from('users').update({ credits: 3 }).eq('id', session.user.id);
-                    profile.credits = 3;
-                  }
-                } catch (_) {}
-                
-                // Always use the API key from the database, don't generate new ones
-                let apiKey = profile.api_key;
-                if (!apiKey) {
-                  console.error('❌ User missing API key in database! This should not happen for existing users.');
-                  // For existing users, this is a critical error - don't auto-generate
-                  // New users should get API keys during registration
-                }
-                
-                const userObj = {
-                  id: session.user.id,
-                  email: session.user.email,
-                  website: profile.website,
-                  niche: profile.niche,
-                  api_key: apiKey,
-                  plan: profile.plan,
-                  credits: profile.credits,
-                };
-                setIsAuthenticated(true);
-                setUser(userObj);
-                supabaseService.setApiKey(apiKey);
-                localStorage.setItem('linkzy_user', JSON.stringify(userObj));
-              } else {
-                // New user from Google OAuth with no database record yet
-                // Only use API key from user_metadata, don't generate new ones
-                const existingApiKey = session.user.user_metadata?.api_key;
-                if (existingApiKey) {
-                  setIsAuthenticated(true);
-                  setUser({
-                    id: session.user.id,
-                    email: session.user.email,
-                    api_key: existingApiKey,
-                  });
-                  supabaseService.setApiKey(existingApiKey);
-                  localStorage.setItem('linkzy_user', JSON.stringify({
-                    id: session.user.id,
-                    email: session.user.email,
-                    api_key: existingApiKey,
-                  }));
-                } else {
-                  console.error('❌ New Google user missing API key in metadata');
-                  setIsAuthenticated(false);
-                }
-              }
-            }
-          } else if (event === 'SIGNED_OUT') {
-            setIsAuthenticated(false);
-            setUser(null);
-            supabaseService.clearApiKey();
-            localStorage.removeItem('linkzy_user');
-          } else if (event === 'TOKEN_REFRESHED') {
-          } else if (event === 'USER_UPDATED') {
-            // Refresh user data
-            try {
-              const { isAuthenticated: authStatus, user: authUser } = await supabaseService.getAuthStatus();
-              if (authStatus && authUser) {
-                setUser(authUser);
-              }
-            } catch (error) {
-            }
-          }
-        } catch (error) {
+        } catch (e: any) {
+          console.error("[auth] onAuthStateChange error:", e?.message || e);
         } finally {
           setLoading(false);
         }
       }
     );
 
-    // Clean up subscription on unmount
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Periodically check and refresh session
-  useEffect(() => {
-    const refreshInterval = 15 * 60 * 1000; // 15 minutes
-    
-    const refreshSession = async () => {
-      if (!isAuthenticated) return;
-      
-      try {
-        setSessionRefreshing(true);
-        
-        // Get current session and refresh if needed
-        const { data, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          if (error.message !== 'Invalid JWT token') {
-            setIsAuthenticated(false);
-            setUser(null);
-            supabaseService.clearApiKey();
-          }
-        } else if (data.session) {
-          // Session is still valid, no action needed
-        } else {
-          // Try to recover from storage
-          const apiKey = supabaseService.getApiKey();
-          if (apiKey) {
-            try {
-              // Attempt to load profile using the last known user id from localStorage
-              const stored = localStorage.getItem('linkzy_user');
-              const storedId = stored ? (() => { try { return JSON.parse(stored).id; } catch { return undefined; } })() : undefined;
-              const userData = storedId ? await supabaseService.getUserProfile(storedId) : null;
-              if (userData) {
-                setUser(userData);
-                setIsAuthenticated(true);
-              }
-            } catch (recoveryError) {
-              setIsAuthenticated(false);
-              setUser(null);
-              supabaseService.clearApiKey();
-            }
-          } else {
-            setIsAuthenticated(false);
-            setUser(null);
-          }
-        }
-      } catch (e) {
-      } finally {
-        setSessionRefreshing(false);
-      }
-    };
-    
-    // Set up interval to refresh session
-    const intervalId = setInterval(refreshSession, refreshInterval);
-    
-    // Run once on mount
-    refreshSession();
-    
-    // Clean up on unmount
-    return () => clearInterval(intervalId);
-  }, [isAuthenticated]);
+  // Manual refresh, e.g. after credits/profile updates
+  const refreshUserData = async () => {
+    const { data } = await supabase.auth.getSession();
+    const supaUser = data.session?.user;
+    if (!supaUser) return;
+    const profile = await fetchProfile(supaUser.id);
+    if (profile) {
+      setUser({
+        id: supaUser.id,
+        email: supaUser.email ?? null,
+        website: profile.website,
+        niche: profile.niche,
+        plan: profile.plan,
+        credits: profile.credits,
+        api_key: profile.api_key,
+      });
+      if (profile.api_key) supabaseService.setApiKey(profile.api_key);
+    }
+  };
 
-  const login = (apiKey: string, userProfile?: any) => {
+  // Legacy programmatic login (API-key mode)
+  const login = (
+    apiKey: string,
+    userProfile?: Partial<AppProfile>
+  ): AppProfile => {
     supabaseService.setApiKey(apiKey);
-
-    setIsAuthenticated(true);
-    
-    // Create a standardized user object
-    const standardizedUser = userProfile 
-      ? {
-          ...userProfile,
-          api_key: apiKey,
-          creditsRemaining: userProfile.credits || userProfile.creditsRemaining || 3
-        }
-      : { 
-          email: 'user@example.com',
-          api_key: apiKey, 
-          creditsRemaining: 3 
-        };
-    
-    setUser(standardizedUser);
-    
-    // Store user data for persistence
-    localStorage.setItem('linkzy_user', JSON.stringify(standardizedUser));
+    const standardized: AppProfile = {
+      id: userProfile?.id ?? user?.id ?? "anonymous",
+      email: userProfile?.email ?? user?.email ?? null,
+      website: userProfile?.website ?? user?.website ?? null,
+      niche: userProfile?.niche ?? user?.niche ?? null,
+      plan: userProfile?.plan ?? user?.plan ?? "free",
+      credits: userProfile?.credits ?? user?.credits ?? 3,
+      api_key: apiKey,
+    };
+    setUser(standardized);
     setLoading(false);
-    
-    return standardizedUser;
+    return standardized;
   };
 
   const logout = async () => {
-    console.log('🚪 Logout function called');
-    
-    // Immediately clear auth state to prevent UI hanging
-    setIsAuthenticated(false);
-    setUser(null);
-    setLoading(false);
-    
     try {
-      // Mark logout in progress so guards can skip UI
-      sessionStorage.setItem('linkzy_logging_out', 'true');
-      
-      // Clear local storage first
-      supabaseService.clearApiKey();
-      localStorage.removeItem('linkzy_user');
-      localStorage.clear(); // Clear all local storage
-      
-      // Fire-and-forget sign out from Supabase
-      supabaseService.signOut().catch(() => {});
-    } catch (error) {
-      console.error('❌ Logout error (non-critical):', error);
+      sessionStorage.setItem("linkzy_logging_out", "true");
+      await supabase.auth.signOut();
     } finally {
-      // Redirect immediately to home
+      supabaseService.clearApiKey();
+      setUser(null);
+      setLoading(false);
       try {
-        window.location.replace('/');
+        window.location.replace("/");
       } catch {
-        window.location.href = '/';
+        window.location.href = "/";
       }
     }
   };
 
-  // Add a function to refresh user data from database
-  const refreshUserData = async () => {
-    try {
-      if (!user) return;
-      
-      console.log('🔄 Refreshing user data from database...');
-      const authStatus = await supabaseService.getAuthStatus();
-      
-      if (authStatus.user) {
-        setUser(authStatus.user);
-        localStorage.setItem('linkzy_user', JSON.stringify(authStatus.user));
-        console.log('✅ User data refreshed:', { 
-          email: authStatus.user.email, 
-          credits: authStatus.user.credits 
-        });
-      }
-    } catch (error) {
-      console.error('❌ Failed to refresh user data:', error);
-    }
-  };
-
-  // Listen for credit updates to refresh user data
-  useEffect(() => {
-    const handleCreditsUpdate = async (event: Event) => {
-      console.log('🔄 AuthContext received creditsUpdated event!');
-      console.log('📊 Event details:', event);
-      console.log('🔄 Starting refreshUserData...');
-      await refreshUserData(); // Wait for refresh to complete
-      console.log('✅ AuthContext refreshUserData completed');
-    };
-
-    const handleProfileUpdate = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      const { user: updatedUser } = customEvent.detail;
-      console.log('🔄 Profile updated - refreshing user data...', updatedUser);
-      setUser(updatedUser);
-    };
-
-    console.log('🔗 AuthContext registering event listeners');
-    window.addEventListener('creditsUpdated', handleCreditsUpdate);
-    window.addEventListener('profileUpdated', handleProfileUpdate);
-    
-    return () => {
-      console.log('🔗 AuthContext removing event listeners');
-      window.removeEventListener('creditsUpdated', handleCreditsUpdate);
-      window.removeEventListener('profileUpdated', handleProfileUpdate);
-    };
-  }, [user]);
-
-  const value = {
-    user,
-    isAuthenticated,
-    loading,
-    login,
-    logout,
-    refreshUserData // Export the refresh function
-  };
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user,
+      isAuthenticated: !!user,
+      loading,
+      login,
+      logout,
+      refreshUserData,
+    }),
+    [user, loading]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
