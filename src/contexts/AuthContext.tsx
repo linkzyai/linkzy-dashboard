@@ -211,17 +211,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const logout = async () => {
     try {
+      console.log("🚪 Logout clicked");
+      // prevent double-clicks
+      // @ts-ignore
+      if (window.__linkzy_logging_out) return;
+      // @ts-ignore
+      window.__linkzy_logging_out = true;
+
+      // so guards/components can short-circuit UI during logout
       sessionStorage.setItem("linkzy_logging_out", "true");
-      await supabase.auth.signOut();
-    } finally {
+
+      // show spinner briefly (optional)
+      setLoading(true);
+
+      // 1) clear client-only secrets FIRST
       supabaseService.clearApiKey();
+
+      // 2) sign out from Supabase (await so session is actually removed)
+      const { error } = await supabase.auth.signOut();
+      if (error) console.error("signOut error:", error.message);
+
+      // 3) clear any local cache YOU set (never store API keys here)
+      localStorage.removeItem("linkzy_user");
+      localStorage.removeItem("linkzy_api_key");
+
+      // 4) reset context state
       setUser(null);
+    } catch (e) {
+      console.error("❌ logout error", e);
+    } finally {
       setLoading(false);
+      // 5) hard navigation to reset the SPA completely
       try {
         window.location.replace("/");
       } catch {
         window.location.href = "/";
       }
+      // tiny fallback re-try if a browser blocks replace()
+      setTimeout(() => {
+        if (window.location.pathname !== "/") {
+          window.location.href = "/";
+        }
+      }, 150);
     }
   };
 
