@@ -8,20 +8,20 @@ import RegistrationModal from "./RegistrationModal";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requireVerifiedEmail?: boolean; // toggle if you want to enforce verification
+  requireVerifiedEmail?: boolean; // set true if you want to enforce
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requireVerifiedEmail = false,
 }) => {
-  const { isAuthenticated, loading, user } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
-  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const loggingOut = sessionStorage.getItem("linkzy_logging_out") === "true";
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
 
-  // Fast email verification from session (no extra fetch)
+  // Derive email verification from session (fast, no extra fetch)
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -39,7 +39,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }, [loading, isAuthenticated]);
 
   // Preserve your original loading UI
-  if (!user) {
+  if (loading) {
     if (loggingOut) {
       navigate("/", { replace: true });
       return null;
@@ -84,12 +84,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         <div className="min-h-screen bg-black flex items-center justify-center px-4">
           <div className="max-w-md w-full text-center">
             <div className="bg-gray-900 border border-gray-700 rounded-2xl p-8">
+              {/* Linkzy Logo */}
               <div className="flex items-center justify-center space-x-3 mb-6">
                 <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center">
                   <Link className="w-6 h-6 text-white" />
                 </div>
                 <span className="text-white text-2xl font-bold">Linkzy</span>
               </div>
+              {/* Access Denied Message */}
               <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Shield className="w-8 h-8 text-red-400" />
               </div>
@@ -98,7 +100,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
               </h1>
               <p className="text-gray-300 mb-6">
                 You need an account to access the Linkzy dashboard. Create your
-                free account to get started.
+                free account to get started with high-quality backlinks.
               </p>
               <div className="bg-orange-900/20 border border-orange-500/30 rounded-lg p-4 mb-6">
                 <div className="flex items-start space-x-3">
@@ -132,7 +134,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // (Optional) Enforce email verification without polling
+  // (Optional) Enforce email verification
   if (requireVerifiedEmail && emailVerified === false) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center px-4">

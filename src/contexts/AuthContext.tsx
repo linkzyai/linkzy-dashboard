@@ -11,7 +11,7 @@ import { supabase } from "../lib/supabase";
 // @ts-ignore
 import supabaseService from "../services/supabaseService";
 
-type AppProfile = {
+export type AppProfile = {
   id: string;
   email: string | null;
   website?: string | null;
@@ -62,6 +62,14 @@ async function fetchProfile(userId: string): Promise<AppProfile | null> {
   };
 }
 
+// Don’t let a slow DB call block the UI
+async function fetchProfileWithTimeout(userId: string, ms = 2000) {
+  const timeout = new Promise<null>((resolve) =>
+    setTimeout(() => resolve(null), ms)
+  );
+  return Promise.race([fetchProfile(userId), timeout]);
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -73,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await supabase.auth.getSession(); // in-memory
+        const { data } = await supabase.auth.getSession(); // in-memory, fast
         const supaUser = data.session?.user;
 
         if (!supaUser) {
@@ -90,8 +98,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           setLoading(false);
         }
 
-        // Step 2: fetch app profile in background
-        const profile = await fetchProfile(supaUser.id);
+        // Step 2: fetch app profile in background (timed)
+        const profile = await fetchProfileWithTimeout(supaUser.id, 2000);
         if (!cancelled && profile) {
           setUser({
             id: supaUser.id,
@@ -127,13 +135,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           if (event === "SIGNED_OUT") {
             supabaseService.clearApiKey();
             setUser(null);
+            setLoading(false);
             return;
           }
 
           const supaUser = session?.user;
-          if (!supaUser) return;
+          if (!supaUser) {
+            setUser(null);
+            setLoading(false);
+            return;
+          }
 
-          // reflect session immediately
+          // 1) reflect session immediately so spinner stops
           setUser((prev) => ({
             id: supaUser.id,
             email: supaUser.email ?? prev?.email ?? null,
@@ -143,9 +156,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             credits: prev?.credits ?? null,
             api_key: prev?.api_key ?? null,
           }));
+          setLoading(false);
 
-          // background profile refresh
-          const profile = await fetchProfile(supaUser.id);
+          // 2) background profile refresh (timed)
+          const profile = await fetchProfileWithTimeout(supaUser.id, 2000);
           if (profile) {
             setUser({
               id: supaUser.id,
@@ -160,8 +174,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           }
         } catch (e: any) {
           console.error("[auth] onAuthStateChange error:", e?.message || e);
-        } finally {
-          setLoading(false);
+          setLoading(false); // never leave it true
         }
       }
     );
@@ -174,7 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const { data } = await supabase.auth.getSession();
     const supaUser = data.session?.user;
     if (!supaUser) return;
-    const profile = await fetchProfile(supaUser.id);
+    const profile = await fetchProfileWithTimeout(supaUser.id, 2000);
     if (profile) {
       setUser({
         id: supaUser.id,
@@ -227,7 +240,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       // 1) clear client-only secrets FIRST
       supabaseService.clearApiKey();
 
-      // 2) sign out from Supabase (await so session is actually removed)
+      // 2) sign out from Supabase (await so session is removed)
       const { error } = await supabase.auth.signOut();
       if (error) console.error("signOut error:", error.message);
 
@@ -247,7 +260,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       } catch {
         window.location.href = "/";
       }
-      // tiny fallback re-try if a browser blocks replace()
       setTimeout(() => {
         if (window.location.pathname !== "/") {
           window.location.href = "/";
