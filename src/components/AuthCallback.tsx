@@ -134,8 +134,8 @@ export default function AuthCallback() {
             body: JSON.stringify({
               userId: session.user.id,
               email: session.user.email,
-              website: 'yourdomain.com', // Default value triggers onboarding
-              niche: 'technology' // Default value triggers onboarding
+              website: '', // Default value triggers onboarding
+              niche: '' // Default value triggers onboarding
             })
           });
 
