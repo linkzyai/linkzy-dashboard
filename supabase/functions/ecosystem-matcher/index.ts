@@ -260,7 +260,7 @@ async function findMatchingOpportunities(
             geographic_relevance_score: scores.geographicRelevance,
             partner_quality_score: scores.partnerQuality,
             overall_match_score: scores.overall,
-            suggested_anchor_text: anchorSuggestions[0],
+            suggested_anchor_text: anchorSuggestions[0] ?? "Read more",
             suggested_target_url: sourceUser.website,
             suggested_placement_context: `Natural placement opportunity in content about "${targetContent.title}"`,
             estimated_value: Math.ceil(scores.overall * 3), // 1-3 credits based on quality
@@ -313,11 +313,26 @@ serve(async (req: Request) => {
 
     // Check if opportunities already exist (unless forcing reprocess)
     if (!forceReprocess) {
-      const { data: existing } = await supabase
+      const { data: existing, error: existingError } = await supabase
         .from("placement_opportunities")
         .select("id")
         .eq("source_content_id", contentId)
         .eq("status", "pending");
+
+      // Check for query error
+      if (existingError) {
+        console.error("Error checking existing opportunities:", existingError);
+        return new Response(
+          JSON.stringify({
+            error: "Failed to check existing opportunities",
+            details: existingError.message,
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
 
       if (existing?.length) {
         return new Response(
