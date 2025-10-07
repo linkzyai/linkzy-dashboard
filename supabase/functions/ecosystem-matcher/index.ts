@@ -260,7 +260,7 @@ async function findMatchingOpportunities(
             geographic_relevance_score: scores.geographicRelevance,
             partner_quality_score: scores.partnerQuality,
             overall_match_score: scores.overall,
-            suggested_anchor_text: anchorSuggestions[0],
+            suggested_anchor_text: anchorSuggestions[0] ?? "Read more",
             suggested_target_url: sourceUser.website,
             suggested_placement_context: `Natural placement opportunity in content about "${targetContent.title}"`,
             estimated_value: Math.ceil(scores.overall * 3), // 1-3 credits based on quality
