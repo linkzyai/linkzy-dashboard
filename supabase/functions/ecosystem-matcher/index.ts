@@ -313,8 +313,6 @@ serve(async (req: Request) => {
 
     // Check if opportunities already exist (unless forcing reprocess)
     if (!forceReprocess) {
-      console.log("forceReprocess is false: stop inserting");
-      console.log("source content id: ", contentId);
       const { data: existing, error: existingError } = await supabase
         .from("placement_opportunities")
         .select("id")
