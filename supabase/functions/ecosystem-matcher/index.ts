@@ -313,11 +313,28 @@ serve(async (req: Request) => {
 
     // Check if opportunities already exist (unless forcing reprocess)
     if (!forceReprocess) {
-      const { data: existing } = await supabase
+      console.log("forceReprocess is false: stop inserting");
+      console.log("source content id: ", contentId);
+      const { data: existing, error: existingError } = await supabase
         .from("placement_opportunities")
         .select("id")
         .eq("source_content_id", contentId)
         .eq("status", "pending");
+
+      // Check for query error
+      if (existingError) {
+        console.error("Error checking existing opportunities:", existingError);
+        return new Response(
+          JSON.stringify({
+            error: "Failed to check existing opportunities",
+            details: existingError.message,
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
 
       if (existing?.length) {
         return new Response(
