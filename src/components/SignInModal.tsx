@@ -32,6 +32,7 @@ const SignInModal: React.FC<SignInModalProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [fieldsValidated, setFieldsValidated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
@@ -85,7 +86,7 @@ const SignInModal: React.FC<SignInModalProps> = ({
 
   const handleGoogleSignIn = async () => {
     try {
-      setIsLoading(true);
+      setIsGoogleLoading(true);
       setError("");
       const result = await supabaseService.signInWithGoogle();
       if (result?.success) {
@@ -99,7 +100,7 @@ const SignInModal: React.FC<SignInModalProps> = ({
         setError("Network error. Please check your connection and try again.");
       else setError("Google sign in failed. Please try again.");
     } finally {
-      setIsLoading(false);
+      setIsGoogleLoading(false);
     }
   };
 
@@ -262,11 +263,11 @@ const SignInModal: React.FC<SignInModalProps> = ({
           <div className="mb-6">
             <button
               onClick={handleGoogleSignIn}
-              disabled={isLoading}
+              disabled={isGoogleLoading}
               className="w-full relative overflow-hidden group rounded-lg border border-orange-500/40 bg-gray-800 hover:bg-gray-750 text-white font-semibold py-3 px-4 transition-all flex items-center justify-center space-x-3 shadow-lg hover:shadow-orange-500/10 disabled:opacity-70"
             >
               <span className="absolute inset-0 bg-gradient-to-r from-orange-500/10 via-transparent to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></span>
-              {isLoading ? (
+              {isGoogleLoading ? (
                 <div className="w-5 h-5 border-2 border-orange-400 border-t-transparent rounded-full animate-spin"></div>
               ) : (
                 <div className="w-5 h-5 rounded flex items-center justify-center">
