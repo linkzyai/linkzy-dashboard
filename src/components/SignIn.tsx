@@ -3,7 +3,6 @@ import { Link, Mail, Lock, Eye, EyeOff, ArrowLeft, ArrowRight, AlertCircle, Chec
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import supabaseService from '../services/supabaseService';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
 
 const SignIn = () => {
   const navigate = useNavigate();

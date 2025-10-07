@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS public.tracked_content (
   url TEXT NOT NULL,
   title TEXT DEFAULT '',
   content TEXT DEFAULT '',
+  referrer TEXT DEFAULT '',
   keywords TEXT[] DEFAULT '{}',
   keyword_density JSONB DEFAULT '{}',
   timestamp TIMESTAMPTZ NOT NULL,
