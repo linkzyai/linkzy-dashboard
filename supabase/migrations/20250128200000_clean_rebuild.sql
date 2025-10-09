@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS public.placement_instructions (
   executed_at TIMESTAMPTZ,
   execution_result JSONB,
   expires_at TIMESTAMPTZ DEFAULT (now() + INTERVAL '24 hours'),
+  updated_at TIMESTAMPTZ DEFAULT now(),
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -120,6 +121,55 @@ CREATE TABLE IF NOT EXISTS public.niche_proximity (
   niche_b TEXT NOT NULL,
   proximity_score DECIMAL(3,2) NOT NULL,
   UNIQUE(niche_a, niche_b)
+);
+
+-- =========================
+-- domain_metrics
+-- =========================
+create table if not exists public.domain_metrics (
+  id                      uuid primary key default gen_random_uuid(),
+  user_id                 uuid not null references public.users(id) on delete cascade,
+
+  -- Core identifiers
+  website                 text not null,      -- e.g. https://example.com
+  hostname                text generated always as (
+                           lower(
+                             split_part(regexp_replace(website, '^https?://', ''), '/', 1)
+                           )
+                         ) stored,
+
+  -- Platform detection
+  platform                text,               -- 'wordpress' | 'shopify' | 'wix' | 'squarespace' | 'webflow' | 'unknown'
+  is_wordpress            boolean default false,
+  rest_api_detected       boolean default false,
+  js_injection_possible   boolean default true,
+
+  -- WordPress API config/credentials (used by placement function)
+  wordpress_api_enabled   boolean default false,
+  wordpress_api_url       text,               -- e.g. https://example.com/wp-json
+  wordpress_username      text,
+  wordpress_app_password  text,
+
+  -- Optional quality metrics (fill later if desired)
+  domain_authority        numeric(5,2),
+  domain_rating           numeric(5,2),
+  organic_traffic         integer,
+  spam_score              numeric(5,2),
+
+  -- Optional geography
+  country_code            text,               -- ISO-3166-1 alpha-2
+  region                  text,
+  latitude                double precision,
+  longitude               double precision,
+
+  -- Bookkeeping
+  last_scanned_at         timestamptz,
+  verified_at             timestamptz,
+  created_at              timestamptz not null default now(),
+  updated_at              timestamptz not null default now(),
+
+  -- One row per user (change to (user_id, website) if you support multiple sites)
+  constraint domain_metrics_user_unique unique (user_id)
 );
 
 -- =============================================
@@ -174,6 +224,21 @@ USING (auth.role() = 'service_role');
 CREATE POLICY "service_role_all_credits" ON public.credit_transactions FOR ALL 
 USING (auth.role() = 'service_role');
 
+-- =========================
+-- OPTIONAL: RLS (if you use it)
+-- =========================
+alter table public.domain_metrics enable row level security;
+create policy "select_own_domain_metrics"
+  on public.domain_metrics for select to authenticated
+  using (auth.uid() = user_id);
+create policy "insert_own_domain_metrics"
+  on public.domain_metrics for insert to authenticated
+  with check (auth.uid() = user_id);
+create policy "update_own_domain_metrics"
+  on public.domain_metrics for update to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
 -- =============================================
 -- INDEXES FOR PERFORMANCE
 -- =============================================
@@ -185,6 +250,9 @@ CREATE INDEX IF NOT EXISTS idx_opportunities_status ON public.placement_opportun
 CREATE INDEX IF NOT EXISTS idx_instructions_target_user ON public.placement_instructions(target_user_id);
 CREATE INDEX IF NOT EXISTS idx_instructions_status ON public.placement_instructions(status);
 CREATE INDEX IF NOT EXISTS idx_credits_user_id ON public.credit_transactions(user_id);
+create index if not exists domain_metrics_user_id_idx  on public.domain_metrics (user_id);
+create index if not exists domain_metrics_hostname_idx on public.domain_metrics (hostname);
+create index if not exists domain_metrics_platform_idx on public.domain_metrics (platform);
 
 -- =============================================
 -- UPDATED_AT TRIGGERS
@@ -202,6 +270,18 @@ CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users
 
 CREATE TRIGGER update_opportunities_updated_at BEFORE UPDATE ON public.placement_opportunities
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+create or replace function public.set_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at := now();
+  return new;
+end $$;
+
+drop trigger if exists trg_domain_metrics_updated_at on public.domain_metrics;
+create trigger trg_domain_metrics_updated_at
+before update on public.domain_metrics
+for each row execute function public.set_updated_at();
 
 -- =============================================
 -- ESSENTIAL NICHE PROXIMITY DATA
@@ -247,3 +327,49 @@ WHERE niche_a != niche_b
 ON CONFLICT (niche_a, niche_b) DO NOTHING;
 
 SELECT 'Clean Linkzy database rebuilt successfully! ✅' as status;
+
+
+-- =============================================
+-- TABLE: PLACEMENT_ATTEMPTS (Placement attempt logging)
+-- =============================================
+CREATE TABLE IF NOT EXISTS public.placement_attempts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  opportunity_id UUID REFERENCES public.placement_opportunities(id) ON DELETE CASCADE,
+  target_domain TEXT NOT NULL,
+  placement_method TEXT,
+  success BOOLEAN NOT NULL DEFAULT false,
+  response_time_ms INTEGER,
+  verification_attempted BOOLEAN DEFAULT false,
+  verification_success BOOLEAN DEFAULT false,
+  link_still_live BOOLEAN DEFAULT false,
+  error_message TEXT,
+  attempted_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- =============================================
+-- INDEXES FOR placement_attempts
+-- =============================================
+CREATE INDEX IF NOT EXISTS idx_placement_attempts_opportunity_id ON public.placement_attempts(opportunity_id);
+CREATE INDEX IF NOT EXISTS idx_placement_attempts_target_domain ON public.placement_attempts(target_domain);
+CREATE INDEX IF NOT EXISTS idx_placement_attempts_attempted_at ON public.placement_attempts(attempted_at);
+CREATE INDEX IF NOT EXISTS idx_placement_attempts_success ON public.placement_attempts(success);
+
+-- =============================================
+-- RLS POLICIES FOR placement_attempts
+-- =============================================
+ALTER TABLE public.placement_attempts ENABLE ROW LEVEL SECURITY;
+
+-- Users can view attempts for opportunities they're involved in
+CREATE POLICY "placement_attempts_involved" ON public.placement_attempts FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM public.placement_opportunities po
+    WHERE po.id = placement_attempts.opportunity_id
+    AND (po.source_user_id = auth.uid() OR po.target_user_id = auth.uid())
+  )
+);
+
+-- Service role can access everything (for Edge Functions)
+CREATE POLICY "service_role_all_placement_attempts" ON public.placement_attempts FOR ALL 
+USING (auth.role() = 'service_role');
