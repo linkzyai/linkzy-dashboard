@@ -171,7 +171,7 @@ async function findMatchingOpportunities(
   }
 
   // Get tracked content for each user separately
-  const potentialTargets = [];
+  const potentialTargets: any[] = [];
   for (const user of potentialUsers) {
     const { data: userContent } = await supabase
       .from("tracked_content")
@@ -194,7 +194,7 @@ async function findMatchingOpportunities(
 
   console.log(`🎯 Found ${potentialTargets.length} potential targets`);
 
-  const opportunities = [];
+  const opportunities: any[] = [];
 
   for (const target of potentialTargets) {
     if (!target.tracked_content?.length) continue;
@@ -265,6 +265,7 @@ async function findMatchingOpportunities(
             suggested_placement_context: `Natural placement opportunity in content about "${targetContent.title}"`,
             estimated_value: Math.ceil(scores.overall * 3), // 1-3 credits based on quality
             auto_approved: scores.overall >= 0.7, // Auto-approve if score is high enough
+            status: scores.overall >= 0.7 ? "approved" : "pending",
             target_content_title: targetContent.title,
             target_content_url: targetContent.url,
           });
@@ -283,6 +284,66 @@ async function findMatchingOpportunities(
 
   console.log(`✅ Generated ${opportunities.length} opportunities`);
   return opportunities.slice(0, 20); // Return top 20 opportunities
+}
+
+/**
+ * Triggers automatic placement for a given opportunity
+ * @param opportunityId - The ID of the placement opportunity
+ * @param userId - Optional user ID for ownership validation
+ * @param manualOverride - Optional flag to bypass auto-approval checks
+ */
+async function triggerAutomaticPlacement(
+  opportunityId: string,
+  userId?: string,
+  manualOverride?: boolean
+): Promise<void> {
+  try {
+    console.log(
+      `🤖 Starting automatic placement for opportunity ${opportunityId}`
+    );
+
+    // Call the automatic-placement function
+    const response = await fetch(
+      `${SUPABASE_URL}/functions/v1/automatic-placement`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify({
+          opportunityId: opportunityId,
+          userId: userId,
+          manualOverride: manualOverride || false,
+        }),
+      }
+    );
+
+    const result = await response.json();
+
+    if (result.success) {
+      console.log(
+        `✅ Automatic placement successful: ${result.message || "Link placed"}`
+      );
+      console.log(`📍 Placement URL: ${result.placementUrl || "N/A"}`);
+      console.log(`⚡ Method: ${result.placementMethod || "unknown"}`);
+
+      if (result.verificationSuccess) {
+        console.log(`✅ Link verification: PASSED`);
+      } else {
+        console.log(`⚠️ Link verification: FAILED or not attempted`);
+      }
+    } else {
+      console.error(
+        `❌ Automatic placement failed: ${result.error || "Unknown error"}`
+      );
+    }
+
+    return result;
+  } catch (error) {
+    console.error(`❌ Failed to trigger automatic placement:`, error);
+    throw error;
+  }
 }
 
 serve(async (req: Request) => {
@@ -362,6 +423,24 @@ serve(async (req: Request) => {
         throw new Error(
           `Failed to create opportunities: ${insertError.message}`
         );
+      }
+
+      // create instruction (backlink)
+      // Trigger automatic placement for auto-approved opportunities
+      if (insertedOpportunities && insertedOpportunities.length > 0) {
+        for (const opportunity of insertedOpportunities) {
+          // if (opportunity.auto_approved) {
+            try {
+              await triggerAutomaticPlacement(opportunity.id, userId, false);
+            } catch (error) {
+              console.error(
+                `⚠️ Failed to trigger automatic placement for opportunity ${opportunity.id}:`,
+                error
+              );
+              // Continue with other opportunities even if one fails
+            }
+          // }
+        }
       }
 
       // Count auto-approved opportunities
