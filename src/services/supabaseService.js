@@ -1149,9 +1149,9 @@ If you're testing, try these workarounds:
       const user = await this.getUserProfile();
 
       const { data, error, count } = await supabase
-        .from("backlinks")
+        .from("placement_opportunities")
         .select("*", { count: "exact" })
-        .eq("user_id", user.id)
+        .eq("source_user_id", user.id)
         .order("created_at", { ascending: false })
         .range((page - 1) * limit, page * limit - 1);
 
