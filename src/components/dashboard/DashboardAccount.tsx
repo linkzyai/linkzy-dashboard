@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import DashboardLayout from "./DashboardLayout";
 import CelebrationModal from "../CelebrationModal";
@@ -19,6 +19,19 @@ import { useAuth } from "../../contexts/AuthContext";
 import supabaseService from "../../services/supabaseService";
 import axios from "axios";
 import JSZip from "jszip";
+
+type BacklinkRecord = {
+  id: string | number;
+  target_content_url: string;
+  suggested_anchor_text?: string;
+  status?: string;
+  created_at?: string;
+  placement_url?: string;
+  niche?: string;
+  notes?: string;
+};
+
+const BACKLINKS_PAGE_SIZE = 10;
 
 const DashboardAccount = () => {
   const { user, logout, isAuthenticated, login } = useAuth();
@@ -67,6 +80,12 @@ const DashboardAccount = () => {
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [credits, setCredits] = useState(user?.credits || 3);
   const [billingHistory, setBillingHistory] = useState<any[]>([]);
+  const [backlinks, setBacklinks] = useState<BacklinkRecord[]>([]);
+  const [backlinksLoading, setBacklinksLoading] = useState(false);
+  const [backlinksError, setBacklinksError] = useState<string | null>(null);
+  const [backlinksPage, setBacklinksPage] = useState(1);
+  const [backlinksTotalPages, setBacklinksTotalPages] = useState(0);
+  const [backlinksTotal, setBacklinksTotal] = useState(0);
 
   // Listen for credit updates from success page
   useEffect(() => {
@@ -156,6 +175,118 @@ const DashboardAccount = () => {
       loadUserData();
     }
   }, [user?.id]);
+
+  const loadBacklinks = useCallback(
+    async (page: number = 1) => {
+      if (!user?.id) {
+        setBacklinks([]);
+        setBacklinksTotal(0);
+        setBacklinksTotalPages(0);
+        return;
+      }
+
+      setBacklinksLoading(true);
+      setBacklinksError(null);
+
+      try {
+        const response: {
+          backlinks?: BacklinkRecord[];
+          total?: number;
+          totalPages?: number;
+          page?: number;
+        } = await supabaseService.getBacklinks(page, BACKLINKS_PAGE_SIZE);
+
+        setBacklinks(response?.backlinks || []);
+        setBacklinksTotal(response?.total ?? 0);
+        setBacklinksTotalPages(response?.totalPages ?? 0);
+      } catch (error: any) {
+        console.error("Failed to load backlinks:", error);
+        setBacklinksError(
+          error?.message || "We couldn't load your backlinks right now."
+        );
+        setBacklinks([]);
+        setBacklinksTotal(0);
+        setBacklinksTotalPages(0);
+      } finally {
+        setBacklinksLoading(false);
+      }
+    },
+    [user?.id]
+  );
+
+  useEffect(() => {
+    if (activeTab === "links") {
+      loadBacklinks(backlinksPage);
+    }
+  }, [activeTab, backlinksPage, loadBacklinks]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setBacklinks([]);
+      setBacklinksTotal(0);
+      setBacklinksTotalPages(0);
+      setBacklinksPage(1);
+      return;
+    }
+
+    setBacklinksPage(1);
+
+    if (activeTab === "links") {
+      loadBacklinks(1);
+    }
+  }, [user?.id, activeTab, loadBacklinks]);
+
+  const handleBacklinksPageChange = (newPage: number) => {
+    if (newPage < 1) return;
+    if (backlinksTotalPages && newPage > backlinksTotalPages) return;
+
+    setBacklinksPage((prev) => (prev === newPage ? prev : newPage));
+  };
+
+  const formatBacklinkDate = (value?: string) => {
+    if (!value) return "—";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    return date.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const formatBacklinkStatus = (status?: string) => {
+    if (!status) return "Pending";
+    return status
+      .replace(/[_-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
+  const getStatusBadgeClass = (status?: string) => {
+    if (!status) return "bg-yellow-500/10 text-yellow-300 border border-yellow-500/40";
+    const normalized = status.toLowerCase();
+
+    if (normalized === "completed" || normalized === "placed") {
+      return "bg-green-500/10 text-green-400 border border-green-500/40";
+    }
+
+    if (normalized === "in-progress" || normalized === "in progress") {
+      return "bg-blue-500/10 text-blue-300 border border-blue-500/40";
+    }
+
+    if (normalized === "pending") {
+      return "bg-yellow-500/10 text-yellow-300 border border-yellow-500/40";
+    }
+
+    if (normalized === "failed" || normalized === "rejected") {
+      return "bg-red-500/10 text-red-300 border border-red-500/40";
+    }
+
+    return "bg-gray-800 text-gray-300 border border-gray-700";
+  };
 
   const [requests, setRequests] = useState([
     // Example mock requests
@@ -1428,31 +1559,219 @@ const DashboardAccount = () => {
     </>
   );
 
-  const renderLinksTab = () => (
-    <div className="space-y-8">
-      <div className="bg-gray-900 border border-gray-700 rounded-xl p-6">
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
-            <Send className="w-5 h-5 text-orange-500 flex-shrink-0" />
+  const renderLinksTab = () => {
+    const totalCount = backlinksTotal || backlinks.length;
+    const hasBacklinks = backlinks.length > 0;
+    const computedTotalPages = backlinksTotalPages || (hasBacklinks ? 1 : 0);
+    const startIndex =
+      totalCount === 0 ? 0 : (backlinksPage - 1) * BACKLINKS_PAGE_SIZE + 1;
+    const endIndex =
+      totalCount === 0
+        ? 0
+        : Math.min(backlinksPage * BACKLINKS_PAGE_SIZE, totalCount);
+
+    return (
+      <div className="space-y-8">
+        <div className="bg-gray-900 border border-gray-700 rounded-xl p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                <Send className="w-5 h-5 text-orange-500 flex-shrink-0" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-xl font-bold text-white">Your Backlinks</h3>
+                <p className="text-gray-400 text-sm">
+                  Links Linkzy has automatically placed or is working on for you
+                </p>
+              </div>
+            </div>
+            {isAuthenticated && (
+              <div className="flex items-center gap-3">
+                <div className="text-sm text-gray-400">
+                  Total{" "}
+                  <span className="text-white font-semibold">{totalCount}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => loadBacklinks(backlinksPage)}
+                  disabled={backlinksLoading}
+                  className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium border border-gray-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {backlinksLoading ? "Refreshing..." : "Refresh"}
+                </button>
+              </div>
+            )}
           </div>
-          <div className="min-w-0">
-            <h3 className="text-xl font-bold text-white">Your Backlinks</h3>
-            <p className="text-gray-400 text-sm">
-              Links Linkzy has automatically placed or is working on for you
-            </p>
-          </div>
-        </div>
-        {/* Placeholder: Replace with real data from your backend */}
-        <div className="text-center py-8 bg-gray-800/50 rounded-lg">
-          <p className="text-gray-400 mb-2">No backlinks yet</p>
-          <p className="text-gray-500 text-sm">
-            Once Linkzy places or finds backlinks for you, they will appear
-            here.
-          </p>
+          {!isAuthenticated ? (
+            <div className="text-center py-8 bg-gray-800/50 rounded-lg">
+              <p className="text-gray-400 mb-2">
+                Please log in to view your backlinks.
+              </p>
+              <p className="text-gray-500 text-sm">
+                Once you're signed in, any backlinks we place will be listed
+                here.
+              </p>
+            </div>
+          ) : backlinksError ? (
+            <div className="bg-red-900/20 border border-red-600/30 rounded-lg p-6 text-red-200">
+              <p className="font-semibold mb-2">
+                We couldn't load your backlinks.
+              </p>
+              <p className="text-sm mb-4 text-red-200/80">{backlinksError}</p>
+              <button
+                type="button"
+                onClick={() => loadBacklinks(backlinksPage)}
+                className="bg-red-500/20 hover:bg-red-500/30 text-red-200 px-4 py-2 rounded-lg text-sm font-medium border border-red-500/40"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : backlinksLoading && !hasBacklinks ? (
+            <div className="text-center py-8 bg-gray-800/50 rounded-lg">
+              <p className="text-gray-400 mb-2">Loading backlinks…</p>
+              <p className="text-gray-500 text-sm">
+                Fetching the latest placements from your Linkzy account.
+              </p>
+            </div>
+          ) : !hasBacklinks ? (
+            <div className="text-center py-8 bg-gray-800/50 rounded-lg">
+              <p className="text-gray-400 mb-2">No backlinks yet</p>
+              <p className="text-gray-500 text-sm">
+                Once Linkzy places or finds backlinks for you, they will appear
+                here.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {backlinksLoading && (
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                  Refreshing backlinks…
+                </div>
+              )}
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-800 text-sm">
+                  <thead>
+                    <tr className="text-gray-400">
+                      <th className="px-4 py-3 text-left font-medium">
+                        Anchor Text
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium">
+                        Target URL
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium">
+                        Placement
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium">
+                        Created
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-800 text-gray-300">
+                    {backlinks.map((backlink) => (
+                      <tr key={String(backlink.id)}>
+                        <td className="px-4 py-4 align-top">
+                          <div className="font-semibold text-white">
+                            {backlink.suggested_anchor_text || "—"}
+                          </div>
+                          {backlink.notes && (
+                            <p className="text-xs text-gray-500 mt-1 break-words">
+                              {backlink.notes}
+                            </p>
+                          )}
+                          {backlink.niche && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              {formatBacklinkStatus(backlink.niche)}
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 align-top">
+                          {backlink.target_content_url ? (
+                            <a
+                              href={backlink.target_content_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-orange-400 hover:text-orange-300 break-all"
+                            >
+                              {backlink.target_content_url}
+                            </a>
+                          ) : (
+                            <span className="text-gray-500">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 align-top">
+                          <span
+                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(
+                              backlink.status
+                            )}`}
+                          >
+                            {formatBacklinkStatus(backlink.status)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 align-top">
+                          {backlink.placement_url ? (
+                            <a
+                              href={backlink.placement_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-orange-400 hover:text-orange-300 break-all"
+                            >
+                              {backlink.placement_url}
+                            </a>
+                          ) : (
+                            <span className="text-gray-500 text-sm">
+                              Not placed yet
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 align-top text-sm text-gray-400">
+                          {formatBacklinkDate(backlink.created_at)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {computedTotalPages > 1 && (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-gray-800">
+                  <p className="text-sm text-gray-400">
+                    Showing {startIndex}-{endIndex} of {totalCount}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleBacklinksPageChange(backlinksPage - 1)}
+                      disabled={backlinksPage === 1 || backlinksLoading}
+                      className="px-4 py-2 rounded-lg border border-gray-700 text-sm text-gray-300 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-sm text-gray-400">
+                      Page {Math.min(backlinksPage, computedTotalPages)} of{" "}
+                      {computedTotalPages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleBacklinksPageChange(backlinksPage + 1)}
+                      disabled={
+                        backlinksPage >= computedTotalPages || backlinksLoading
+                      }
+                      className="px-4 py-2 rounded-lg border border-gray-700 text-sm text-gray-300 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderIntegrationsTab = () => (
     <div className="space-y-8">
