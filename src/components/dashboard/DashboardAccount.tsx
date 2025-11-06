@@ -266,7 +266,8 @@ const DashboardAccount = () => {
   };
 
   const getStatusBadgeClass = (status?: string) => {
-    if (!status) return "bg-yellow-500/10 text-yellow-300 border border-yellow-500/40";
+    if (!status)
+      return "bg-yellow-500/10 text-yellow-300 border border-yellow-500/40";
     const normalized = status.toLowerCase();
 
     if (normalized === "completed" || normalized === "placed") {
@@ -364,6 +365,21 @@ const DashboardAccount = () => {
   const apiSnippet = `<script>
 (function(){
   var lz = window.linkzy = window.linkzy || {};
+  var validPages = currentPath.includes('/blog') || 
+                             currentPath.includes('/article') || 
+                             currentPath.includes('/post') || 
+                             currentPath.includes('/about') || 
+                             currentPath.includes('/service') || 
+                             currentPath.includes('/page') ||
+                             document.querySelector('article') ||
+                             document.querySelector('.blog-post') ||
+                             document.querySelector('.post-content') ||
+                             (document.body && document.body.innerText.length > 500); // Long content pages
+              
+              if (!validPages) {
+                console.log('Linkzy: Page not suitable for placement:', currentPath);
+                return;
+              }
   lz.apiKey = '${userApiKey}';
   lz.track = function(){
     fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/track-content', {
@@ -412,23 +428,6 @@ const DashboardAccount = () => {
               if (currentPath === '/' || currentPath === '/index.html' || currentPath === '' || 
                   currentUrl.endsWith('/#') || currentUrl.endsWith('/index.html')) {
                 console.log('Linkzy: Skipping homepage placement');
-                return;
-              }
-              
-              // Only place on content-rich pages
-              var validPages = currentPath.includes('/blog') || 
-                             currentPath.includes('/article') || 
-                             currentPath.includes('/post') || 
-                             currentPath.includes('/about') || 
-                             currentPath.includes('/service') || 
-                             currentPath.includes('/page') ||
-                             document.querySelector('article') ||
-                             document.querySelector('.blog-post') ||
-                             document.querySelector('.post-content') ||
-                             (document.body && document.body.innerText.length > 500); // Long content pages
-              
-              if (!validPages) {
-                console.log('Linkzy: Page not suitable for placement:', currentPath);
                 return;
               }
               
@@ -1743,7 +1742,9 @@ const DashboardAccount = () => {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => handleBacklinksPageChange(backlinksPage - 1)}
+                      onClick={() =>
+                        handleBacklinksPageChange(backlinksPage - 1)
+                      }
                       disabled={backlinksPage === 1 || backlinksLoading}
                       className="px-4 py-2 rounded-lg border border-gray-700 text-sm text-gray-300 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -1755,7 +1756,9 @@ const DashboardAccount = () => {
                     </span>
                     <button
                       type="button"
-                      onClick={() => handleBacklinksPageChange(backlinksPage + 1)}
+                      onClick={() =>
+                        handleBacklinksPageChange(backlinksPage + 1)
+                      }
                       disabled={
                         backlinksPage >= computedTotalPages || backlinksLoading
                       }
