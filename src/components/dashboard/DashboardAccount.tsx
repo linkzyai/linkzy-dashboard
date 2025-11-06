@@ -376,11 +376,16 @@ const DashboardAccount = () => {
                              document.querySelector('.post-content') ||
                              (document.body && document.body.innerText.length > 500); // Long content pages
               
-              if (!validPages) {
-                console.log('Linkzy: Page not suitable for placement:', currentPath);
+              // if (!validPages) {
+              //   console.log('Linkzy: Page not suitable for placement:', currentPath);
+              //   return;
+              // }
+  lz.apiKey = '${userApiKey}';
+  if (currentPath === '/' || currentPath === '/index.html' || currentPath === '' || 
+                  currentUrl.endsWith('/#') || currentUrl.endsWith('/index.html')) {
+                console.log('Linkzy: Skipping homepage placement');
                 return;
               }
-  lz.apiKey = '${userApiKey}';
   lz.track = function(){
     fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/track-content', {
       method: 'POST',
@@ -428,6 +433,11 @@ const DashboardAccount = () => {
               if (currentPath === '/' || currentPath === '/index.html' || currentPath === '' || 
                   currentUrl.endsWith('/#') || currentUrl.endsWith('/index.html')) {
                 console.log('Linkzy: Skipping homepage placement');
+                return;
+              }
+              
+              if (!validPages) {
+                console.log('Linkzy: Page not suitable for placement:', currentPath);
                 return;
               }
               
