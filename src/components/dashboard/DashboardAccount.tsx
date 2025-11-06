@@ -381,11 +381,11 @@ const DashboardAccount = () => {
               //   return;
               // }
   lz.apiKey = '${userApiKey}';
-  if (currentPath === '/' || currentPath === '/index.html' || currentPath === '' || 
-                  currentUrl.endsWith('/#') || currentUrl.endsWith('/index.html')) {
-                console.log('Linkzy: Skipping homepage placement');
-                return;
-              }
+  // if (currentPath === '/' || currentPath === '/index.html' || currentPath === '' || 
+  //                 currentUrl.endsWith('/#') || currentUrl.endsWith('/index.html')) {
+  //               console.log('Linkzy: Skipping homepage placement');
+  //               return;
+  //             }
   lz.track = function(){
     fetch('https://sljlwvrtwqmhmjunyplr.supabase.co/functions/v1/track-content', {
       method: 'POST',
