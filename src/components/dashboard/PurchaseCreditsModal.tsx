@@ -19,7 +19,7 @@ import { supabase } from "../../lib/supabase";
 
 // Initialize Stripe with TEST KEY for safe testing
 const stripePromise = loadStripe(
-  "pk_test_51RcWy5KwiECS8C7ZPPzXHrxYJzcuDOr3un8pbDcDmQPz3MCaB8ghot0x1zg4WK0zofOC589J120xPaGtUHH4hvDj00nmAd7Jln"
+  "pk_test_51RcWyHQSsW1OegvZu57qyjGyc1Bw4zbqfNcuqEaksBAbCx4YPudinNnwhoFVdpa7n7sAF3hsq7Nushmt0pQhaAB300D2tlPYdv"
 );
 
 interface PurchaseCreditsModalProps {
@@ -558,7 +558,7 @@ const PurchaseCreditsModal: React.FC<PurchaseCreditsModalProps> = ({
       name: "Starter Pack",
       credits: 3,
       price: 10,
-      priceId: "price_1RnN7qKwiECS8C7ZNpK2BEO2",
+      priceId: "price_1STSbkQSsW1OegvZRIJ114ra",
       isSubscription: false,
       description: "Perfect for testing – includes 3 high-quality backlinks",
       features: [
@@ -573,7 +573,7 @@ const PurchaseCreditsModal: React.FC<PurchaseCreditsModalProps> = ({
       name: "Growth Pack",
       credits: 10,
       price: 25,
-      priceId: "price_1RnN8BKwiECS8C7ZKxP0bK9E",
+      priceId: "price_1STSc8QSsW1OegvZ8kCVghMC",
       isSubscription: false,
       description: "Great value – includes 10 backlinks with bulk savings",
       features: [
@@ -588,7 +588,7 @@ const PurchaseCreditsModal: React.FC<PurchaseCreditsModalProps> = ({
       name: "Pro Monthly",
       credits: 30,
       price: 49,
-      priceId: "price_1RnN8YKwiECS8C7ZhXN5uG85",
+      priceId: "price_1STScYQSsW1OegvZNlv8gg2d",
       isSubscription: true,
       description:
         "For SEO professionals and agencies – 30 backlinks every month",

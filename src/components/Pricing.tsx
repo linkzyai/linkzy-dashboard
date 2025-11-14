@@ -17,7 +17,7 @@ const Pricing = () => {
       }
 
       // Initialize Stripe with test key (but looks like production)
-      const publishableKey = 'pk_test_51RcWy5KwiECS8C7ZPPzXHrxYJzcuDOr3un8pbDcDmQPz3MCaB8ghot0x1zg4WK0zofOC589J120xPaGtUHH4hvDj00nmAd7Jln';
+      const publishableKey = 'pk_test_51RcWyHQSsW1OegvZu57qyjGyc1Bw4zbqfNcuqEaksBAbCx4YPudinNnwhoFVdpa7n7sAF3hsq7Nushmt0pQhaAB300D2tlPYdv';
       const stripe = (window as unknown as { Stripe: (key: string) => any }).Stripe(publishableKey);
       
       if (!stripe) {
