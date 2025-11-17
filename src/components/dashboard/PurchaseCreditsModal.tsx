@@ -1,12 +1,5 @@
 import React, { useState } from "react";
-import {
-  X,
-  CreditCard,
-  Zap,
-  CheckCircle,
-  AlertCircle,
-  Lock,
-} from "lucide-react";
+import { X, CreditCard, CheckCircle, AlertCircle, Lock } from "lucide-react";
 import { loadStripe } from "@stripe/stripe-js";
 import {
   Elements,
@@ -17,7 +10,7 @@ import {
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 
-// Initialize Stripe with TEST KEY for safe testing
+// ✅ Stripe test key (publishable)
 const stripePromise = loadStripe(
   "pk_test_51RcWyHQSsW1OegvZu57qyjGyc1Bw4zbqfNcuqEaksBAbCx4YPudinNnwhoFVdpa7n7sAF3hsq7Nushmt0pQhaAB300D2tlPYdv"
 );
@@ -29,15 +22,118 @@ interface PurchaseCreditsModalProps {
   currentPlan: string;
 }
 
+interface Plan {
+  id: string;
+  name: string;
+  credits: number;
+  price: number;
+  priceId: string;
+  isSubscription: boolean;
+  description: string;
+  features: string[];
+  popular: boolean;
+}
+
 interface PaymentFormProps {
-  selectedPlan: any;
+  selectedPlan: Plan;
   onSuccess: () => void;
   onError: (error: string) => void;
   isProcessing: boolean;
   setIsProcessing: (processing: boolean) => void;
 }
 
-// Real Stripe Payment Form Component
+// Shared plans (no need to recreate on every render)
+const PLANS: Plan[] = [
+  {
+    id: "starter",
+    name: "Starter Pack",
+    credits: 3,
+    price: 10,
+    priceId: "price_1STSbkQSsW1OegvZRIJ114ra",
+    isSubscription: false,
+    description: "Perfect for testing – includes 3 high-quality backlinks",
+    features: ["3 high-quality backlinks", "One-time payment", "No commitment"],
+    popular: false,
+  },
+  {
+    id: "growth",
+    name: "Growth Pack",
+    credits: 10,
+    price: 25,
+    priceId: "price_1STSc8QSsW1OegvZ8kCVghMC",
+    isSubscription: false,
+    description: "Great value – includes 10 backlinks with bulk savings",
+    features: [
+      "10 high-quality backlinks",
+      "Bulk discount",
+      "One-time payment",
+    ],
+    popular: true,
+  },
+  {
+    id: "pro",
+    name: "Pro Monthly",
+    credits: 30,
+    price: 49,
+    priceId: "price_1STScYQSsW1OegvZNlv8gg2d",
+    isSubscription: true,
+    description:
+      "For SEO professionals and agencies – 30 backlinks every month",
+    features: [
+      "30 backlinks monthly",
+      "Priority support",
+      "Advanced analytics",
+      "Cancel anytime",
+    ],
+    popular: false,
+  },
+];
+
+// Helper: after payment, wait for webhook to update credits, then dispatch event
+async function syncCreditsAfterPayment(creditsToAdd: number) {
+  const { default: supabaseService } = await import(
+    "../../services/supabaseService"
+  );
+
+  const preStatus = await supabaseService.getAuthStatus();
+  if (!preStatus.user) {
+    throw new Error("User not found during credit polling");
+  }
+
+  const originalCredits = preStatus.user.credits || 0;
+  const expectedCredits = originalCredits + creditsToAdd;
+
+  let freshCredits = originalCredits;
+  let attempts = 0;
+  const maxAttempts = 10;
+
+  while (attempts < maxAttempts && freshCredits < expectedCredits) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const freshStatus = await supabaseService.getAuthStatus();
+      freshCredits = freshStatus.user?.credits || 0;
+      if (freshCredits >= expectedCredits) break;
+    } catch {
+      // ignore polling error & retry
+    }
+    attempts++;
+  }
+
+  const finalStatus = await supabaseService.getAuthStatus();
+  const finalCredits = finalStatus.user?.credits ?? originalCredits;
+
+  window.dispatchEvent(
+    new CustomEvent("creditsUpdated", {
+      detail: {
+        newCredits: finalCredits,
+        oldCredits: originalCredits,
+        creditsAdded: creditsToAdd,
+        verificationPassed: true,
+      },
+    })
+  );
+}
+
 const PaymentForm: React.FC<PaymentFormProps> = ({
   selectedPlan,
   onSuccess,
@@ -47,7 +143,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 }) => {
   const stripe = useStripe();
   const elements = useElements();
-  const { user } = useAuth(); // Add this line to get the user object
+  const { user: authUser } = useAuth();
+
   const [discountCode, setDiscountCode] = useState("");
   const [discountApplied, setDiscountApplied] = useState<{
     code: string;
@@ -57,7 +154,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   } | null>(null);
   const [checkingDiscount, setCheckingDiscount] = useState(false);
 
-  // Function to validate discount code with Stripe
+  // Validate discount via Supabase Edge Function
   const validateDiscountCode = async (code: string) => {
     if (!code.trim()) {
       setDiscountApplied(null);
@@ -70,11 +167,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         "validate-coupon",
         {
           body: { coupon_code: code },
-          // headers: { 'X-Admin-Key': '...' } // not needed for coupon; just an example
         }
       );
 
-      if (!error) {
+      if (!error && couponData) {
         setDiscountApplied({
           code,
           amount_off: couponData.amount_off,
@@ -84,27 +180,26 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       } else {
         setDiscountApplied({ code, valid: false });
       }
-    } catch (error) {
-      console.error("Error validating discount code:", error);
-      setDiscountApplied({
-        code: code,
-        valid: false,
-      });
+    } catch (err) {
+      console.error("Error validating discount code:", err);
+      setDiscountApplied({ code, valid: false });
+    } finally {
+      setCheckingDiscount(false);
     }
-    setCheckingDiscount(false);
   };
 
-  // Calculate discounted price
   const getDiscountedPrice = () => {
-    if (!discountApplied?.valid || !selectedPlan)
+    if (!discountApplied?.valid || !selectedPlan) {
       return selectedPlan?.price || 0;
+    }
 
     if (discountApplied.percent_off) {
       return selectedPlan.price * (1 - discountApplied.percent_off / 100);
     }
 
     if (discountApplied.amount_off) {
-      return Math.max(0, selectedPlan.price - discountApplied.amount_off / 100); // amount_off is in cents
+      // Stripe amount_off is in cents
+      return Math.max(0, selectedPlan.price - discountApplied.amount_off / 100);
     }
 
     return selectedPlan.price;
@@ -113,324 +208,98 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!stripe || !elements || !selectedPlan) {
-      return;
-    }
+    if (!stripe || !elements || !selectedPlan) return;
 
-    // Safety check for user object
-    if (!user || !user.id) {
+    if (!authUser?.id) {
       onError("User not authenticated. Please log in and try again.");
       return;
     }
 
     setIsProcessing(true);
-    onError(""); // Clear previous errors
+    onError("");
 
     try {
-      // Set payment processing flag to prevent auth timeouts
-      sessionStorage.setItem("linkzy_payment_processing", "true");
+      // Prefer auth user; fall back to local storage if needed
+      const localUser = JSON.parse(localStorage.getItem("linkzy_user") || "{}");
+      const userId = authUser.id || localUser.id;
+      const userEmail = authUser.email || localUser.email;
 
-      console.log("Processing payment with Stripe Elements...");
-      console.log("Selected plan:", selectedPlan);
+      if (!userId || !userEmail) {
+        throw new Error("Missing user information for payment.");
+      }
 
-      // Get user info
-      const user = JSON.parse(localStorage.getItem("linkzy_user") || "{}");
+      const cardElement = elements.getElement(CardElement);
+      if (!cardElement) {
+        throw new Error("Card element not found.");
+      }
 
-      // Create payment method using the card element
-      const { error: paymentMethodError, paymentMethod } =
-        await stripe!.createPaymentMethod({
-          type: "card",
-          card: elements!.getElement(CardElement)!,
-          billing_details: {
-            email: user.email,
+      // 1) Ask backend (Supabase Edge Function) to create PaymentIntent
+      const { data: intent, error: intentErr } =
+        await supabase.functions.invoke("create-payment-intent", {
+          body: {
+            amount: Math.round(getDiscountedPrice() * 100),
+            currency: "usd",
+            description: `${selectedPlan.name} - ${
+              selectedPlan.credits
+            } Credits${
+              discountApplied?.valid ? ` (${discountApplied.code} applied)` : ""
+            }`,
+            user_id: userId,
+            user_email: userEmail,
+            credits: selectedPlan.credits,
+            plan_name: selectedPlan.name,
+            coupon_code: discountApplied?.valid
+              ? discountApplied.code
+              : undefined,
           },
         });
 
-      if (paymentMethodError) {
-        throw new Error(paymentMethodError.message);
+      if (intentErr || !intent?.client_secret) {
+        throw new Error(
+          intentErr?.message || "Failed to create payment intent."
+        );
       }
 
-      console.log("💳 Payment method created:", paymentMethod.id);
+      const clientSecret = intent.client_secret as string;
 
-      // Create payment intent via our Netlify function (no server-side confirm)
-      try {
-        const { data: intent, error: intentErr } =
-          await supabase.functions.invoke("create-payment-intent", {
-            body: {
-              amount: Math.round(getDiscountedPrice() * 100),
-              currency: "usd",
-              description: `${selectedPlan.name} - ${
-                selectedPlan.credits
-              } Credits${
-                discountApplied?.valid
-                  ? ` (${discountApplied.code} applied)`
-                  : ""
-              }`,
-              user_id: user.id,
-              user_email: user.email,
-              credits: selectedPlan.credits,
-              plan_name: selectedPlan.name,
-              coupon_code: discountApplied?.valid
-                ? discountApplied.code
-                : undefined,
+      // 2) Confirm card payment with Stripe
+      const { error: confirmError } = await stripe.confirmCardPayment(
+        clientSecret,
+        {
+          payment_method: {
+            card: cardElement,
+            billing_details: {
+              email: userEmail,
             },
-            // If your function enforces admin gate:
-            // headers: { 'X-Admin-Key': import.meta.env.VITE_ADMIN_API_KEY }
-          });
-
-        if (intentErr) {
-          console.log("Error");
-          throw new Error(
-            intentErr.message || "Failed to create payment intent"
-          );
+          },
         }
+      );
 
-        console.log("intent", intent)
+      if (confirmError) {
+        throw new Error(confirmError.message);
+      }
 
-        const client_secret = intent.client_secret;
-        console.log("TEST", client_secret, paymentMethod);
-        const { error: confirmError } = await stripe!.confirmCardPayment(
-          client_secret,
-          {
-            payment_method: paymentMethod.id,
-          }
-        );
-        if (confirmError) throw new Error(confirmError.message);
-
-        // Light webhook wait: poll billing_history for confirmation (max ~20s)
-        try {
-          const start = Date.now();
-          const poll = async () => {
-            const res = await fetch(
-              `/rest/v1/billing_history?user_id=eq.${user.id}&select=id,created_at&order=created_at.desc`,
-              {
-                headers: {
-                  apikey: (window as any).VITE_SUPABASE_ANON_KEY || "",
-                },
-              }
-            ).catch(() => null);
-            return res && res.ok ? res.json() : [];
-          };
-          let confirmed = false;
-          while (Date.now() - start < 20000) {
-            const rows = await poll();
-            if (Array.isArray(rows) && rows.length > 0) {
-              confirmed = true;
-              break;
-            }
-            await new Promise((r) => setTimeout(r, 2000));
-          }
-          if (!confirmed)
-            console.warn("Webhook confirmation not observed within window");
-        } catch {}
-
-        // 🔥 CRITICAL FIX: Add credit update logic for real payments
-        console.log("💳 Real payment completed - updating credits...");
-        try {
-          const { default: supabaseService } = await import(
-            "../../services/supabaseService"
-          );
-          console.log("✅ supabaseService imported for real payment");
-
-          // Wait for webhook to process and update credits with polling
-          console.log("⏳ Polling for webhook credit update...");
-          console.log("👤 Current user data for polling:", user);
-
-          // Small delay to allow webhook to start processing
-          await new Promise((resolve) => setTimeout(resolve, 500));
-
-          // Get the ORIGINAL credits before this payment (not potentially updated ones)
-          console.log("🔄 Fetching pre-payment auth status...");
-          const prePaymentAuthStatus = await supabaseService.getAuthStatus();
-          console.log("📊 Pre-payment auth status:", prePaymentAuthStatus);
-
-          if (!prePaymentAuthStatus.user) {
-            console.error("❌ No user found in auth status during polling");
-            throw new Error("User not found during credit polling");
-          }
-
-          const originalCredits = prePaymentAuthStatus.user?.credits || 0;
-          const expectedCredits = originalCredits + selectedPlan.credits;
-
-          console.log(
-            `💰 Payment math: original=${originalCredits} + purchased=${selectedPlan.credits} = expected=${expectedCredits}`
-          );
-
-          if (originalCredits === expectedCredits) {
-            console.log(
-              "⚡ Credits already match expected amount - webhook was very fast!"
-            );
-          } else {
-            let freshCredits = originalCredits;
-            let attempts = 0;
-            const maxAttempts = 10; // 10 seconds max
-
-            while (attempts < maxAttempts && freshCredits < expectedCredits) {
-              await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second
-
-              console.log(
-                `🔄 Polling attempt ${attempts + 1}/${maxAttempts}...`
-              );
-              try {
-                const freshAuthStatus = await supabaseService.getAuthStatus();
-                freshCredits = freshAuthStatus.user?.credits || 0;
-                console.log(
-                  `💳 Credits check: current=${freshCredits}, expected=${expectedCredits}`
-                );
-
-                if (freshCredits >= expectedCredits) {
-                  console.log("✅ Credits updated by webhook!");
-                  break;
-                }
-              } catch (pollError: any) {
-                console.error(
-                  `❌ Polling attempt ${attempts + 1} failed:`,
-                  pollError
-                );
-              }
-
-              attempts++;
-            }
-
-            if (attempts >= maxAttempts && freshCredits < expectedCredits) {
-              console.warn(
-                "⚠️ Webhook polling timed out, but continuing with current credits"
-              );
-            }
-          }
-
-          // Get final fresh credits for the event
-          const finalAuthStatus = await supabaseService.getAuthStatus();
-          const finalCredits = finalAuthStatus.user?.credits || originalCredits;
-
-          console.log(
-            "💳 Final fresh credits from real payment:",
-            finalCredits
-          );
-
-          // Dispatch event with fresh data
-          console.log(
-            "📡 Dispatching creditsUpdated event after real payment..."
-          );
-          window.dispatchEvent(
-            new CustomEvent("creditsUpdated", {
-              detail: {
-                newCredits: finalCredits,
-                oldCredits: originalCredits, // Use originalCredits here
-                creditsAdded: selectedPlan.credits,
-                verificationPassed: true,
-              },
-            })
-          );
-          console.log("✅ creditsUpdated event dispatched after real payment");
-        } catch (realPaymentError: any) {
-          console.error(
-            "❌ Real payment credit update failed:",
-            realPaymentError
-          );
-        }
-      } catch (fetchError) {
-        console.error("❌ Failed to create payment intent:", fetchError);
-
-        // Fallback: Use simulation method temporarily
-        console.log("🔄 Falling back to payment simulation...");
-
-        setTimeout(async () => {
-          console.log("🔄 Payment simulation starting...");
-          console.log("📊 Current user object:", user);
-          console.log("📊 Selected plan:", selectedPlan);
-
-          try {
-            const { default: supabaseService } = await import(
-              "../../services/supabaseService"
-            );
-            console.log("✅ supabaseService imported successfully");
-
-            const paymentDetails = {
-              sessionId: "simulation_" + Date.now(),
-              amount: selectedPlan.price,
-              description: `${selectedPlan.name} - ${selectedPlan.credits} Credits`,
-            };
-            console.log("💰 Payment details:", paymentDetails);
-
-            console.log("📞 Calling updateUserCredits...");
-            const result = await supabaseService.updateUserCredits(
-              user.id,
-              selectedPlan.credits,
-              paymentDetails
-            );
-            console.log("✅ updateUserCredits result:", result);
-
-            // Get fresh user data after payment
-            console.log("🔄 Fetching fresh auth status...");
-            const freshAuthStatus = await supabaseService.getAuthStatus();
-            console.log("📊 Fresh auth status:", freshAuthStatus);
-
-            const freshCredits =
-              freshAuthStatus.user?.credits || result.newCredits;
-            console.log("💳 Fresh credits calculated:", {
-              freshCredits,
-              fromAuthStatus: freshAuthStatus.user?.credits,
-              fromResult: result.newCredits,
-            });
-
-            console.log(
-              "🔄 Payment completed, dispatching creditsUpdated with fresh data:",
-              {
-                freshCredits,
-                resultCredits: result.newCredits,
-                userCredits: freshAuthStatus.user?.credits,
-              }
-            );
-
-            // Dispatch event with fresh data
-            console.log("📡 Dispatching creditsUpdated event...");
-            window.dispatchEvent(
-              new CustomEvent("creditsUpdated", {
-                detail: {
-                  newCredits: freshCredits,
-                  oldCredits: result.oldCredits,
-                  creditsAdded: result.creditsAdded,
-                  verificationPassed: result.verificationPassed,
-                },
-              })
-            );
-            console.log("✅ creditsUpdated event dispatched successfully");
-          } catch (creditError: any) {
-            console.error("❌ Credit update failed:", creditError);
-            console.error("❌ Error details:", {
-              name: creditError.name,
-              message: creditError.message,
-              stack: creditError.stack,
-            });
-          }
-
-          console.log("🔄 Calling onSuccess...");
-          onSuccess();
-          console.log("🔄 Setting processing to false...");
-          setIsProcessing(false);
-          sessionStorage.removeItem("linkzy_payment_processing");
-          console.log("✅ Payment simulation completed");
-        }, 2000);
-
-        return; // Exit early for simulation
+      // 3) Let webhook update credits, then sync them into UI
+      try {
+        await syncCreditsAfterPayment(selectedPlan.credits);
+      } catch (syncErr) {
+        console.error("Credit sync error:", syncErr);
+        // Not fatal: payment succeeded, UI just won't auto-refresh credits nicely
       }
 
       onSuccess();
-      setIsProcessing(false);
-      // Clear payment processing flag
-      sessionStorage.removeItem("linkzy_payment_processing");
     } catch (err: any) {
       console.error("Payment error:", err);
-      onError(err.message || "Payment processing failed. Please try again.");
+      onError(err?.message || "Payment processing failed. Please try again.");
+    } finally {
       setIsProcessing(false);
-      // Clear payment processing flag on error
       sessionStorage.removeItem("linkzy_payment_processing");
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Card */}
       <div className="bg-gray-800 rounded-lg p-4 border border-gray-600">
         <label className="block text-sm font-medium text-gray-300 mb-2">
           💳 Payment Information
@@ -452,7 +321,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         </div>
       </div>
 
-      {/* Discount Code Section */}
+      {/* Discount */}
       <div className="bg-gray-800 rounded-lg p-4 border border-gray-600">
         <label className="block text-sm font-medium text-gray-300 mb-2">
           🎟️ Discount Code (Optional)
@@ -472,14 +341,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             className="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-3 rounded-md transition-colors"
           >
             {checkingDiscount ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
             ) : (
               "Apply"
             )}
           </button>
         </div>
 
-        {/* Discount Status */}
         {discountApplied && (
           <div
             className={`mt-2 text-sm ${
@@ -519,7 +387,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       >
         {isProcessing ? (
           <>
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
             <span>Processing Payment...</span>
           </>
         ) : (
@@ -529,13 +397,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               <span>
                 Pay ${getDiscountedPrice().toFixed(2)}
                 <span className="line-through text-gray-400 ml-2">
-                  ${selectedPlan?.price}
+                  ${selectedPlan.price}
                 </span>
-                • Add {selectedPlan?.credits} Credits
+                • Add {selectedPlan.credits} Credits
               </span>
             ) : (
               <span>
-                Pay ${selectedPlan?.price} • Add {selectedPlan?.credits} Credits
+                Pay ${selectedPlan.price} • Add {selectedPlan.credits} Credits
               </span>
             )}
           </>
@@ -552,90 +420,41 @@ const PurchaseCreditsModal: React.FC<PurchaseCreditsModalProps> = ({
   currentPlan,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
-  const plans = [
-    {
-      id: "starter",
-      name: "Starter Pack",
-      credits: 3,
-      price: 10,
-      priceId: "price_1STSbkQSsW1OegvZRIJ114ra",
-      isSubscription: false,
-      description: "Perfect for testing – includes 3 high-quality backlinks",
-      features: [
-        "3 high-quality backlinks",
-        "One-time payment",
-        "No commitment",
-      ],
-      popular: false,
-    },
-    {
-      id: "growth",
-      name: "Growth Pack",
-      credits: 10,
-      price: 25,
-      priceId: "price_1STSc8QSsW1OegvZ8kCVghMC",
-      isSubscription: false,
-      description: "Great value – includes 10 backlinks with bulk savings",
-      features: [
-        "10 high-quality backlinks",
-        "Bulk discount",
-        "One-time payment",
-      ],
-      popular: true,
-    },
-    {
-      id: "pro",
-      name: "Pro Monthly",
-      credits: 30,
-      price: 49,
-      priceId: "price_1STScYQSsW1OegvZNlv8gg2d",
-      isSubscription: true,
-      description:
-        "For SEO professionals and agencies – 30 backlinks every month",
-      features: [
-        "30 backlinks monthly",
-        "Priority support",
-        "Advanced analytics",
-        "Cancel anytime",
-      ],
-      popular: false,
-    },
-  ];
+  const selectedPlan = selectedPlanId
+    ? PLANS.find((p) => p.id === selectedPlanId) || null
+    : null;
 
   const handlePaymentSuccess = () => {
     setPaymentSuccess(true);
     setShowPaymentForm(false);
-    // In a real app, you'd refresh user credits here
     setTimeout(() => {
       onClose();
-      // Reset states when closing
       setPaymentSuccess(false);
-      setSelectedPlan(null);
+      setSelectedPlanId(null);
       setShowPaymentForm(false);
       setError(null);
     }, 2000);
   };
 
-  const handlePaymentError = (errorMessage: string) => {
-    setError(errorMessage);
+  const handlePaymentError = (msg: string) => {
+    setError(msg);
   };
 
   const handlePlanSelect = (planId: string) => {
-    setSelectedPlan(planId);
+    setSelectedPlanId(planId);
     setError(null);
   };
 
   const handleProceedToPayment = () => {
-    if (!selectedPlan) {
+    if (!selectedPlanId) {
       setError("Please select a plan to continue.");
       return;
     }
-
     setError(null);
     setShowPaymentForm(true);
   };
@@ -681,14 +500,14 @@ const PurchaseCreditsModal: React.FC<PurchaseCreditsModalProps> = ({
           </div>
         </div>
 
-        {/* Plans Grid */}
+        {/* Plan Grid */}
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {plans.map((plan) => (
+            {PLANS.map((plan) => (
               <div
                 key={plan.id}
                 className={`relative border rounded-xl p-6 cursor-pointer transition-all duration-200 ${
-                  selectedPlan === plan.id
+                  selectedPlanId === plan.id
                     ? "border-orange-500 bg-orange-500/10"
                     : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
                 }`}
@@ -725,9 +544,9 @@ const PurchaseCreditsModal: React.FC<PurchaseCreditsModalProps> = ({
                   </p>
 
                   <ul className="text-left space-y-2 mb-4">
-                    {plan.features.map((feature, index) => (
+                    {plan.features.map((feature) => (
                       <li
-                        key={index}
+                        key={feature}
                         className="flex items-center text-sm text-gray-300"
                       >
                         <CheckCircle className="w-4 h-4 text-green-400 mr-2 flex-shrink-0" />
@@ -737,7 +556,7 @@ const PurchaseCreditsModal: React.FC<PurchaseCreditsModalProps> = ({
                   </ul>
                 </div>
 
-                {selectedPlan === plan.id && (
+                {selectedPlanId === plan.id && (
                   <div className="absolute top-4 right-4">
                     <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center">
                       <CheckCircle className="w-4 h-4 text-white" />
@@ -749,7 +568,7 @@ const PurchaseCreditsModal: React.FC<PurchaseCreditsModalProps> = ({
           </div>
         </div>
 
-        {/* Error Message */}
+        {/* Error */}
         {error && (
           <div className="px-6 pb-4">
             <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
@@ -788,11 +607,9 @@ const PurchaseCreditsModal: React.FC<PurchaseCreditsModalProps> = ({
               </h3>
               <div className="bg-gray-800/50 rounded-lg p-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-300">
-                    {plans.find((p) => p.id === selectedPlan)?.name}
-                  </span>
+                  <span className="text-gray-300">{selectedPlan.name}</span>
                   <span className="text-white font-semibold">
-                    ${plans.find((p) => p.id === selectedPlan)?.price}
+                    ${selectedPlan.price}
                   </span>
                 </div>
               </div>
@@ -800,7 +617,7 @@ const PurchaseCreditsModal: React.FC<PurchaseCreditsModalProps> = ({
 
             <Elements stripe={stripePromise}>
               <PaymentForm
-                selectedPlan={plans.find((p) => p.id === selectedPlan)}
+                selectedPlan={selectedPlan}
                 onSuccess={handlePaymentSuccess}
                 onError={handlePaymentError}
                 isProcessing={isProcessing}
@@ -830,7 +647,7 @@ const PurchaseCreditsModal: React.FC<PurchaseCreditsModalProps> = ({
             </button>
             <button
               onClick={handleProceedToPayment}
-              disabled={!selectedPlan || isProcessing}
+              disabled={!selectedPlanId || isProcessing}
               className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2"
             >
               <CreditCard className="w-4 h-4" />
