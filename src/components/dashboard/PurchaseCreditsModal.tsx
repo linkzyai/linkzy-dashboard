@@ -178,12 +178,17 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             // headers: { 'X-Admin-Key': import.meta.env.VITE_ADMIN_API_KEY }
           });
 
-        if (intentErr)
+        if (intentErr) {
+          console.log("Error");
           throw new Error(
             intentErr.message || "Failed to create payment intent"
           );
+        }
+
+        console.log("intent", intent)
 
         const client_secret = intent.client_secret;
+        console.log("TEST", client_secret, paymentMethod);
         const { error: confirmError } = await stripe!.confirmCardPayment(
           client_secret,
           {
