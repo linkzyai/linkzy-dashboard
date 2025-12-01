@@ -18,11 +18,13 @@ import { useAuth } from "../contexts/AuthContext";
 interface SignInModalProps {
   isOpen: boolean;
   setIsModalOpen: (isOpen: boolean) => void;
+  onSwitchToRegistration?: () => void;
 }
 
 const SignInModal: React.FC<SignInModalProps> = ({
   isOpen,
   setIsModalOpen,
+  onSwitchToRegistration,
 }) => {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -109,8 +111,7 @@ const SignInModal: React.FC<SignInModalProps> = ({
     setFieldsValidated(true);
     if (!email || !password) {
       setError(
-        `Please enter ${!email ? "email" : ""}${
-          !email && !password ? " and " : ""
+        `Please enter ${!email ? "email" : ""}${!email && !password ? " and " : ""
         }${!password ? "password" : ""}`
       );
       return;
@@ -403,13 +404,12 @@ const SignInModal: React.FC<SignInModalProps> = ({
                       setError("Email is required");
                     }
                   }}
-                  className={`w-full bg-gray-800 border ${
-                    fieldsValidated && !email
-                      ? "border-red-500 focus:border-red-500"
-                      : formFocused === "email"
+                  className={`w-full bg-gray-800 border ${fieldsValidated && !email
+                    ? "border-red-500 focus:border-red-500"
+                    : formFocused === "email"
                       ? "border-orange-500"
                       : "border-gray-600"
-                  } rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors`}
+                    } rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors`}
                   placeholder="your@email.com"
                   required
                 />
@@ -495,6 +495,26 @@ const SignInModal: React.FC<SignInModalProps> = ({
                 </>
               )}
             </button>
+
+            {/* Sign Up Link */}
+            <div className="mt-4 text-center">
+              <p className="text-gray-400 text-sm">
+                Don't have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onSwitchToRegistration) {
+                      onSwitchToRegistration();
+                    } else {
+                      setIsModalOpen(false);
+                    }
+                  }}
+                  className="text-orange-400 hover:text-orange-300 font-medium"
+                >
+                  Sign up
+                </button>
+              </p>
+            </div>
           </form>
         ) : showResendConfirmation ? (
           // Resend Confirmation
@@ -517,13 +537,12 @@ const SignInModal: React.FC<SignInModalProps> = ({
                   autoComplete="email"
                   onFocus={() => setFormFocused("resetEmail")}
                   onBlur={() => setFormFocused(null)}
-                  className={`w-full bg-gray-800 border ${
-                    fieldsValidated && !resetEmail
-                      ? "border-red-500"
-                      : formFocused === "resetEmail"
+                  className={`w-full bg-gray-800 border ${fieldsValidated && !resetEmail
+                    ? "border-red-500"
+                    : formFocused === "resetEmail"
                       ? "border-orange-500"
                       : "border-gray-600"
-                  } rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors`}
+                    } rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors`}
                   placeholder="your@email.com"
                   required
                 />
@@ -596,13 +615,12 @@ const SignInModal: React.FC<SignInModalProps> = ({
                   autoComplete="email"
                   onFocus={() => setFormFocused("resetEmail")}
                   onBlur={() => setFormFocused(null)}
-                  className={`w-full bg-gray-800 border ${
-                    fieldsValidated && !resetEmail
-                      ? "border-red-500"
-                      : formFocused === "resetEmail"
+                  className={`w-full bg-gray-800 border ${fieldsValidated && !resetEmail
+                    ? "border-red-500"
+                    : formFocused === "resetEmail"
                       ? "border-orange-500"
                       : "border-gray-600"
-                  } rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors`}
+                    } rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors`}
                   placeholder="your@email.com"
                   required
                 />

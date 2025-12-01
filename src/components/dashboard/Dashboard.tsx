@@ -558,7 +558,7 @@ const Dashboard = () => {
           )}
 
           {/* Performance Metrics teaser for new users */}
-          {!hasBacklinks && (
+          {/* {!hasBacklinks && (
             <div className="bg-gray-900/50 border border-gray-700 rounded-xl p-6 mb-8">
               <div className="flex items-center space-x-3 mb-4">
                 <BarChart3 className="w-5 h-5 text-orange-500" />
@@ -584,10 +584,10 @@ const Dashboard = () => {
                 />
               </div>
             </div>
-          )}
+          )} */}
 
           {/* Stats Grid */}
-          <div className={`grid grid-cols-1 md:grid-cols-${stats.length} gap-6 mb-8`}>
+          {/* <div className={`grid grid-cols-1 md:grid-cols-${stats.length} gap-6 mb-8`}>
             {stats.map((stat) => (
               <div
                 key={stat.name}
@@ -610,7 +610,7 @@ const Dashboard = () => {
                 <p className="text-sm text-gray-500">{stat.change}</p>
               </div>
             ))}
-          </div>
+          </div> */}
 
           {/* Bottom Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">

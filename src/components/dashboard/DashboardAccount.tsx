@@ -445,7 +445,7 @@ const DashboardAccount = () => {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ' + anonKey
         },
-        body: JSON.stringify({ apiKey: lz.apiKey })
+        body: JSON.stringify({ apiKey: lz.apiKey, url: window.location.href })
       })
       .then(res => res.json())
       .then(data => {
