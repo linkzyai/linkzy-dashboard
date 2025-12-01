@@ -12,8 +12,8 @@ import OnboardingModal from '../OnboardingModal';
 import CelebrationModal from '../CelebrationModal';
 import ContextualHelp from '../ContextualHelp';
 import ProfileCompletionModal from '../ProfileCompletionModal';
-import { 
-  Link as LinkIcon, 
+import {
+  Link as LinkIcon,
   ArrowRight,
   Calendar,
   DollarSign,
@@ -26,7 +26,6 @@ import {
   Zap,
   CheckCheck
 } from 'lucide-react';
-// @ts-expect-error: No type declarations for supabase.js
 import { supabase } from '../../lib/supabase';
 import supabaseService from '../../services/supabaseService';
 
@@ -58,6 +57,22 @@ export type DashboardDataType = {
   performanceData: PerformanceData;
 };
 
+// Plan/credit constants – keep these in sync with your webhook mapping
+const FREE_CREDITS = 3;
+const STARTER_CREDITS = 5;
+const PRO_CREDITS = 15;
+
+// Helper to format join date from user.created_at
+const formatJoinDate = (iso?: string | null) => {
+  if (!iso) return 'Member';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return 'Member';
+  return d.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+  });
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -65,14 +80,16 @@ const Dashboard = () => {
   const [showProfileOnboarding, setShowProfileOnboarding] = useState(false);
   const [showProfileCompletion, setShowProfileCompletion] = useState(false);
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
-  const [celebrationType, setCelebrationType] = useState<'first-request' | 'first-backlink' | 'completed-onboarding'>('completed-onboarding');
+  const [celebrationType, setCelebrationType] = useState<
+    'first-request' | 'first-backlink' | 'completed-onboarding'
+  >('completed-onboarding');
   const [currentStep, setCurrentStep] = useState(0);
   const { data: dashboardData, loading, error, refetch } = useDashboardStats();
   const [currentCredits, setCurrentCredits] = useState(user?.credits || 0);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   // Admin tools removed for launch
 
-  // Listen for credit updates
+  // Listen for credit updates from other pages (Stripe success page, account page, etc.)
   useEffect(() => {
     const handleCreditsUpdate = async (event: Event) => {
       console.log('🎯 Dashboard received creditsUpdated event!');
@@ -80,7 +97,7 @@ const Dashboard = () => {
       console.log('📊 Event detail:', customEvent.detail);
       const { newCredits } = customEvent.detail || {};
       console.log('💳 Extracted newCredits:', newCredits);
-      
+
       if (newCredits !== undefined) {
         console.log('✅ Setting credits from event:', newCredits);
         setCurrentCredits(newCredits);
@@ -103,14 +120,14 @@ const Dashboard = () => {
 
     console.log('🔗 Dashboard registering creditsUpdated event listener');
     window.addEventListener('creditsUpdated', handleCreditsUpdate);
-    
+
     return () => {
       console.log('🔗 Dashboard removing creditsUpdated event listener');
       window.removeEventListener('creditsUpdated', handleCreditsUpdate);
     };
   }, []);
 
-  // Update credits when user changes
+  // Keep local credits in sync when user object changes
   useEffect(() => {
     setCurrentCredits(user?.credits || 0);
   }, [user?.credits]);
@@ -124,7 +141,7 @@ const Dashboard = () => {
           console.warn('⚠️ Dashboard loading timeout - showing fallback');
         }
       }, 15000); // 15 second timeout
-      
+
       return () => clearTimeout(timeout);
     }
   }, [loading]);
@@ -145,37 +162,35 @@ const Dashboard = () => {
     const loadDashboard = async () => {
       // If we already have data or are still loading normally, don't interfere
       if (dashboardData || loading) return;
-      
+
       // If there's an error loading dashboard data, check auth state
       if (error) {
-        
-                  try {
-            // Try Supabase auth first
-            const { data: session } = await supabase.auth.getSession();
-            if (session?.user) return;
-            
-            // Fallback to localStorage
-            const localUser = localStorage.getItem('linkzy_user');
-            const localApiKey = localStorage.getItem('linkzy_api_key');
-            
-            if (localUser && localApiKey) {
-              // We have auth data, the error might be temporary - let normal retry handle it
-              return;
-            }
-            
-            // If nothing works, redirect to login instead of showing error
-            navigate('/');
-            
-          } catch (authError) {
-            // Don't show timeout modal, just redirect to login
-            navigate('/');
+        try {
+          // Try Supabase auth first
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) return;
+
+          // Fallback to localStorage
+          const localUser = localStorage.getItem('linkzy_user');
+          const localApiKey = localStorage.getItem('linkzy_api_key');
+
+          if (localUser && localApiKey) {
+            // We have auth data, the error might be temporary - let normal retry handle it
+            return;
           }
+
+          // If nothing works, redirect to login instead of showing error
+          navigate('/');
+        } catch (authError) {
+          // Don't show timeout modal, just redirect to login
+          navigate('/');
+        }
       }
     };
 
     // Run the fallback check after a brief delay to let normal loading complete
     const fallbackTimer = setTimeout(loadDashboard, 2000);
-    
+
     return () => clearTimeout(fallbackTimer);
   }, [error, navigate]); // Removed dashboardData and loading to prevent infinite loops
 
@@ -197,12 +212,25 @@ const Dashboard = () => {
   useEffect(() => {
     // Check if user is new (has 0 backlinks) and show onboarding modal
     if (!loading && !error && dashboardData) {
-      const hasNoBacklinks = ((dashboardData as DashboardDataType)?.totalBacklinks || 0) === 0;
-      const initialFreeCredits = 3;
-      const isFreePlan = !user?.plan || user?.plan === 'free';
-      const hasOnlyFreeCredits = (user?.credits ?? 0) <= initialFreeCredits;
-      const shouldShowOnboarding = hasNoBacklinks && isFreePlan && hasOnlyFreeCredits && !localStorage.getItem('linkzy_onboarding_shown');
-      
+      const hasNoBacklinks =
+        ((dashboardData as DashboardDataType)?.totalBacklinks || 0) === 0;
+
+      const userPlan = user?.plan || 'free';
+      const initialFreeCredits = FREE_CREDITS;
+      const isFreePlan = userPlan === 'free';
+
+      // Use live credits (currentCredits) for this logic
+      const currentOrUserCredits =
+        currentCredits ?? user?.credits ?? 0;
+      const hasOnlyFreeCredits =
+        currentOrUserCredits <= initialFreeCredits;
+
+      const shouldShowOnboarding =
+        hasNoBacklinks &&
+        isFreePlan &&
+        hasOnlyFreeCredits &&
+        !localStorage.getItem('linkzy_onboarding_shown');
+
       if (shouldShowOnboarding) {
         // Show onboarding modal after a short delay
         setTimeout(() => {
@@ -210,44 +238,54 @@ const Dashboard = () => {
           localStorage.setItem('linkzy_onboarding_shown', 'true');
         }, 1500);
       }
-      
+
       // Check if user needs to complete their profile
-      const needsProfileCompletion = user && (
-        !user.website || 
-        user.website === 'yourdomain.com' || 
-        user.website === 'https://example.com' ||
-        !user.niche || 
-        user.niche === 'technology' ||
-        user.niche === 'Technology'
-      );
-      
+      const needsProfileCompletion =
+        user &&
+        (
+          !user.website ||
+          user.website === 'yourdomain.com' ||
+          user.website === 'https://example.com' ||
+          !user.niche ||
+          user.niche === 'technology' ||
+          user.niche === 'Technology'
+        );
+
       const hasSeenProfileCompletion = localStorage.getItem('linkzy_profile_completion_seen');
       const hasSeenProfileOnboarding = localStorage.getItem('linkzy_profile_onboarding_seen');
-      
+
       // Debug logging
       console.log('🔍 Profile completion check:', {
         needsProfileCompletion,
         hasSeenProfileCompletion,
+        hasSeenProfileOnboarding,
         showOnboardingModal,
         showProfileCompletion,
         showProfileOnboarding,
         userWebsite: user?.website,
         userNiche: user?.niche
       });
-      
+
       // Only show ONE profile completion modal - prioritize the newer ProfileCompletionModal
-      if (needsProfileCompletion && !hasSeenProfileCompletion && !showOnboardingModal && !showProfileCompletion && !showProfileOnboarding) {
+      if (
+        needsProfileCompletion &&
+        !hasSeenProfileCompletion &&
+        !showOnboardingModal &&
+        !showProfileCompletion &&
+        !showProfileOnboarding
+      ) {
         console.log('🔄 Showing ProfileCompletionModal for user:', user);
         setTimeout(() => {
           setShowProfileCompletion(true);
           // Don't set completion flag here - wait for actual completion
         }, shouldShowOnboarding ? 3000 : 1000);
       }
-      
+
       // Check if user just got their first backlink
-      const justReceivedFirstBacklink = localStorage.getItem('linkzy_had_no_backlinks') === 'true' 
-                                       && ((dashboardData as DashboardDataType)?.totalBacklinks || 0) > 0;
-                                       
+      const justReceivedFirstBacklink =
+        localStorage.getItem('linkzy_had_no_backlinks') === 'true' &&
+        ((dashboardData as DashboardDataType)?.totalBacklinks || 0) > 0;
+
       if (justReceivedFirstBacklink) {
         // Show celebration modal
         localStorage.removeItem('linkzy_had_no_backlinks');
@@ -257,9 +295,7 @@ const Dashboard = () => {
         localStorage.setItem('linkzy_had_no_backlinks', 'true');
       }
     }
-  }, [dashboardData, user, showOnboardingModal, showProfileCompletion]); // Only depend on stable values
-
-
+  }, [dashboardData, user, showOnboardingModal, showProfileCompletion, currentCredits, loading, error]);
 
   if (loading) {
     return (
@@ -282,14 +318,27 @@ const Dashboard = () => {
   }
 
   // Use real data or fallback to defaults
-  const hasBacklinks = ((dashboardData as DashboardDataType)?.totalBacklinks || 0) > 0;
-  const effectiveCredits = (() => {
-    const plan = user?.plan || 'free';
-    const credits = currentCredits ?? 0;
-    return (plan === 'free' && credits < 3) ? 3 : credits;
+  const hasBacklinks =
+    ((dashboardData as DashboardDataType)?.totalBacklinks || 0) > 0;
+
+  // Use live credits from state, with safe fallback
+  const effectiveCredits =
+    currentCredits ?? user?.credits ?? 0;
+
+  // Plan label for the badge
+  const userPlan = user?.plan || 'free';
+  const planLabel = (() => {
+    switch (userPlan) {
+      case 'starter':
+        return `Starter plan • ${STARTER_CREDITS} credits/mo`;
+      case 'pro':
+        return `Pro plan • ${PRO_CREDITS} credits/mo`;
+      default:
+        return 'Free plan';
+    }
   })();
-  
-  // Define onboarding steps
+
+  // Onboarding steps
   const onboardingSteps = [
     {
       label: 'Integrate your website',
@@ -307,97 +356,118 @@ const Dashboard = () => {
       description: 'Analyze your SEO improvements',
     },
   ];
-  
-  // Only show total backlinks and success rate if user has backlinks
+
+  // Stats: only show backlink metrics if user has backlinks
   const stats = [
-    ...(hasBacklinks ? [{ 
-      name: 'Total Backlinks', 
-      value: String((dashboardData as DashboardDataType)?.totalBacklinks ?? 0), 
-      change: '+6% from last month', 
-      changeType: 'increase', 
-      icon: LinkIcon,
-      color: 'text-white'
-    }, { 
-      name: 'Success Rate', 
-      value: `${((dashboardData as DashboardDataType)?.successRate || 0).toString()}%`, 
-      change: '+2% from last month', 
-      changeType: 'increase', 
-      icon: TrendingUp,
-      color: 'text-white'
-    }] : []),
-    { 
-      name: 'Credits Remaining', 
-      value: effectiveCredits.toString() || '0', 
-      change: 'Available for use', 
-      changeType: 'neutral', 
+    ...(hasBacklinks
+      ? [
+        {
+          name: 'Total Backlinks',
+          value: String((dashboardData as DashboardDataType)?.totalBacklinks ?? 0),
+          change: '+6% from last month',
+          changeType: 'increase',
+          icon: LinkIcon,
+          color: 'text-white',
+        },
+        {
+          name: 'Success Rate',
+          value: `${((dashboardData as DashboardDataType)?.successRate || 0).toString()}%`,
+          change: '+2% from last month',
+          changeType: 'increase',
+          icon: TrendingUp,
+          color: 'text-white',
+        },
+      ]
+      : []),
+    {
+      name: 'Credits Remaining',
+      value: effectiveCredits.toString(),
+      change: 'Available for use',
+      changeType: 'neutral',
       icon: Zap,
-      color: 'text-white'
+      color: 'text-white',
     },
-    { 
-      name: 'Monthly Spend', 
-      value: `$${((dashboardData as DashboardDataType)?.monthlySpend || 0).toString()}`, 
-      change: 'Current period', 
-      changeType: 'neutral', 
+    {
+      name: 'Monthly Spend',
+      value: `$${((dashboardData as DashboardDataType)?.monthlySpend || 0).toString()}`,
+      change: 'Current period',
+      changeType: 'neutral',
       icon: DollarSign,
-      color: 'text-white'
+      color: 'text-white',
     },
   ];
 
-  const recentBacklinks = ((dashboardData as DashboardDataType)?.recentBacklinks || []) as Backlink[];
-  const performanceData = ((dashboardData as DashboardDataType)?.performanceData || {
-    successful: 85,
-    pending: 10,
-    failed: 5
-  }) as PerformanceData;
-  
-  // Create userData from user object
+  const recentBacklinks =
+    ((dashboardData as DashboardDataType)?.recentBacklinks || []) as Backlink[];
+
+  const performanceData =
+    ((dashboardData as DashboardDataType)?.performanceData || {
+      successful: 85,
+      pending: 10,
+      failed: 5,
+    }) as PerformanceData;
+
+  // Build userData object used in a few places
   const userData = {
     email: user?.email || 'user@example.com',
     website: user?.website || 'https://example.com',
     niche: user?.niche || 'Technology',
     apiKey: user?.api_key || 'linkzy_user_example_com_1234567890',
-    credits: user?.credits || 3,
-    isPro: user?.plan && user.plan !== 'free',
-    joinDate: 'December 2024'
+    credits: effectiveCredits || FREE_CREDITS,
+    isPro: userPlan !== 'free',
+    joinDate: formatJoinDate((user as any)?.created_at),
   };
 
   return (
     <>
       <DashboardLayout title="Overview">
         <div className="p-6">
-          {/* Welcome Section with guidance for new users */}
+          {/* Welcome Section */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-              {hasBacklinks ? "Welcome back!" : "Welcome to Linkzy"}
-              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${userData.isPro ? 'bg-green-900/30 text-green-300 border-green-500/30' : 'bg-gray-800 text-gray-300 border-gray-600'}`}>
-                {userData.isPro ? 'Pro plan • 30 credits/mo' : 'Free plan'}
+              {hasBacklinks ? 'Welcome back!' : 'Welcome to Linkzy'}
+              <span
+                className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${userData.isPro
+                  ? 'bg-green-900/30 text-green-300 border-green-500/30'
+                  : 'bg-gray-800 text-gray-300 border-gray-600'
+                  }`}
+              >
+                {planLabel}
               </span>
               {!hasBacklinks && (
                 <ContextualHelp
                   title="Getting Started"
                   content={
                     <div className="space-y-2">
-                      <p>Welcome to Linkzy! We're excited to help boost your website's SEO with quality backlinks.</p>
-                      <p>You have 3 free credits to start with. Each credit gets you one high-quality backlink.</p>
+                      <p>
+                        Welcome to Linkzy! We&apos;re excited to help boost your
+                        website&apos;s SEO with quality backlinks.
+                      </p>
+                      <p>
+                        You start with {FREE_CREDITS} free credits. Each credit
+                        gets you one high-quality backlink.
+                      </p>
                       <p>Follow the onboarding guide to get started quickly!</p>
                     </div>
                   }
                   highlight={true}
                   position="right"
-                  icon={<HelpCircle className="w-5 h-5 ml-2 text-orange-400 animate-pulse" />}
+                  icon={
+                    <HelpCircle className="w-5 h-5 ml-2 text-orange-400 animate-pulse" />
+                  }
                 />
               )}
             </h1>
             <div className="flex items-center justify-between">
               <p className="text-gray-400">
-                {hasBacklinks 
-                  ? "Here's what's happening with your backlinks today." 
+                {hasBacklinks
+                  ? "Here's what's happening with your backlinks today."
                   : "Let's get your first backlinks. Click 'Integrate Website' to start."}
               </p>
             </div>
           </div>
 
-          {/* Simplified Action Buttons: Larger and More Prominent */}
+          {/* Simplified Action Buttons (placeholder for future) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 relative px-1">
             {!hasBacklinks && (
               <div className="absolute -top-6 left-1/4 transform -translate-x-1/2 bg-orange-500 text-white px-4 py-1.5 rounded-full text-sm font-bold flex items-center animate-bounce">
@@ -408,17 +478,17 @@ const Dashboard = () => {
             {hasBacklinks && (
               <button className="bg-gray-800 hover:bg-gray-700 text-white p-6 md:p-5 rounded-xl transition-colors flex items-center justify-center space-x-3 border border-gray-600 min-h-[60px]">
                 <ArrowRight className="w-6 h-6 text-gray-300" />
-                <span className="text-base md:text-lg font-semibold">View Results</span>
+                <span className="text-base md:text-lg font-semibold">
+                  View Results
+                </span>
               </button>
             )}
           </div>
 
-          {/* Admin tools removed */}
-
-          {/* Onboarding Progress Tracker - Show only for new users */}
+          {/* Onboarding Progress Tracker */}
           {!hasBacklinks && (
             <div className="mb-8">
-              <OnboardingTracker 
+              <OnboardingTracker
                 steps={onboardingSteps}
                 currentStepIndex={currentStep}
                 onStepClick={setCurrentStep}
@@ -426,7 +496,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Track Progress Section */}
+          {/* Track Progress Section (for new users) */}
           {!hasBacklinks && (
             <div className="mb-8">
               <div className="bg-gray-900 border border-gray-700 rounded-xl p-6">
@@ -437,24 +507,36 @@ const Dashboard = () => {
                 <div className="space-y-4">
                   {recentBacklinks.length > 0 ? (
                     recentBacklinks.map((link: any, index: number) => (
-                      <div key={link.id || index} className="flex items-center justify-between p-4 bg-gray-800 rounded-lg hover:bg-gray-750 transition-colors">
+                      <div
+                        key={link.id || index}
+                        className="flex items-center justify-between p-4 bg-gray-800 rounded-lg hover:bg-gray-750 transition-colors"
+                      >
                         <div className="flex-1">
                           <div className="flex items-center space-x-3 mb-2">
-                            <p className="text-white font-medium truncate max-w-[150px] md:max-w-none">{link.domain || link.url}</p>
-                            <span className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                              link.status === 'success' || link.status === 'placed'
-                                ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                            <p className="text-white font-medium truncate max-w-[150px] md:max-w-none">
+                              {link.domain || link.url}
+                            </p>
+                            <span
+                              className={`px-3 py-1.5 rounded-full text-xs font-medium ${link.status === 'success' || link.status === 'placed'
+                                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                                 : link.status === 'pending'
-                                ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                                : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                            }`}>
+                                  ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                                  : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                                }`}
+                            >
                               {(link.status || 'pending').toUpperCase()}
                             </span>
                           </div>
-                          <p className="text-gray-400 text-sm">"{link.anchorText || link.anchor}"</p>
+                          <p className="text-gray-400 text-sm">
+                            &quot;{link.anchorText || link.anchor}&quot;
+                          </p>
                           <div className="flex flex-wrap items-center space-x-2 md:space-x-4 mt-2 text-xs">
-                            <span className="text-gray-500">{link.clicks || 0} clicks</span>
-                            <span className="text-gray-500">Traffic: {link.trafficIncrease || '+0%'}</span>
+                            <span className="text-gray-500">
+                              {link.clicks || 0} clicks
+                            </span>
+                            <span className="text-gray-500">
+                              Traffic: {link.trafficIncrease || '+0%'}
+                            </span>
                           </div>
                         </div>
                         <button className="text-gray-400 hover:text-white transition-colors">
@@ -464,7 +546,10 @@ const Dashboard = () => {
                     ))
                   ) : (
                     <div className="text-center py-8 px-4 bg-gray-800/50 rounded-xl border border-gray-700">
-                      <p className="text-gray-300">No integrations yet. Integrate your website to start tracking progress!</p>
+                      <p className="text-gray-300">
+                        No integrations yet. Integrate your website to start tracking
+                        progress!
+                      </p>
                     </div>
                   )}
                 </div>
@@ -472,16 +557,18 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Metrics with Conditional Display for New Users */}
+          {/* Performance Metrics teaser for new users */}
           {!hasBacklinks && (
             <div className="bg-gray-900/50 border border-gray-700 rounded-xl p-6 mb-8">
               <div className="flex items-center space-x-3 mb-4">
                 <BarChart3 className="w-5 h-5 text-orange-500" />
-                <h3 className="text-xl font-bold text-white">Performance Metrics</h3>
+                <h3 className="text-xl font-bold text-white">
+                  Performance Metrics
+                </h3>
               </div>
               <div className="text-gray-300 flex items-center space-x-2 justify-center">
                 <span>Integrate your website to see performance metrics</span>
-                <ContextualHelp 
+                <ContextualHelp
                   title="Performance Metrics"
                   content={
                     <div className="space-y-2">
@@ -502,17 +589,24 @@ const Dashboard = () => {
           {/* Stats Grid */}
           <div className={`grid grid-cols-1 md:grid-cols-${stats.length} gap-6 mb-8`}>
             {stats.map((stat) => (
-              <div key={stat.name} className="bg-gray-900 border border-gray-700 rounded-xl p-6 hover:border-orange-500/50 transition-colors">
+              <div
+                key={stat.name}
+                className="bg-gray-900 border border-gray-700 rounded-xl p-6 hover:border-orange-500/50 transition-colors"
+              >
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <stat.icon className="w-5 h-5 text-gray-400" />
-                    <p className="text-sm font-medium text-gray-400">{stat.name}</p>
+                    <p className="text-sm font-medium text-gray-400">
+                      {stat.name}
+                    </p>
                   </div>
                   {stat.changeType === 'increase' && (
                     <TrendingUp className="w-4 h-4 text-green-400" />
                   )}
                 </div>
-                <p className={`text-3xl font-bold mb-2 ${stat.color}`}>{stat.value}</p>
+                <p className={`text-3xl font-bold mb-2 ${stat.color}`}>
+                  {stat.value}
+                </p>
                 <p className="text-sm text-gray-500">{stat.change}</p>
               </div>
             ))}
@@ -524,28 +618,38 @@ const Dashboard = () => {
             <div className="bg-gray-900 border border-gray-700 rounded-xl p-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-xl font-bold text-white mb-2">Recent Backlinks</h2>
-                  <p className="text-gray-400 text-sm">Your latest backlink placements</p>
+                  <h2 className="text-xl font-bold text-white mb-2">
+                    Recent Backlinks
+                  </h2>
+                  <p className="text-gray-400 text-sm">
+                    Your latest backlink placements
+                  </p>
                 </div>
                 <button className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors border border-gray-600">
                   <Calendar className="w-4 h-4" />
                 </button>
               </div>
-              
+
               <div className="space-y-4">
                 {hasBacklinks ? (
                   recentBacklinks.map((link: any, index: number) => (
-                    <div key={link.id || index} className="flex items-center justify-between p-4 bg-gray-800 rounded-lg hover:bg-gray-750 transition-colors">
+                    <div
+                      key={link.id || index}
+                      className="flex items-center justify-between p-4 bg-gray-800 rounded-lg hover:bg-gray-750 transition-colors"
+                    >
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">
-                          <p className="text-white font-medium truncate max-w-[150px] md:max-w-none">{link.domain || link.url}</p>
-                          <span className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                            link.status === 'success' || link.status === 'placed'
-                              ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                          <p className="text-white font-medium truncate max-w-[150px] md:max-w-none">
+                            {link.domain || link.url}
+                          </p>
+                          <span
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium ${link.status === 'success' || link.status === 'placed'
+                              ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                               : link.status === 'pending'
-                              ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                              : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                          }`}>
+                                ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                                : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                              }`}
+                          >
                             {(link.status || 'pending').toUpperCase()}
                           </span>
                           {link.domainAuthority && (
@@ -554,10 +658,16 @@ const Dashboard = () => {
                             </span>
                           )}
                         </div>
-                        <p className="text-gray-400 text-sm">"{link.anchorText || link.anchor}"</p>
+                        <p className="text-gray-400 text-sm">
+                          &quot;{link.anchorText || link.anchor}&quot;
+                        </p>
                         <div className="flex flex-wrap items-center space-x-2 md:space-x-4 mt-2 text-xs">
-                          <span className="text-gray-500">{link.clicks || 0} clicks</span>
-                          <span className="text-gray-500">Traffic: {link.trafficIncrease || '+0%'}</span>
+                          <span className="text-gray-500">
+                            {link.clicks || 0} clicks
+                          </span>
+                          <span className="text-gray-500">
+                            Traffic: {link.trafficIncrease || '+0%'}
+                          </span>
                         </div>
                       </div>
                       <button className="text-gray-400 hover:text-white transition-colors">
@@ -568,29 +678,43 @@ const Dashboard = () => {
                 ) : (
                   <div className="text-center py-8 px-4 bg-gray-800/50 rounded-xl border border-gray-700">
                     <div className="flex items-center justify-center mb-2">
-                      <h3 className="text-lg md:text-xl font-bold text-white mr-2">Ready to boost your SEO?</h3>
+                      <h3 className="text-lg md:text-xl font-bold text-white mr-2">
+                        Ready to boost your SEO?
+                      </h3>
                       <ContextualHelp
                         title="How Backlinks Work"
                         content={
                           <div className="space-y-2">
-                            <p>Backlinks are links from other websites to yours. They're one of the most important factors for SEO rankings.</p>
-                            <p>With Linkzy, we place your backlinks on high-quality, relevant websites in your niche. This helps search engines see your site as more authoritative.</p>
+                            <p>
+                              Backlinks are links from other websites to yours.
+                              They&apos;re one of the most important factors for
+                              SEO rankings.
+                            </p>
+                            <p>
+                              With Linkzy, we place your backlinks on
+                              high-quality, relevant websites in your niche. This
+                              helps search engines see your site as more
+                              authoritative.
+                            </p>
                           </div>
                         }
                       />
                     </div>
                     <p className="text-gray-300 mb-6">
-                      Your first {user?.credits || 3} backlinks are free! Get high-quality backlinks from real niche blogs.
+                      Your first {FREE_CREDITS} backlinks are free! Get
+                      high-quality backlinks from real niche blogs.
                     </p>
-                    
-                    <button 
+
+                    <button
                       className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-4 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center space-x-2 mx-auto mb-6 shadow-lg shadow-orange-500/20 animate-pulse min-h-[56px] w-full md:w-auto"
-                      onClick={() => navigate('/dashboard/account', { state: { tab: 'integrations' } })}
+                      onClick={() =>
+                        navigate('/dashboard/account', { state: { tab: 'integrations' } })
+                      }
                     >
                       <Plus className="w-4 h-4" />
                       <span>Integrate Website</span>
                     </button>
-                    
+
                     <div className="flex flex-wrap justify-center space-x-2 md:space-x-6 text-gray-400 text-xs md:text-sm">
                       <div className="flex items-center space-x-1 my-1">
                         <CheckCheck className="w-4 h-4 text-green-400" />
@@ -605,10 +729,10 @@ const Dashboard = () => {
                         <span>Results in 7-14 days</span>
                       </div>
                     </div>
-                 </div>
+                  </div>
                 )}
               </div>
-              
+
               <div className="mt-6">
                 <button className="w-full bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-600">
                   <span>View All Backlinks</span>
@@ -617,135 +741,186 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Performance Overview */}
-            {hasBacklinks && <div className="bg-gray-900 border border-gray-700 rounded-xl p-6">
-              <div className="mb-6">
-                <h2 className="text-xl font-bold text-white mb-2">Performance Overview</h2>
-                <p className="text-gray-400 text-sm">Backlink success rate breakdown</p>
-              </div>
-              
-              <div className="flex items-center justify-center mb-8">
-                {/* Donut Chart */}
-                <div className="relative w-48 h-48">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                    {/* Background circle */}
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="40"
-                      fill="none"
-                      stroke="#374151"
-                      strokeWidth="8"
-                    />
-                    
-                    {/* Success segment */}
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="40"
-                      fill="none"
-                      stroke="#10b981"
-                      strokeWidth="8"
-                      strokeDasharray={`${performanceData.successful * 2.513} ${(100 - performanceData.successful) * 2.513}`}
-                      strokeDashoffset="0"
-                      className="transition-all duration-1000"
-                    />
-                    
-                    {/* Pending segment */}
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="40"
-                      fill="none"
-                      stroke="#f59e0b"
-                      strokeWidth="8"
-                      strokeDasharray={`${performanceData.pending * 2.513} ${(100 - performanceData.pending) * 2.513}`}
-                      strokeDashoffset={`-${performanceData.successful * 2.513}`}
-                      className="transition-all duration-1000"
-                    />
-                    
-                    {/* Failed segment */}
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="40"
-                      fill="none"
-                      stroke="#ef4444"
-                      strokeWidth="8"
-                      strokeDasharray={`${performanceData.failed * 2.513} ${(100 - performanceData.failed) * 2.513}`}
-                      strokeDashoffset={`-${(performanceData.successful + performanceData.pending) * 2.513}`}
-                      className="transition-all duration-1000"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-white">{performanceData.successful}%</p>
-                      <p className="text-gray-400 text-xs">Success Rate</p>
+            {/* Performance Overview – only if user has backlinks */}
+            {hasBacklinks && (
+              <div className="bg-gray-900 border border-gray-700 rounded-xl p-6">
+                <div className="mb-6">
+                  <h2 className="text-xl font-bold text-white mb-2">
+                    Performance Overview
+                  </h2>
+                  <p className="text-gray-400 text-sm">
+                    Backlink success rate breakdown
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-center mb-8">
+                  {/* Donut Chart */}
+                  <div className="relative w-48 h-48">
+                    <svg
+                      className="w-full h-full transform -rotate-90"
+                      viewBox="0 0 100 100"
+                    >
+                      {/* Background circle */}
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="40"
+                        fill="none"
+                        stroke="#374151"
+                        strokeWidth="8"
+                      />
+
+                      {/* Success segment */}
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="40"
+                        fill="none"
+                        stroke="#10b981"
+                        strokeWidth="8"
+                        strokeDasharray={`${performanceData.successful * 2.513
+                          } ${(100 - performanceData.successful) * 2.513}`}
+                        strokeDashoffset="0"
+                        className="transition-all duration-1000"
+                      />
+
+                      {/* Pending segment */}
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="40"
+                        fill="none"
+                        stroke="#f59e0b"
+                        strokeWidth="8"
+                        strokeDasharray={`${performanceData.pending * 2.513
+                          } ${(100 - performanceData.pending) * 2.513}`}
+                        strokeDashoffset={`-${performanceData.successful * 2.513
+                          }`}
+                        className="transition-all duration-1000"
+                      />
+
+                      {/* Failed segment */}
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="40"
+                        fill="none"
+                        stroke="#ef4444"
+                        strokeWidth="8"
+                        strokeDasharray={`${performanceData.failed * 2.513
+                          } ${(100 - performanceData.failed) * 2.513}`}
+                        strokeDashoffset={`-${(performanceData.successful +
+                          performanceData.pending) *
+                          2.513
+                          }`}
+                        className="transition-all duration-1000"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-white">
+                          {performanceData.successful}%
+                        </p>
+                        <p className="text-gray-400 text-xs">Success Rate</p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Legend */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                    <span className="text-sm font-medium text-green-400">
-                      Successful: {performanceData.successful}%
-                    </span>
+                {/* Legend */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                      <span className="text-sm font-medium text-green-400">
+                        Successful: {performanceData.successful}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                      <span className="text-sm font-medium text-orange-400">
+                        Pending: {performanceData.pending}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                      <span className="text-sm font-medium text-red-400">
+                        Failed: {performanceData.failed}%
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-                    <span className="text-sm font-medium text-orange-400">
-                      Pending: {performanceData.pending}%
+
+                <div className="mt-6 bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <CheckCircle className="w-4 h-4 text-green-400" />
+                    <span className="text-green-400 font-medium">
+                      Excellent Performance
                     </span>
                   </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                    <span className="text-sm font-medium text-red-400">
-                      Failed: {performanceData.failed}%
-                    </span>
-                  </div>
+                  <p className="text-white text-sm">
+                    Your success rate is{' '}
+                    {performanceData.successful >= 80 ? 'above' : 'at'} industry
+                    average. Keep up the great work!
+                  </p>
                 </div>
               </div>
-              
-              <div className="mt-6 bg-green-900/20 border border-green-500/30 rounded-lg p-4">
-                <div className="flex items-center space-x-2 mb-2">
-                  <CheckCircle className="w-4 h-4 text-green-400" />
-                  <span className="text-green-400 font-medium">Excellent Performance</span>
-                </div>
-                <p className="text-white text-sm">
-                  Your success rate is {performanceData.successful >= 80 ? 'above' : 'at'} industry average. Keep up the great work!
-                </p>
-              </div>
-            </div>
-            }
+            )}
           </div>
 
-          {/* New User Getting Started Guide (only shown when no backlinks) */}
+          {/* Getting Started Guide */}
           {!hasBacklinks && (
             <div className="mt-6 md:mt-8 bg-gray-900 border border-gray-700 rounded-xl p-4 md:p-6">
-              <h2 className="text-xl font-bold text-white mb-4">Getting Started Guide</h2>
+              <h2 className="text-xl font-bold text-white mb-4">
+                Getting Started Guide
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 relative">
-                <div className={`bg-gray-800 rounded-lg p-5 text-center ${currentStep === 0 ? 'ring-2 ring-orange-500 shadow-lg shadow-orange-500/20' : ''}`}>
-                  <div className={`w-12 h-12 ${currentStep === 0 ? 'bg-orange-500 animate-pulse' : 'bg-gray-700'} rounded-xl flex items-center justify-center mx-auto mb-4 transition-colors`}>
+                <div
+                  className={`bg-gray-800 rounded-lg p-5 text-center ${currentStep === 0
+                    ? 'ring-2 ring-orange-500 shadow-lg shadow-orange-500/20'
+                    : ''
+                    }`}
+                >
+                  <div
+                    className={`w-12 h-12 ${currentStep === 0
+                      ? 'bg-orange-500 animate-pulse'
+                      : 'bg-gray-700'
+                      } rounded-xl flex items-center justify-center mx-auto mb-4 transition-colors`}
+                  >
                     <Plus className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="text-white font-semibold mb-2">1. Integrate Website</h3>
-                  <p className="text-gray-400 text-sm">Connect your site to enable automated backlink matching</p>
+                  <h3 className="text-white font-semibold mb-2">
+                    1. Integrate Website
+                  </h3>
+                  <p className="text-gray-400 text-sm">
+                    Connect your site to enable automated backlink matching
+                  </p>
                 </div>
-                
-                <div className={`bg-gray-800 rounded-lg p-5 text-center ${currentStep === 1 ? 'ring-2 ring-orange-500 shadow-lg shadow-orange-500/20' : ''}`}>
-                  <div className={`w-12 h-12 ${currentStep === 1 ? 'bg-orange-500 animate-pulse' : 'bg-gray-700'} rounded-xl flex items-center justify-center mx-auto mb-4 transition-colors`}>
+
+                <div
+                  className={`bg-gray-800 rounded-lg p-5 text-center ${currentStep === 1
+                    ? 'ring-2 ring-orange-500 shadow-lg shadow-orange-500/20'
+                    : ''
+                    }`}
+                >
+                  <div
+                    className={`w-12 h-12 ${currentStep === 1
+                      ? 'bg-orange-500 animate-pulse'
+                      : 'bg-gray-700'
+                      } rounded-xl flex items-center justify-center mx-auto mb-4 transition-colors`}
+                  >
                     <Calendar className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="text-white font-semibold mb-2">2. Wait 7-14 Days</h3>
-                  <p className="text-gray-400 text-sm">We'll place your links on relevant sites</p>
+                  <h3 className="text-white font-semibold mb-2">
+                    2. Wait 7-14 Days
+                  </h3>
+                  <p className="text-gray-400 text-sm">
+                    We&apos;ll place your links on relevant sites
+                  </p>
                   <div className="mt-3">
                     <ContextualHelp
                       title="What Happens During Processing"
@@ -754,9 +929,16 @@ const Dashboard = () => {
                           <p>When your request is being processed, our team:</p>
                           <ul className="list-disc pl-4 space-y-1">
                             <li>Finds relevant websites in your niche</li>
-                            <li>Ensures they meet our quality standards (DA 20+)</li>
-                            <li>Places your backlinks in contextually relevant content</li>
-                            <li>Verifies the link is live and indexed</li>
+                            <li>
+                              Ensures they meet our quality standards (DA 20+)
+                            </li>
+                            <li>
+                              Places your backlinks in contextually relevant
+                              content
+                            </li>
+                            <li>
+                              Verifies the link is live and indexed
+                            </li>
                           </ul>
                         </div>
                       }
@@ -764,13 +946,27 @@ const Dashboard = () => {
                     />
                   </div>
                 </div>
-                
-                <div className={`bg-gray-800 rounded-lg p-5 text-center ${currentStep === 2 ? 'ring-2 ring-orange-500 shadow-lg shadow-orange-500/20' : ''}`}>
-                  <div className={`w-12 h-12 ${currentStep === 2 ? 'bg-orange-500 animate-pulse' : 'bg-gray-700'} rounded-xl flex items-center justify-center mx-auto mb-4 transition-colors`}>
+
+                <div
+                  className={`bg-gray-800 rounded-lg p-5 text-center ${currentStep === 2
+                    ? 'ring-2 ring-orange-500 shadow-lg shadow-orange-500/20'
+                    : ''
+                    }`}
+                >
+                  <div
+                    className={`w-12 h-12 ${currentStep === 2
+                      ? 'bg-orange-500 animate-pulse'
+                      : 'bg-gray-700'
+                      } rounded-xl flex items-center justify-center mx-auto mb-4 transition-colors`}
+                  >
                     <Zap className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="text-white font-semibold mb-2">3. See Results</h3>
-                  <p className="text-gray-400 text-sm">Watch your SEO improve in real-time</p>
+                  <h3 className="text-white font-semibold mb-2">
+                    3. See Results
+                  </h3>
+                  <p className="text-gray-400 text-sm">
+                    Watch your SEO improve in real-time
+                  </p>
                   <div className="mt-3">
                     <ContextualHelp
                       title="Expected Results"
@@ -791,14 +987,18 @@ const Dashboard = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="mt-6 bg-orange-900/20 border border-orange-500/30 rounded-lg p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-orange-400 font-medium">Need help getting started?</p>
-                  <p className="text-gray-300 text-sm">We're here to help you succeed with Linkzy</p>
+                  <p className="text-orange-400 font-medium">
+                    Need help getting started?
+                  </p>
+                  <p className="text-gray-300 text-sm">
+                    We&apos;re here to help you succeed with Linkzy
+                  </p>
                 </div>
                 <div>
-                  <button 
+                  <button
                     onClick={() => setShowOnboardingModal(true)}
                     className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-3 rounded-lg transition-colors min-h-[48px]"
                   >
@@ -808,9 +1008,9 @@ const Dashboard = () => {
               </div>
             </div>
           )}
-          
+
           {/* Onboarding Modal */}
-          <OnboardingModal 
+          <OnboardingModal
             isOpen={showOnboardingModal}
             onClose={() => {
               setShowOnboardingModal(false);
@@ -821,11 +1021,11 @@ const Dashboard = () => {
               localStorage.setItem('linkzy_onboarding_shown', 'true');
               navigate('/dashboard/account');
             }}
-            creditsRemaining={userData?.credits || 3}
+            creditsRemaining={userData.credits || FREE_CREDITS}
           />
-          
-          {/* Profile Completion Modal - NEW */}
-          <ProfileCompletionModal 
+
+          {/* Profile Completion Modal */}
+          <ProfileCompletionModal
             isOpen={showProfileCompletion}
             onClose={() => {
               setShowProfileCompletion(false);
@@ -839,16 +1039,16 @@ const Dashboard = () => {
             }}
             user={user}
           />
-          
+
           {/* Celebration Modal */}
-          <CelebrationModal 
+          <CelebrationModal
             isOpen={showCelebrationModal}
             onClose={() => setShowCelebrationModal(false)}
             achievementType={celebrationType}
           />
-          
-          {/* Profile Onboarding Modal - EXISTING */}
-          <ProfileOnboardingModal 
+
+          {/* Legacy Profile Onboarding Modal (kept for compatibility) */}
+          <ProfileOnboardingModal
             isOpen={showProfileOnboarding}
             onComplete={(website, niche) => {
               setShowProfileOnboarding(false);

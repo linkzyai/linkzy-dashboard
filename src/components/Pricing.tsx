@@ -1,6 +1,6 @@
-import React from 'react';
 import { useState } from 'react';
 import RegistrationModal from './RegistrationModal';
+import { ENV } from '../config/env';
 
 const Pricing = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -16,9 +16,8 @@ const Pricing = () => {
         return;
       }
 
-      // Initialize Stripe with test key (but looks like production)
-      const publishableKey = 'pk_test_51RcWyHQSsW1OegvZu57qyjGyc1Bw4zbqfNcuqEaksBAbCx4YPudinNnwhoFVdpa7n7sAF3hsq7Nushmt0pQhaAB300D2tlPYdv';
-      const stripe = (window as unknown as { Stripe: (key: string) => any }).Stripe(publishableKey);
+      // Initialize Stripe with publishable key from environment
+      const stripe = (window as unknown as { Stripe: (key: string) => any }).Stripe(ENV.STRIPE_PUBLISHABLE_KEY);
       
       if (!stripe) {
         console.error('Failed to initialize Stripe');
@@ -39,7 +38,7 @@ const Pricing = () => {
       if (error) {
         console.error('Stripe checkout error:', error);
         if (error.message.includes('No such price')) {
-          alert('Test price not found. You need to create test prices in your Stripe test dashboard first.\n\nPrice ID: ' + priceId);
+          alert('Test price not found. You need to create test prices in your Stripe test dashboard first.\\n\\nPrice ID: ' + priceId);
         } else {
           alert('Payment error: ' + error.message);
         }

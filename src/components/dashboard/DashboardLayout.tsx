@@ -2,7 +2,7 @@ import React from 'react';
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { 
+import {
   Home,
   BarChart3,
   Link as LinkIcon,
@@ -25,7 +25,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchEndX, setTouchEndX] = useState<number | null>(null);
-  
+
   // Track window resize to determine if on mobile
   useEffect(() => {
     const handleResize = () => {
@@ -34,7 +34,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
         setSidebarOpen(false);
       }
     };
-    
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -59,24 +59,24 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
   };
 
   const navigation = [
-    { 
-      name: 'Dashboard', 
-      href: '/dashboard', 
-      icon: Home, 
-      current: location.pathname === '/dashboard' 
+    {
+      name: 'Dashboard',
+      href: '/dashboard',
+      icon: Home,
+      current: location.pathname === '/dashboard'
     },
-    { 
-      name: 'Analytics', 
-      href: '/dashboard/analytics', 
-      icon: BarChart3, 
-      current: location.pathname === '/dashboard/analytics' 
-    },
-    
-    { 
-      name: 'Account', 
-      href: '/dashboard/account', 
-      icon: User, 
-      current: location.pathname === '/dashboard/account' 
+    // { 
+    //   name: 'Analytics', 
+    //   href: '/dashboard/analytics', 
+    //   icon: BarChart3, 
+    //   current: location.pathname === '/dashboard/analytics' 
+    // },
+
+    {
+      name: 'Account',
+      href: '/dashboard/account',
+      icon: User,
+      current: location.pathname === '/dashboard/account'
     },
   ];
 
@@ -88,7 +88,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2 md:space-x-4">
               {isMobile && (
-                <button 
+                <button
                   onClick={() => setSidebarOpen(true)}
                   className="text-gray-400 hover:text-white transition-colors p-2 mr-2"
                 >
@@ -104,7 +104,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
               <span className="text-gray-400 hidden md:inline">•</span>
               <span className="text-white font-semibold hidden md:inline">{title}</span>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-300">
                 <span className="text-orange-500 font-semibold">
@@ -115,7 +115,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
                   })()} credits
                 </span> remaining
               </div>
-              <button 
+              <button
                 onClick={logout}
                 className="text-gray-400 hover:text-white transition-colors"
                 title="Logout"
@@ -129,12 +129,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
 
       <div className="flex relative">
         {/* Simplified Sidebar */}
-        <nav className={`${isMobile 
+        <nav className={`${isMobile
           ? 'fixed inset-0 z-40 transform transition-transform duration-300 ease-in-out' + (sidebarOpen ? ' translate-x-0' : ' -translate-x-full')
           : 'w-64 border-r border-gray-700'} bg-gray-900 min-h-[calc(100vh-4rem)]`} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
           {isMobile && sidebarOpen && (
             <div className="absolute top-0 right-0 p-4">
-              <button 
+              <button
                 onClick={() => setSidebarOpen(false)}
                 className="text-gray-400 hover:text-white transition-colors p-2 bg-gray-800 rounded-lg"
               >
@@ -149,22 +149,20 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
                   key={item.name}
                   to={item.href}
                   onClick={() => isMobile && setSidebarOpen(false)}
-                  className={`${
-                    item.current
+                  className={`${item.current
                       ? 'border-l-4 border-orange-500 bg-gray-800/50 text-white shadow-lg shadow-orange-500/25'
                       : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                  } group flex items-center px-6 py-4 min-h-12 text-base font-medium rounded-xl transition-all duration-200 ease-in-out transform hover:scale-105`}
+                    } group flex items-center px-6 py-4 min-h-12 text-base font-medium rounded-xl transition-all duration-200 ease-in-out transform hover:scale-105`}
                 >
                   <item.icon
-                    className={`${
-                      item.current ? 'text-white' : 'text-gray-400 group-hover:text-orange-400'
-                    } mr-4 h-6 w-6 transition-colors duration-200`}
+                    className={`${item.current ? 'text-white' : 'text-gray-400 group-hover:text-orange-400'
+                      } mr-4 h-6 w-6 transition-colors duration-200`}
                   />
                   <span className="font-semibold">{item.name}</span>
                 </Link>
               ))}
             </div>
-            
+
             {/* User Info Section */}
             <div className="mt-8 pt-6 border-t border-gray-700">
               <div className="flex items-center space-x-3 px-4 py-3 bg-gray-800/50 rounded-xl">
@@ -189,7 +187,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
           {children}
         </main>
       </div>
-      
+
       {/* Mobile Bottom Navigation */}
       {isMobile && (
         <div className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 z-40">
@@ -198,9 +196,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex flex-col items-center justify-center ${
-                  item.current ? 'text-orange-500' : 'text-gray-400'
-                }`}
+                className={`flex flex-col items-center justify-center ${item.current ? 'text-orange-500' : 'text-gray-400'
+                  }`}
               >
                 <item.icon className="h-6 w-6 mb-1" />
                 <span className="text-xs">{item.name}</span>
