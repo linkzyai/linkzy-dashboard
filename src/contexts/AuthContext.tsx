@@ -19,6 +19,8 @@ export type AppProfile = {
   plan?: string | null;
   credits?: number | null;
   api_key?: string | null; // keep in memory only
+  subscription_status?: string | null;
+  created_at?: string | null;
 };
 
 interface AuthContextType {
@@ -42,7 +44,9 @@ export const useAuth = () => {
 async function fetchProfile(userId: string): Promise<AppProfile | null> {
   const { data, error } = await supabase
     .from("users") // consider 'profiles' to avoid confusion with auth.users
-    .select("id, email, website, niche, plan, credits, api_key")
+    .select(
+      "id, email, website, niche, plan, credits, api_key, subscription_status, created_at"
+    )
     .eq("id", userId)
     .single();
 
@@ -59,6 +63,8 @@ async function fetchProfile(userId: string): Promise<AppProfile | null> {
     plan: data.plan ?? null,
     credits: data.credits ?? null,
     api_key: data.api_key ?? null,
+    subscription_status: data.subscription_status ?? null,
+    created_at: data.created_at ?? null,
   };
 }
 
@@ -94,7 +100,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
         // Step 1: reflect session ASAP (stop spinner)
         if (!cancelled) {
-          setUser({ id: supaUser.id, email: supaUser.email ?? null });
+          setUser({
+            id: supaUser.id,
+            email: supaUser.email ?? null,
+            website: null,
+            niche: null,
+            plan: null,
+            credits: null,
+            api_key: null,
+            subscription_status: null,
+            // auth.users has created_at, use as a fallback until profile row loads
+            created_at: (supaUser as any).created_at ?? null,
+          });
           setLoading(false);
         }
 
@@ -109,6 +126,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             plan: profile.plan,
             credits: profile.credits,
             api_key: profile.api_key,
+            subscription_status: profile.subscription_status,
+            // prefer app profile created_at, fallback to auth user if missing
+            created_at:
+              profile.created_at ??
+              ((supaUser as any).created_at as string | undefined) ??
+              null,
           });
           if (profile.api_key) supabaseService.setApiKey(profile.api_key);
         }
@@ -155,6 +178,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             plan: prev?.plan ?? null,
             credits: prev?.credits ?? null,
             api_key: prev?.api_key ?? null,
+            subscription_status: prev?.subscription_status ?? null,
+            created_at:
+              prev?.created_at ??
+              ((supaUser as any).created_at as string | undefined) ??
+              null,
           }));
           setLoading(false);
 
@@ -169,6 +197,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               plan: profile.plan,
               credits: profile.credits,
               api_key: profile.api_key,
+              subscription_status: profile.subscription_status,
+              created_at:
+                profile.created_at ??
+                ((supaUser as any).created_at as string | undefined) ??
+                null,
             });
             if (profile.api_key) supabaseService.setApiKey(profile.api_key);
           }
@@ -197,6 +230,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         plan: profile.plan,
         credits: profile.credits,
         api_key: profile.api_key,
+        subscription_status: profile.subscription_status,
+        created_at:
+          profile.created_at ??
+          ((supaUser as any).created_at as string | undefined) ??
+          null,
       });
       if (profile.api_key) supabaseService.setApiKey(profile.api_key);
     }
@@ -216,6 +254,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       plan: userProfile?.plan ?? user?.plan ?? "free",
       credits: userProfile?.credits ?? user?.credits ?? 3,
       api_key: apiKey,
+      subscription_status:
+        userProfile?.subscription_status ?? user?.subscription_status ?? null,
+      created_at:
+        userProfile?.created_at ?? user?.created_at ?? null,
     };
     setUser(standardized);
     setLoading(false);

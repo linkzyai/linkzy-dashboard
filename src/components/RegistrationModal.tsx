@@ -14,6 +14,7 @@ import supabaseService from "../services/supabaseService";
 interface RegistrationModalProps {
   isOpen: boolean;
   setIsModalOpen: (isOpen: boolean) => void;
+  onSwitchToSignIn?: () => void;
 }
 
 type TabType = "signup" | "google";
@@ -21,6 +22,7 @@ type TabType = "signup" | "google";
 const RegistrationModal: React.FC<RegistrationModalProps> = ({
   isOpen,
   setIsModalOpen,
+  onSwitchToSignIn,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>("signup");
   const [email, setEmail] = useState("");
@@ -185,7 +187,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-700">
@@ -208,21 +210,19 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
           <div className="flex space-x-1 bg-gray-800 rounded-lg p-1">
             <button
               onClick={() => setActiveTab("signup")}
-              className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
-                activeTab === "signup"
-                  ? "bg-orange-600 text-white"
-                  : "text-gray-300 hover:text-white"
-              }`}
+              className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${activeTab === "signup"
+                ? "bg-orange-600 text-white"
+                : "text-gray-300 hover:text-white"
+                }`}
             >
               Sign Up
             </button>
             <button
               onClick={() => setActiveTab("google")}
-              className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
-                activeTab === "google"
-                  ? "bg-orange-600 text-white"
-                  : "text-gray-300 hover:text-white"
-              }`}
+              className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${activeTab === "google"
+                ? "bg-orange-600 text-white"
+                : "text-gray-300 hover:text-white"
+                }`}
             >
               Google
             </button>
@@ -275,11 +275,10 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
                 </label>
                 <div className="relative">
                   <Mail
-                    className={`absolute left-3 top-1/2 transform -translate-y-1/2 transition-colors ${
-                      formFocused === "email"
-                        ? "text-orange-400"
-                        : "text-gray-500"
-                    }`}
+                    className={`absolute left-3 top-1/2 transform -translate-y-1/2 transition-colors ${formFocused === "email"
+                      ? "text-orange-400"
+                      : "text-gray-500"
+                      }`}
                     size={18}
                   />
                   <input
@@ -304,11 +303,10 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
                 </label>
                 <div className="relative">
                   <Lock
-                    className={`absolute left-3 top-1/2 transform -translate-y-1/2 transition-colors ${
-                      formFocused === "password"
-                        ? "text-orange-400"
-                        : "text-gray-500"
-                    }`}
+                    className={`absolute left-3 top-1/2 transform -translate-y-1/2 transition-colors ${formFocused === "password"
+                      ? "text-orange-400"
+                      : "text-gray-500"
+                      }`}
                     size={18}
                   />
                   <input
@@ -424,7 +422,13 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
             <p className="text-gray-400 text-sm">
               Already have an account?{" "}
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  if (onSwitchToSignIn) {
+                    onSwitchToSignIn();
+                  } else {
+                    setIsModalOpen(false);
+                  }
+                }}
                 className="text-orange-400 hover:text-orange-300 font-medium"
               >
                 Sign in

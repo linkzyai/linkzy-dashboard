@@ -28,15 +28,34 @@ class SupabaseService {
     localStorage.removeItem("linkzy_user");
   }
 
-  // Get user profile data
-  async getUserProfile(userId) {
+  // Get user profile data - automatically fetches current authenticated user
+  async getUserProfile(userId = null) {
     try {
+      let targetUserId = userId;
+
+      // If no userId provided, get current authenticated user
+      if (!targetUserId) {
+        const {
+          data: { user: authUser },
+          error: authError,
+        } = await supabase.auth.getUser();
+
+        if (authError) {
+          console.error("Failed to get authenticated user:", authError);
+          throw authError;
+        }
+
+        if (!authUser) {
+          throw new Error("No authenticated user found");
+        }
+
+        targetUserId = authUser.id;
+      }
+
       const { data, error } = await supabase
         .from("users")
-        .select(
-          "id, email, website, niche, plan, credits, created_at, updated_at"
-        )
-        .eq("id", userId)
+        .select("*")
+        .eq("id", targetUserId)
         .single();
 
       if (error) {
@@ -1066,34 +1085,159 @@ If you're testing, try these workarounds:
     try {
       const user = await this.getUserProfile();
 
-      // IMMEDIATE FIX: Skip problematic backlinks query, use fallback data
+      // 1) Fetch placement_instructions joined with placement_opportunities
+      const { data: backlinksRaw, error: backlinksError } = await supabase
+        .from("placement_instructions")
+        .select(
+          `
+          id,
+          status,
+          clicks,
+          opportunity_id,
+          created_at,
+          placement_opportunities (
+            id,
+            source_user_id,
+            target_content_url,
+            suggested_anchor_text,
+            domain_authority_score
+          )
+        `
+        )
+        .eq("placement_opportunities.source_user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (backlinksError) {
+        console.warn("Error fetching backlinks:", backlinksError);
+      }
+
+      const backlinks = backlinksRaw ?? [];
+      const recentBacklinksRaw = backlinks.slice(0, 5);
+
+      // 2) Calculate metrics
+      const totalBacklinks = backlinks.length;
+
+      const successfulBacklinks = backlinks.filter(
+        (b) =>
+          b.status === "completed" ||
+          b.status === "placed" ||
+          b.status === "active"
+      ).length;
+
+      const pendingBacklinks = backlinks.filter(
+        (b) => b.status === "pending" || b.status === "processing"
+      ).length;
+
+      const failedBacklinks = backlinks.filter(
+        (b) => b.status === "failed" || b.status === "rejected"
+      ).length;
+
+      const successRate =
+        totalBacklinks > 0
+          ? Math.round((successfulBacklinks / totalBacklinks) * 100)
+          : 0;
+
+      // 3) Monthly spend from billing_history (timestamptz-safe)
+      const now = new Date();
+      const year = now.getUTCFullYear();
+      const monthIndex = now.getUTCMonth(); // 0–11
+
+      const monthStart = new Date(Date.UTC(year, monthIndex, 1)).toISOString();
+      const nextMonthStart = new Date(
+        Date.UTC(year, monthIndex + 1, 1)
+      ).toISOString();
+
+      const { data: billingData, error: billingError } = await supabase
+        .from("billing_history")
+        .select("amount")
+        .eq("user_id", user.id)
+        .gte("created_at", monthStart)
+        .lt("created_at", nextMonthStart);
+
+      if (billingError) {
+        console.warn("Error fetching billing data:", billingError);
+      }
+
+      const monthlySpend =
+        billingData?.reduce(
+          (sum, record) => sum + Number(record.amount || 0),
+          0
+        ) || 0;
+
+      // 4) Shape recentBacklinks for the UI
+      const recentBacklinks = recentBacklinksRaw.map((b) => {
+        // Supabase returns a single row as object, but we guard in case it's an array
+        const opp = Array.isArray(b.placement_opportunities)
+          ? b.placement_opportunities[0]
+          : b.placement_opportunities;
+
+        const url = opp?.target_content_url || null;
+
+        // domain preference: instruction.domain -> derived from URL
+        let domain = b.domain || null;
+        if (!domain && url) {
+          try {
+            domain = new URL(url).hostname;
+          } catch {
+            domain = url;
+          }
+        }
+
+        return {
+          id: b.id,
+          domain,
+          url,
+          anchorText: opp?.suggested_anchor_text || null,
+          anchor: opp?.suggested_anchor_text || null,
+          status: b.status,
+          clicks: b.clicks || 0,
+          trafficIncrease: b.traffic_increase || "+0%",
+          domainAuthority:
+            b.domain_authority ?? opp?.domain_authority ?? undefined,
+        };
+      });
+
+      console.log("✅ Dashboard stats fetched successfully:", {
+        totalBacklinks,
+        successRate,
+        recentBacklinksCount: recentBacklinks.length,
+        monthlySpend,
+      });
 
       return {
-        totalBacklinks: 0,
-        successRate: 95,
-        creditsRemaining: user.credits || 3,
-        monthlySpend: 0,
-        recentBacklinks: [],
+        totalBacklinks,
+        successRate,
+        creditsRemaining: user.credits || 0,
+        monthlySpend,
+        recentBacklinks,
         performanceData: {
-          successful: 95,
-          pending: 5,
-          failed: 0,
+          successful:
+            totalBacklinks > 0
+              ? Math.round((successfulBacklinks / totalBacklinks) * 100)
+              : 0,
+          pending:
+            totalBacklinks > 0
+              ? Math.round((pendingBacklinks / totalBacklinks) * 100)
+              : 0,
+          failed:
+            totalBacklinks > 0
+              ? Math.round((failedBacklinks / totalBacklinks) * 100)
+              : 0,
         },
-        // Additional user data for dashboard
         website: user.website || "Not set",
         niche: user.niche || "General",
         plan: user.plan || "free",
       };
     } catch (error) {
       console.error("Failed to get dashboard stats:", error);
-      // Return absolute fallback if even user profile fails
+
       return {
         totalBacklinks: 0,
-        successRate: 95,
-        creditsRemaining: 3,
+        successRate: 0,
+        creditsRemaining: 0,
         monthlySpend: 0,
         recentBacklinks: [],
-        performanceData: { successful: 95, pending: 5, failed: 0 },
+        performanceData: { successful: 0, pending: 0, failed: 0 },
         website: "Not set",
         niche: "General",
         plan: "free",
@@ -1143,29 +1287,34 @@ If you're testing, try these workarounds:
     }
   }
 
-  // Get user's backlinks
+  // Get user's backlinks with pagination
   async getBacklinks(page = 1, limit = 10) {
     try {
       const user = await this.getUserProfile();
+      const offset = (page - 1) * limit;
 
       const { data, error, count } = await supabase
-        .from("placement_opportunities")
+        .from("placement_instructions")
         .select("*", { count: "exact" })
-        .eq("source_user_id", user.id)
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false })
-        .range((page - 1) * limit, page * limit - 1);
+        .range(offset, offset + limit - 1);
 
-      if (error && error.code !== "PGRST116") throw error; // Ignore "table doesn't exist" errors
+      if (error) {
+        console.error("Error fetching backlinks:", error);
+        throw error;
+      }
 
       return {
         backlinks: data || [],
         total: count || 0,
         page,
+        limit,
         totalPages: Math.ceil((count || 0) / limit),
       };
     } catch (error) {
       console.error("Failed to get backlinks:", error);
-      return { backlinks: [], total: 0, page: 1, totalPages: 0 };
+      throw error;
     }
   }
 

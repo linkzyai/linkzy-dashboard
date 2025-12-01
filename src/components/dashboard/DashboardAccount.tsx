@@ -36,6 +36,17 @@ const BACKLINKS_PAGE_SIZE = 10;
 const DashboardAccount = () => {
   const { user, logout, isAuthenticated, login } = useAuth();
 
+  // Helper to format join date from user.created_at
+  const getJoinDateLabel = (createdAt?: string | null) => {
+    if (!createdAt) return "—";
+    const dt = new Date(createdAt);
+    if (Number.isNaN(dt.getTime())) return "—";
+    return dt.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "long",
+    });
+  };
+
   // Load API key from localStorage as fallback if user.api_key is missing
   const getApiKey = () => {
     if (user?.api_key) {
@@ -50,6 +61,7 @@ const DashboardAccount = () => {
     console.warn("⚠️ No API key found in user object or localStorage");
     return "demo_api_key_123";
   };
+
   const [searchParams, setSearchParams] = useSearchParams();
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
 
@@ -67,7 +79,9 @@ const DashboardAccount = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState(user?.website || "");
   const [targetKeywords, setTargetKeywords] = useState("");
-  const [contentNiche, setContentNiche] = useState(user?.niche || "technology");
+  const [contentNiche, setContentNiche] = useState(
+    user?.niche || "technology"
+  );
   const [anchorTextStyle, setAnchorTextStyle] = useState("exact-match");
   const [requestNotes, setRequestNotes] = useState("");
   const [isDetectingNiche, setIsDetectingNiche] = useState(false);
@@ -347,15 +361,19 @@ const DashboardAccount = () => {
   );
   const [wpPolling, setWpPolling] = useState(false);
 
-  // Mock data - replace with real data from context/API
+  // Plan / joinDate derived from user record
+  const userPlan = (user?.plan || "free").toLowerCase();
+  const isSubscribed = user?.subscription_status === "active";
+
   const userData = {
     email: user?.email || "user@example.com",
     website: user?.website || "https://example.com",
     niche: user?.niche || "Technology",
     apiKey: getApiKey(),
-    credits: user?.credits || 3,
-    isPro: user?.plan && user.plan !== "free",
-    joinDate: "December 2024",
+    credits: user?.credits ?? credits,
+    plan: userPlan, // 'free' | 'starter' | 'pro' | ...
+    isPro: isSubscribed && userPlan !== "free",
+    joinDate: getJoinDateLabel(user?.created_at || null),
   };
 
   // Get API key using the robust fallback function
@@ -427,7 +445,7 @@ const DashboardAccount = () => {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ' + anonKey
         },
-        body: JSON.stringify({ apiKey: lz.apiKey })
+        body: JSON.stringify({ apiKey: lz.apiKey, url: window.location.href })
       })
       .then(res => res.json())
       .then(data => {
@@ -510,7 +528,7 @@ const DashboardAccount = () => {
         await navigator.clipboard.writeText(apiSnippet);
         setSnippetCopied(true);
         setTimeout(() => setSnippetCopied(false), 2000);
-      } catch {}
+      } catch { }
     };
     window.addEventListener("copyRealApiSnippet", handleCopyRealApiSnippet);
     return () =>
@@ -611,7 +629,7 @@ const DashboardAccount = () => {
           date: new Date().toISOString().slice(0, 10),
           details: requestNotes,
           eta: "7-14 days",
-        },
+        } as any,
         ...prev,
       ]);
       setRequestSuccess(true);
@@ -1071,24 +1089,6 @@ const DashboardAccount = () => {
       setTrackedLoading(false);
       setTrackedContent([]); // Empty array for now
       return;
-
-      /* ORIGINAL CODE - TEMPORARILY DISABLED
-      setTrackedLoading(true);
-      setTrackedError('');
-      try {
-        const { data, error } = await supabase
-          .from('tracked_content')
-          .select('*')
-          .eq('api_key', userApiKey)
-          .order('timestamp', { ascending: false });
-        if (error) throw error;
-        setTrackedContent(data || []);
-      } catch (err) {
-        setTrackedError('Failed to load tracked content.');
-      } finally {
-        setTrackedLoading(false);
-      }
-      */
     };
     if (userApiKey) fetchTrackedContent();
   }, [userApiKey]);
@@ -1116,7 +1116,13 @@ const DashboardAccount = () => {
               Account Type
             </label>
             <div className="p-3 bg-gray-800 border border-gray-700 rounded-lg text-white opacity-75">
-              {userData.isPro ? "Pro" : "Free"}
+              {userData.plan === "starter" && "Starter (subscription)"}
+              {userData.plan === "pro" && "Pro (subscription)"}
+              {userData.plan === "free" && "Free"}
+              {userData.plan !== "starter" &&
+                userData.plan !== "pro" &&
+                userData.plan !== "free" &&
+                userData.plan}
             </div>
           </div>
 
@@ -1134,7 +1140,7 @@ const DashboardAccount = () => {
         </div>
 
         {/* API Test Button */}
-        <div className="mb-8 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+        {/* <div className="mb-8 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
           <h3 className="text-lg font-semibold text-blue-400 mb-2">
             Test Your API Connection
           </h3>
@@ -1143,7 +1149,6 @@ const DashboardAccount = () => {
             Supabase
           </p>
 
-          {/* Show current API key for debugging */}
           <div className="mb-3 p-2 bg-gray-800 rounded text-xs font-mono text-gray-300">
             <strong>Current API Key:</strong> {user?.api_key || "Not loaded"}
           </div>
@@ -1253,7 +1258,7 @@ const DashboardAccount = () => {
               Sync API Key
             </button>
           </div>
-        </div>
+        </div> */}
         {/* Billing & Credits Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {/* Credits Card */}
@@ -1334,13 +1339,12 @@ const DashboardAccount = () => {
                       <td className="py-2">${item.amount}</td>
                       <td className="py-2">
                         <span
-                          className={`px-2 py-1 rounded-full text-xs ${
-                            item.status === "paid"
-                              ? "bg-green-500/20 text-green-400"
-                              : item.status === "pending"
+                          className={`px-2 py-1 rounded-full text-xs ${item.status === "paid" || item.status === "completed"
+                            ? "bg-green-500/20 text-green-400"
+                            : item.status === "pending"
                               ? "bg-yellow-500/20 text-yellow-400"
                               : "bg-red-500/20 text-red-400"
-                          }`}
+                            }`}
                         >
                           {item.status}
                         </span>
@@ -1394,7 +1398,7 @@ const DashboardAccount = () => {
             </form>
           </div>
           {/* Email Notifications & Preferences */}
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6">
+          {/* <div className="bg-gray-900 border border-gray-700 rounded-xl p-6">
             <h3 className="text-xl font-bold text-white mb-4">Preferences</h3>
             <div className="mb-4">
               <h4 className="text-white font-medium mb-2">
@@ -1460,68 +1464,68 @@ const DashboardAccount = () => {
                 </div>
               </div>
             </div>
+          </div> */}
+          {/* Niche Preferences Section */}
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
+            <h3 className="text-xl font-bold text-white mb-4">
+              Niche Preferences
+            </h3>
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-6">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Select Your Niche
+                </label>
+                <select
+                  value={contentNiche}
+                  onChange={(e) => setContentNiche(e.target.value)}
+                  className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-4 text-white text-base md:text-lg focus:outline-none focus:border-orange-500 transition-colors"
+                >
+                  {/* 25+ options, example only */}
+                  <option value="technology">Technology & Software</option>
+                  <option value="health-wellness">Health & Wellness</option>
+                  <option value="finance-business">Finance & Business</option>
+                  <option value="travel-lifestyle">Travel & Lifestyle</option>
+                  <option value="food-restaurants">Food & Restaurants</option>
+                  <option value="education">Education & Learning</option>
+                  <option value="creative-arts">Creative Arts & Design</option>
+                  <option value="home-services">Home Services & DIY</option>
+                  <option value="legal">Legal & Law</option>
+                  <option value="marketing">Marketing & Advertising</option>
+                  <option value="real-estate">Real Estate</option>
+                  <option value="automotive">Automotive</option>
+                  <option value="sports">Sports & Fitness</option>
+                  <option value="fashion">Fashion & Apparel</option>
+                  <option value="beauty">Beauty & Personal Care</option>
+                  <option value="pets">Pets & Animals</option>
+                  <option value="parenting">Parenting & Family</option>
+                  <option value="gaming">Gaming & Esports</option>
+                  <option value="music">Music & Audio</option>
+                  <option value="photography">Photography</option>
+                  <option value="environment">Environment & Green Living</option>
+                  <option value="science">Science & Research</option>
+                  <option value="nonprofit">Nonprofit & Charity</option>
+                  <option value="government">Government & Public Sector</option>
+                  <option value="news">News & Media</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div className="mt-4 md:mt-0">
+                <button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold">
+                  Update Niche
+                </button>
+              </div>
+            </div>
+            <div className="mt-2 text-gray-400 text-sm">
+              Current selection:{" "}
+              <span className="text-orange-400 font-semibold">
+                {contentNiche
+                  .replace("-", " ")
+                  .replace(/\b\w/g, (l: string) => l.toUpperCase())}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Niche Preferences Section */}
-        <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
-          <h3 className="text-xl font-bold text-white mb-4">
-            Niche Preferences
-          </h3>
-          <div className="flex flex-col md:flex-row md:items-center md:space-x-6">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Select Your Niche
-              </label>
-              <select
-                value={contentNiche}
-                onChange={(e) => setContentNiche(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-4 text-white text-base md:text-lg focus:outline-none focus:border-orange-500 transition-colors"
-              >
-                {/* 25+ options, example only */}
-                <option value="technology">Technology & Software</option>
-                <option value="health-wellness">Health & Wellness</option>
-                <option value="finance-business">Finance & Business</option>
-                <option value="travel-lifestyle">Travel & Lifestyle</option>
-                <option value="food-restaurants">Food & Restaurants</option>
-                <option value="education">Education & Learning</option>
-                <option value="creative-arts">Creative Arts & Design</option>
-                <option value="home-services">Home Services & DIY</option>
-                <option value="legal">Legal & Law</option>
-                <option value="marketing">Marketing & Advertising</option>
-                <option value="real-estate">Real Estate</option>
-                <option value="automotive">Automotive</option>
-                <option value="sports">Sports & Fitness</option>
-                <option value="fashion">Fashion & Apparel</option>
-                <option value="beauty">Beauty & Personal Care</option>
-                <option value="pets">Pets & Animals</option>
-                <option value="parenting">Parenting & Family</option>
-                <option value="gaming">Gaming & Esports</option>
-                <option value="music">Music & Audio</option>
-                <option value="photography">Photography</option>
-                <option value="environment">Environment & Green Living</option>
-                <option value="science">Science & Research</option>
-                <option value="nonprofit">Nonprofit & Charity</option>
-                <option value="government">Government & Public Sector</option>
-                <option value="news">News & Media</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div className="mt-4 md:mt-0">
-              <button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold">
-                Update Niche
-              </button>
-            </div>
-          </div>
-          <div className="mt-2 text-gray-400 text-sm">
-            Current selection:{" "}
-            <span className="text-orange-400 font-semibold">
-              {contentNiche
-                .replace("-", " ")
-                .replace(/\b\w/g, (l: string) => l.toUpperCase())}
-            </span>
-          </div>
-        </div>
 
         {/* Account Actions Section */}
         <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 md:space-x-6">
@@ -1863,7 +1867,7 @@ const DashboardAccount = () => {
             <input
               type="url"
               placeholder="https://yourdomain.com/blog/"
-              className="bg-gray-800 border border-gray-600 rounded-lg px-4 py-4 text-white text-base md:text-lg focus:outline-none focus:border-orange-500 transition-colors"
+              className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-4 text-white text-base md:text-lg focus:outline-none focus:border-orange-500 transition-colors"
             />
             <button
               type="button"
@@ -1998,7 +2002,7 @@ const DashboardAccount = () => {
         isOpen={showPurchaseModal}
         onClose={() => setShowPurchaseModal(false)}
         currentCredits={credits}
-        currentPlan={userData.isPro ? "Pro" : "Free"}
+        currentPlan={userData.plan || "free"}
       />
     );
   }
@@ -2010,13 +2014,12 @@ const DashboardAccount = () => {
         {notifications.map((n, i) => (
           <div
             key={i}
-            className={`px-4 py-3 rounded-lg shadow-lg text-white font-semibold ${
-              n.type === "success"
-                ? "bg-green-600"
-                : n.type === "warning"
+            className={`px-4 py-3 rounded-lg shadow-lg text-white font-semibold ${n.type === "success"
+              ? "bg-green-600"
+              : n.type === "warning"
                 ? "bg-orange-600"
                 : "bg-red-600"
-            }`}
+              }`}
           >
             {n.message}
           </div>
@@ -2229,11 +2232,10 @@ const DashboardAccount = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`${
-                    activeTab === tab.id
-                      ? "border-orange-500 text-orange-500"
-                      : "border-transparent text-gray-400 hover:text-white hover:border-gray-300"
-                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2`}
+                  className={`${activeTab === tab.id
+                    ? "border-orange-500 text-orange-500"
+                    : "border-transparent text-gray-400 hover:text-white hover:border-gray-300"
+                    } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2`}
                 >
                   <tab.icon className="w-4 h-4" />
                   <span>{tab.name}</span>

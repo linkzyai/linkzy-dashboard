@@ -10,10 +10,10 @@ import {
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 
-// ✅ Stripe test key (publishable)
-const stripePromise = loadStripe(
-  "pk_test_51RcWyHQSsW1OegvZu57qyjGyc1Bw4zbqfNcuqEaksBAbCx4YPudinNnwhoFVdpa7n7sAF3hsq7Nushmt0pQhaAB300D2tlPYdv"
-);
+// Stripe publishable key from environment
+import { ENV } from "../../config/env";
+
+const stripePromise = loadStripe(ENV.STRIPE_PUBLISHABLE_KEY);
 
 interface PurchaseCreditsModalProps {
   isOpen: boolean;
@@ -45,47 +45,50 @@ interface PaymentFormProps {
 // Shared plans (no need to recreate on every render)
 const PLANS: Plan[] = [
   {
-    id: "starter",
-    name: "Starter Pack",
+    id: "free",
+    name: "Free Plan",
     credits: 3,
-    price: 10,
-    priceId: "price_1STSbkQSsW1OegvZRIJ114ra",
+    price: 0,
+    priceId: "",
     isSubscription: false,
-    description: "Perfect for testing – includes 3 high-quality backlinks",
-    features: ["3 high-quality backlinks", "One-time payment", "No commitment"],
+    description: "Get started with 3 free credits on signup",
+    features: [
+      "3 credits on signup",
+      "No payment required",
+      "Perfect for testing"
+    ],
     popular: false,
   },
   {
-    id: "growth",
-    name: "Growth Pack",
-    credits: 10,
-    price: 25,
-    priceId: "price_1STSc8QSsW1OegvZ8kCVghMC",
-    isSubscription: false,
-    description: "Great value – includes 10 backlinks with bulk savings",
+    id: "starter",
+    name: "Starter Plan",
+    credits: 5,
+    price: 19,
+    priceId: ENV.STRIPE_PRICE_STARTER,
+    isSubscription: true,
+    description: "Perfect for small businesses – 5 credits every month",
     features: [
-      "10 high-quality backlinks",
-      "Bulk discount",
-      "One-time payment",
+      "5 credits monthly",
+      "Automatic renewal",
+      "Cancel anytime"
     ],
-    popular: true,
+    popular: false,
   },
   {
     id: "pro",
-    name: "Pro Monthly",
-    credits: 30,
-    price: 49,
-    priceId: "price_1STScYQSsW1OegvZNlv8gg2d",
+    name: "Pro Plan",
+    credits: 15,
+    price: 29,
+    priceId: ENV.STRIPE_PRICE_PRO,
     isSubscription: true,
-    description:
-      "For SEO professionals and agencies – 30 backlinks every month",
+    description: "For growing businesses – 15 credits every month",
     features: [
-      "30 backlinks monthly",
+      "15 credits monthly",
       "Priority support",
-      "Advanced analytics",
-      "Cancel anytime",
+      "Automatic renewal",
+      "Cancel anytime"
     ],
-    popular: false,
+    popular: true,
   },
 ];
 
@@ -233,58 +236,102 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         throw new Error("Card element not found.");
       }
 
-      // 1) Ask backend (Supabase Edge Function) to create PaymentIntent
-      const { data: intent, error: intentErr } =
-        await supabase.functions.invoke("create-payment-intent", {
-          body: {
-            amount: Math.round(getDiscountedPrice() * 100),
-            currency: "usd",
-            description: `${selectedPlan.name} - ${
-              selectedPlan.credits
-            } Credits${
-              discountApplied?.valid ? ` (${discountApplied.code} applied)` : ""
-            }`,
-            user_id: userId,
-            user_email: userEmail,
-            credits: selectedPlan.credits,
-            plan_name: selectedPlan.name,
-            coupon_code: discountApplied?.valid
-              ? discountApplied.code
-              : undefined,
-          },
-        });
-
-      if (intentErr || !intent?.client_secret) {
-        throw new Error(
-          intentErr?.message || "Failed to create payment intent."
-        );
-      }
-
-      const clientSecret = intent.client_secret as string;
-
-      // 2) Confirm card payment with Stripe
-      const { error: confirmError } = await stripe.confirmCardPayment(
-        clientSecret,
-        {
-          payment_method: {
-            card: cardElement,
-            billing_details: {
-              email: userEmail,
+      // Check if this is a subscription or one-time payment
+      if (selectedPlan.isSubscription) {
+        // SUBSCRIPTION FLOW: Call create-subscription endpoint
+        const { data: subData, error: subErr } = await supabase.functions.invoke(
+          "create-subscription",
+          {
+            body: {
+              price_id: selectedPlan.priceId,
+              user_id: userId,
+              user_email: userEmail,
             },
-          },
+          }
+        );
+
+        if (subErr || !subData?.client_secret) {
+          throw new Error(
+            subErr?.message || "Failed to create subscription."
+          );
         }
-      );
 
-      if (confirmError) {
-        throw new Error(confirmError.message);
-      }
+        const clientSecret = subData.client_secret as string;
 
-      // 3) Let webhook update credits, then sync them into UI
-      try {
-        await syncCreditsAfterPayment(selectedPlan.credits);
-      } catch (syncErr) {
-        console.error("Credit sync error:", syncErr);
-        // Not fatal: payment succeeded, UI just won't auto-refresh credits nicely
+        // Confirm the subscription payment
+        const { error: confirmError } = await stripe.confirmCardPayment(
+          clientSecret,
+          {
+            payment_method: {
+              card: cardElement,
+              billing_details: {
+                email: userEmail,
+              },
+            },
+          }
+        );
+
+        if (confirmError) {
+          throw new Error(confirmError.message);
+        }
+
+        // For subscriptions, credits are added by webhook
+        console.log("✅ Subscription created successfully");
+        
+      } else {
+        // ONE-TIME PAYMENT FLOW: Call create-payment-intent endpoint
+        const { data: intent, error: intentErr } =
+          await supabase.functions.invoke("create-payment-intent", {
+            body: {
+              amount: Math.round(getDiscountedPrice() * 100),
+              currency: "usd",
+              description: `${selectedPlan.name} - ${
+                selectedPlan.credits
+              } Credits${
+                discountApplied?.valid ? ` (${discountApplied.code} applied)` : ""
+              }`,
+              user_id: userId,
+              user_email: userEmail,
+              credits: selectedPlan.credits,
+              plan_name: selectedPlan.name,
+              coupon_code: discountApplied?.valid
+                ? discountApplied.code
+                : undefined,
+            },
+          });
+
+        if (intentErr || !intent?.client_secret) {
+          throw new Error(
+            intentErr?.message || "Failed to create payment intent."
+          );
+        }
+
+        const clientSecret = intent.client_secret as string;
+
+        // Confirm card payment with Stripe
+        const { error: confirmError } = await stripe.confirmCardPayment(
+          clientSecret,
+          {
+            payment_method: {
+              card: cardElement,
+              billing_details: {
+                email: userEmail,
+              },
+            },
+          }
+        );
+
+        if (confirmError) {
+          throw new Error(confirmError.message);
+        }
+
+        // Let webhook update credits, then sync them into UI
+        try {
+          await syncCreditsAfterPayment(selectedPlan.credits);
+        } catch (syncErr) {
+          console.error("Credit sync error:", syncErr);
+          // Not fatal: payment succeeded, UI just won't auto-refresh credits nicely
+        }
       }
 
       onSuccess();
@@ -455,6 +502,13 @@ const PurchaseCreditsModal: React.FC<PurchaseCreditsModalProps> = ({
       setError("Please select a plan to continue.");
       return;
     }
+    
+    // Prevent proceeding with Free plan
+    if (selectedPlanId === 'free') {
+      setError("The Free plan is already active. Please select a paid plan to upgrade.");
+      return;
+    }
+    
     setError(null);
     setShowPaymentForm(true);
   };
@@ -503,68 +557,89 @@ const PurchaseCreditsModal: React.FC<PurchaseCreditsModalProps> = ({
         {/* Plan Grid */}
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {PLANS.map((plan) => (
-              <div
-                key={plan.id}
-                className={`relative border rounded-xl p-6 cursor-pointer transition-all duration-200 ${
-                  selectedPlanId === plan.id
-                    ? "border-orange-500 bg-orange-500/10"
-                    : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
-                }`}
-                onClick={() => handlePlanSelect(plan.id)}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                      🔥 Popular
-                    </span>
-                  </div>
-                )}
-
-                <div className="text-center">
-                  <div className="text-2xl mb-2">
-                    {plan.id === "starter" && "🚀"}
-                    {plan.id === "growth" && "📈"}
-                    {plan.id === "pro" && "🔥"}
-                  </div>
-                  <h3 className="text-xl font-bold text-white mb-2">
-                    {plan.name}
-                  </h3>
-                  <div className="text-3xl font-bold text-white mb-1">
-                    ${plan.price}
-                    {plan.isSubscription && (
-                      <span className="text-lg text-gray-400">/mo</span>
-                    )}
-                  </div>
-                  <p className="text-orange-400 font-semibold mb-4">
-                    {plan.credits} Credits
-                  </p>
-                  <p className="text-gray-300 text-sm mb-4">
-                    {plan.description}
-                  </p>
-
-                  <ul className="text-left space-y-2 mb-4">
-                    {plan.features.map((feature) => (
-                      <li
-                        key={feature}
-                        className="flex items-center text-sm text-gray-300"
-                      >
-                        <CheckCircle className="w-4 h-4 text-green-400 mr-2 flex-shrink-0" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {selectedPlanId === plan.id && (
-                  <div className="absolute top-4 right-4">
-                    <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center">
-                      <CheckCircle className="w-4 h-4 text-white" />
+            {PLANS.map((plan) => {
+              // Check if this is the user's current plan
+              const isCurrentPlan = currentPlan.toLowerCase().includes(plan.id) || 
+                                   (currentPlan.toLowerCase() === 'free' && plan.id === 'free');
+              const isFree = plan.id === 'free';
+              
+              return (
+                <div
+                  key={plan.id}
+                  className={`relative border rounded-xl p-6 transition-all duration-200 ${
+                    isCurrentPlan
+                      ? "border-green-500 bg-green-500/10"
+                      : selectedPlanId === plan.id
+                      ? "border-orange-500 bg-orange-500/10"
+                      : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
+                  } ${isFree ? "cursor-default" : "cursor-pointer"}`}
+                  onClick={() => !isFree && handlePlanSelect(plan.id)}
+                >
+                  {/* Current Plan Badge */}
+                  {isCurrentPlan && (
+                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                      <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                        ✓ Current Plan
+                      </span>
                     </div>
+                  )}
+                  
+                  {/* Popular Badge */}
+                  {!isCurrentPlan && plan.popular && (
+                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                      <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                        🔥 Popular
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="text-center">
+                    <div className="text-2xl mb-2">
+                      {plan.id === "free" && "🎁"}
+                      {plan.id === "starter" && "🚀"}
+                      {plan.id === "pro" && "⭐"}
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-2">
+                      {plan.name}
+                    </h3>
+                    <div className="text-3xl font-bold text-white mb-1">
+                      {plan.price === 0 ? "Free" : `$${plan.price}`}
+                      {plan.isSubscription && plan.price > 0 && (
+                        <span className="text-lg text-gray-400">/mo</span>
+                      )}
+                    </div>
+                    <p className="text-orange-400 font-semibold mb-4">
+                      {plan.credits} Credit{plan.credits !== 1 ? 's' : ''}
+                      {plan.isSubscription && plan.price > 0 && " monthly"}
+                    </p>
+                    <p className="text-gray-300 text-sm mb-4">
+                      {plan.description}
+                    </p>
+
+                    <ul className="text-left space-y-2 mb-4">
+                      {plan.features.map((feature) => (
+                        <li
+                          key={feature}
+                          className="flex items-center text-sm text-gray-300"
+                        >
+                          <CheckCircle className="w-4 h-4 text-green-400 mr-2 flex-shrink-0" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {/* Selection Indicator */}
+                  {selectedPlanId === plan.id && !isFree && (
+                    <div className="absolute top-4 right-4">
+                      <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center">
+                        <CheckCircle className="w-4 h-4 text-white" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
