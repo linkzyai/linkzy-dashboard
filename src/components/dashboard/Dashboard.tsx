@@ -475,14 +475,14 @@ const Dashboard = () => {
                 Start here
               </div>
             )}
-            {hasBacklinks && (
+            {/* {hasBacklinks && (
               <button className="bg-gray-800 hover:bg-gray-700 text-white p-6 md:p-5 rounded-xl transition-colors flex items-center justify-center space-x-3 border border-gray-600 min-h-[60px]">
                 <ArrowRight className="w-6 h-6 text-gray-300" />
                 <span className="text-base md:text-lg font-semibold">
                   View Results
                 </span>
               </button>
-            )}
+            )} */}
           </div>
 
           {/* Onboarding Progress Tracker */}
@@ -587,7 +587,7 @@ const Dashboard = () => {
           )} */}
 
           {/* Stats Grid */}
-          {/* <div className={`grid grid-cols-1 md:grid-cols-${stats.length} gap-6 mb-8`}>
+          <div className={`grid grid-cols-1 md:grid-cols-${stats.length} gap-6 mb-8`}>
             {stats.map((stat) => (
               <div
                 key={stat.name}
@@ -610,7 +610,7 @@ const Dashboard = () => {
                 <p className="text-sm text-gray-500">{stat.change}</p>
               </div>
             ))}
-          </div> */}
+          </div>
 
           {/* Bottom Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
@@ -643,7 +643,7 @@ const Dashboard = () => {
                             {link.domain || link.url}
                           </p>
                           <span
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium ${link.status === 'success' || link.status === 'placed'
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium ${link.status === 'completed' || link.status === 'placed'
                               ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                               : link.status === 'pending'
                                 ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
@@ -734,7 +734,7 @@ const Dashboard = () => {
               </div>
 
               <div className="mt-6">
-                <button className="w-full bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-600">
+                <button onClick={() => navigate('/dashboard/account')} className="w-full bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-600">
                   <span>View All Backlinks</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>

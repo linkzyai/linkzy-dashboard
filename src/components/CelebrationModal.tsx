@@ -11,14 +11,14 @@ interface CelebrationModalProps {
 const CelebrationModal: React.FC<CelebrationModalProps> = ({ isOpen, onClose, achievementType }) => {
   const navigate = useNavigate();
   const [confetti, setConfetti] = useState<{ x: number; y: number; size: number; color: string }[]>([]);
-  
+
   useEffect(() => {
     if (isOpen) {
       // Generate confetti
       const confettiCount = 50;
       const newConfetti = [];
       const colors = ['#f97316', '#22c55e', '#3b82f6', '#eab308', '#ec4899'];
-      
+
       for (let i = 0; i < confettiCount; i++) {
         newConfetti.push({
           x: Math.random() * 100, // percentage across the screen
@@ -27,17 +27,17 @@ const CelebrationModal: React.FC<CelebrationModalProps> = ({ isOpen, onClose, ac
           color: colors[Math.floor(Math.random() * colors.length)]
         });
       }
-      
+
       setConfetti(newConfetti);
     }
   }, [isOpen]);
-  
+
   if (!isOpen) return null;
-  
+
   let title = '';
   let message = '';
   let icon = <CheckCircle className="w-10 h-10 text-white" />;
-  
+
   switch (achievementType) {
     case 'first-request':
       title = 'First Request Submitted!';
@@ -55,12 +55,12 @@ const CelebrationModal: React.FC<CelebrationModalProps> = ({ isOpen, onClose, ac
       icon = <CheckCircle className="w-10 h-10 text-white" />;
       break;
   }
-  
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       {/* Confetti - Only show on larger screens to avoid performance issues on mobile */}
       {window.innerWidth > 768 && confetti.map((particle, i) => (
-        <div 
+        <div
           key={i}
           className="absolute rounded-sm animate-confetti-fall"
           style={{
@@ -75,7 +75,7 @@ const CelebrationModal: React.FC<CelebrationModalProps> = ({ isOpen, onClose, ac
           }}
         ></div>
       ))}
-      
+
       {/* Modal */}
       <div className="bg-gray-900 border-2 border-orange-500 rounded-2xl max-w-md w-full p-5 md:p-8 relative animate-bounce-in max-h-[90vh] overflow-y-auto">
         <button
@@ -84,17 +84,17 @@ const CelebrationModal: React.FC<CelebrationModalProps> = ({ isOpen, onClose, ac
         >
           <X className="w-5 h-5" />
         </button>
-        
+
         <div className="text-center">
           <div className="w-20 h-20 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
             {icon}
           </div>
-          
+
           <h2 className="text-xl md:text-2xl font-bold text-white mb-3 md:mb-4">{title}</h2>
           <p className="text-gray-300 mb-6">
             {message}
           </p>
-          
+
           <div className="grid grid-cols-1 gap-4">
             {achievementType === 'first-request' && (
               <button
@@ -107,8 +107,8 @@ const CelebrationModal: React.FC<CelebrationModalProps> = ({ isOpen, onClose, ac
                 View Request Status
               </button>
             )}
-            
-            {achievementType === 'first-backlink' && (
+
+            {/* {achievementType === 'first-backlink' && (
               <button
                 onClick={() => {
                   onClose();
@@ -119,8 +119,8 @@ const CelebrationModal: React.FC<CelebrationModalProps> = ({ isOpen, onClose, ac
                 <BarChart3 className="w-4 h-4" />
                 <span>View Analytics</span>
               </button>
-            )}
-            
+            )} */}
+
             {achievementType === 'completed-onboarding' && (
               <button
                 onClick={() => {
