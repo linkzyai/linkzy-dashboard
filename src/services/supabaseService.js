@@ -1192,8 +1192,7 @@ If you're testing, try these workarounds:
           status: b.status,
           clicks: b.clicks || 0,
           trafficIncrease: b.traffic_increase || "+0%",
-          domainAuthority:
-            b.domain_authority ?? opp?.domain_authority ?? undefined,
+          domainAuthority: opp?.domain_authority_score ?? undefined,
         };
       });
 
