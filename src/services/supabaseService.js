@@ -1085,38 +1085,22 @@ If you're testing, try these workarounds:
     try {
       const user = await this.getUserProfile();
 
+      console.log("user", user);
+
       // 1) Fetch placement_instructions joined with placement_opportunities
-      const { data: backlinksRaw, error: backlinksError } = await supabase
+      const { data: backlinks, error: backlinksError } = await supabase
         .from("placement_instructions")
-        .select(
-          `
-          id,
-          status,
-          clicks,
-          opportunity_id,
-          created_at,
-          placement_opportunities (
-            id,
-            source_user_id,
-            target_content_url,
-            suggested_anchor_text,
-            domain_authority_score
-          ),
-          users (
-            id,
-            website
-          )
-        `
-        )
-        .eq("placement_opportunities.source_user_id", user.id)
+        .select("*")
+        .eq("source_user_id", user.id)
         .order("created_at", { ascending: false });
+
+      console.log("backlinks", backlinks);
 
       if (backlinksError) {
         console.warn("Error fetching backlinks:", backlinksError);
       }
 
-      const backlinks = backlinksRaw ?? [];
-      const recentBacklinksRaw = backlinks.slice(0, 5);
+      const recentBacklinks = backlinks.slice(0, 5);
 
       // 2) Calculate metrics
       const totalBacklinks = backlinks.length;
@@ -1169,37 +1153,37 @@ If you're testing, try these workarounds:
         ) || 0;
 
       // 4) Shape recentBacklinks for the UI
-      const recentBacklinks = recentBacklinksRaw.map((b) => {
-        // Supabase returns a single row as object, but we guard in case it's an array
-        const opp = Array.isArray(b.placement_opportunities)
-          ? b.placement_opportunities[0]
-          : b.placement_opportunities;
-        const user = Array.isArray(b.users) ? b.users[0] : b.users;
+      // const recentBacklinks = recentBacklinksRaw.map((b) => {
+      //   // Supabase returns a single row as object, but we guard in case it's an array
+      //   const opp = Array.isArray(b.placement_opportunities)
+      //     ? b.placement_opportunities[0]
+      //     : b.placement_opportunities;
+      //   const user = Array.isArray(b.users) ? b.users[0] : b.users;
 
-        const url = opp?.target_content_url || user?.website || null;
+      //   const url = opp?.target_content_url || user?.website || null;
 
-        // domain preference: instruction.domain -> derived from URL
-        let domain = user?.website || null;
-        if (!domain && url) {
-          try {
-            domain = new URL(url).hostname;
-          } catch {
-            domain = url;
-          }
-        }
+      //   // domain preference: instruction.domain -> derived from URL
+      //   let domain = user?.website || null;
+      //   if (!domain && url) {
+      //     try {
+      //       domain = new URL(url).hostname;
+      //     } catch {
+      //       domain = url;
+      //     }
+      //   }
 
-        return {
-          id: b.id,
-          domain,
-          url,
-          anchorText: opp?.suggested_anchor_text || null,
-          anchor: opp?.suggested_anchor_text || null,
-          status: b.status,
-          clicks: b.clicks || 0,
-          trafficIncrease: b.traffic_increase || "+0%",
-          domainAuthority: opp?.domain_authority_score ?? undefined,
-        };
-      });
+      //   return {
+      //     id: b.id,
+      //     domain,
+      //     url,
+      //     anchorText: opp?.suggested_anchor_text || null,
+      //     anchor: opp?.suggested_anchor_text || null,
+      //     status: b.status,
+      //     clicks: b.clicks || 0,
+      //     trafficIncrease: b.traffic_increase || "+0%",
+      //     domainAuthority: opp?.domain_authority_score ?? undefined,
+      //   };
+      // });
 
       console.log("✅ Dashboard stats fetched successfully:", {
         totalBacklinks,
@@ -1299,8 +1283,8 @@ If you're testing, try these workarounds:
 
       const { data, error, count } = await supabase
         .from("placement_instructions")
-        .select("*", { count: "exact" })
-        .eq("user_id", user.id)
+        .select(`*`, { count: "exact" })
+        .eq("source_user_id", user.id)
         .order("created_at", { ascending: false })
         .range(offset, offset + limit - 1);
 
