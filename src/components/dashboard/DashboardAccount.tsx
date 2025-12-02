@@ -22,13 +22,13 @@ import JSZip from "jszip";
 
 type BacklinkRecord = {
   id: string | number;
-  target_content_url: string;
-  suggested_anchor_text?: string;
+  target_url: string;
+  anchor_text?: string;
+  placement_text?: string;
   status?: string;
   created_at?: string;
-  placement_url?: string;
-  niche?: string;
   notes?: string;
+  niche?: string;
 };
 
 const BACKLINKS_PAGE_SIZE = 10;
@@ -1677,7 +1677,7 @@ const DashboardAccount = () => {
                       <tr key={String(backlink.id)}>
                         <td className="px-4 py-4 align-top">
                           <div className="font-semibold text-white">
-                            {backlink.suggested_anchor_text || "—"}
+                            {backlink.anchor_text || "—"}
                           </div>
                           {backlink.notes && (
                             <p className="text-xs text-gray-500 mt-1 break-words">
@@ -1691,14 +1691,14 @@ const DashboardAccount = () => {
                           )}
                         </td>
                         <td className="px-4 py-4 align-top">
-                          {backlink.target_content_url ? (
+                          {backlink.target_url ? (
                             <a
-                              href={backlink.target_content_url}
+                              href={backlink.target_url}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-orange-400 hover:text-orange-300 break-all"
                             >
-                              {backlink.target_content_url}
+                              {backlink.target_url}
                             </a>
                           ) : (
                             <span className="text-gray-500">—</span>
@@ -1714,14 +1714,14 @@ const DashboardAccount = () => {
                           </span>
                         </td>
                         <td className="px-4 py-4 align-top">
-                          {backlink.placement_url ? (
+                          {backlink.placement_text ? (
                             <a
-                              href={backlink.placement_url}
+                              href={backlink.target_url}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-sm text-orange-400 hover:text-orange-300 break-all"
                             >
-                              {backlink.placement_url}
+                              {backlink.placement_text}
                             </a>
                           ) : (
                             <span className="text-gray-500 text-sm">

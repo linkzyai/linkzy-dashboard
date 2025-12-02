@@ -640,7 +640,7 @@ const Dashboard = () => {
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">
                           <p className="text-white font-medium truncate max-w-[150px] md:max-w-none">
-                            {link.domain || link.url}
+                            {link.domain || link.target_url}
                           </p>
                           <span
                             className={`px-3 py-1.5 rounded-full text-xs font-medium ${link.status === 'completed' || link.status === 'placed'
@@ -654,12 +654,12 @@ const Dashboard = () => {
                           </span>
                           {link.domainAuthority && (
                             <span className="bg-blue-500/20 text-white px-3 py-1.5 rounded-full text-xs font-medium border border-blue-500/30">
-                              DA {link.domainAuthority}
+                              DA {link.domain_authority}
                             </span>
                           )}
                         </div>
                         <p className="text-gray-400 text-sm">
-                          &quot;{link.anchorText || link.anchor}&quot;
+                          &quot;{link.anchorText || link.anchor_text}&quot;
                         </p>
                         <div className="flex flex-wrap items-center space-x-2 md:space-x-4 mt-2 text-xs">
                           <span className="text-gray-500">
