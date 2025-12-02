@@ -1624,7 +1624,7 @@ const DashboardAccount = () => {
                 onClick={() => loadBacklinks(backlinksPage)}
                 className="bg-red-500/20 hover:bg-red-500/30 text-red-200 px-4 py-2 rounded-lg text-sm font-medium border border-red-500/40"
               >
-                Try Again
+                Try Again!
               </button>
             </div>
           ) : backlinksLoading && !hasBacklinks ? (
