@@ -1281,7 +1281,7 @@ const DashboardAccount = () => {
               Purchase More Credits
             </button>
             {/* Credit Usage Table */}
-            <div className="w-full mt-6">
+            {/* <div className="w-full mt-6">
               <h4 className="text-lg font-semibold text-white mb-2">
                 Credit Usage History
               </h4>
@@ -1307,10 +1307,9 @@ const DashboardAccount = () => {
                     )}
                   </tbody>
                 </table>
-                {/* Fade/gradient for scroll cue */}
                 <div className="pointer-events-none absolute top-0 right-0 h-full w-8 bg-gradient-to-l from-black/80 to-transparent hidden sm:block" />
               </div>
-            </div>
+            </div> */}
           </div>
           {/* Billing History Card */}
           <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 flex flex-col">
