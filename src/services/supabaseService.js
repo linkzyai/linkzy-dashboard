@@ -1101,6 +1101,10 @@ If you're testing, try these workarounds:
             target_content_url,
             suggested_anchor_text,
             domain_authority_score
+          ),
+          users (
+            id,
+            website
           )
         `
         )
@@ -1170,11 +1174,12 @@ If you're testing, try these workarounds:
         const opp = Array.isArray(b.placement_opportunities)
           ? b.placement_opportunities[0]
           : b.placement_opportunities;
+        const user = Array.isArray(b.users) ? b.users[0] : b.users;
 
-        const url = opp?.target_content_url || null;
+        const url = opp?.target_content_url || user?.website || null;
 
         // domain preference: instruction.domain -> derived from URL
-        let domain = b.domain || null;
+        let domain = user?.website || null;
         if (!domain && url) {
           try {
             domain = new URL(url).hostname;
