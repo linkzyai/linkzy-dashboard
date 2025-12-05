@@ -24,6 +24,7 @@ import DashboardAccount from './components/dashboard/DashboardAccount';
 
 import Blog from './components/Blog';
 import BlogPost from './components/BlogPost';
+import BlogSection from './components/BlogSection';
 import AnimatedDashboardDemo from './components/AnimatedDashboardDemo';
 import EmailVerification from './components/EmailVerification';
 import AuthCallback from './components/AuthCallback';
@@ -38,6 +39,7 @@ const HomePage = () => (
     <Features />
     <HowItWorks />
     <Pricing />
+    <BlogSection />
     <Footer />
   </>
 );
