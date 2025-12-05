@@ -46,7 +46,9 @@ const Footer = () => {
             <h3 className="text-white font-semibold mb-4">Resources</h3>
             <ul className="space-y-3">
               <li>
-
+                <a href="/blog" className="text-gray-400 hover:text-white transition-colors text-sm">
+                  Blog
+                </a>
               </li>
               <li>
                 <a href="/dashboard" className="text-gray-400 hover:text-white transition-colors text-sm">
@@ -70,8 +72,8 @@ const Footer = () => {
             </p>
             <div className="flex items-center space-x-2">
               <Mail className="w-4 h-4 text-orange-500" />
-              <a 
-                href="mailto:hello@linkzy.ai" 
+              <a
+                href="mailto:hello@linkzy.ai"
                 className="text-orange-400 hover:text-orange-300 transition-colors text-sm"
               >
                 hello@linkzy.ai
