@@ -187,7 +187,7 @@ const Hero = () => {
                   <div className="aspect-video rounded-xl overflow-hidden bg-black">
                     <video
                       src="/Linkzy_Dashboard.mp4"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                       autoPlay
                       loop
                       muted
