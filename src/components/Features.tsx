@@ -11,12 +11,14 @@ const Features = () => {
     {
       icon: Zap,
       title: "Lightning Fast Setup",
-      description: "Get started in under 30 seconds. No complex WordPress plugins or technical configuration required."
+      description: "Get started in under 30 seconds. No complex WordPress plugins or technical configuration required.",
+      codmingSoon: true
     },
     {
       icon: BarChart3,
       title: "Real-Time Analytics",
-      description: "Track every click, monitor performance, and see exactly where your backlinks are placed with detailed reporting."
+      description: "Track every click, monitor performance, and see exactly where your backlinks are placed with detailed reporting.",
+      comingSoon: true
     },
     {
       icon: Globe,
@@ -33,11 +35,11 @@ const Features = () => {
             Why Choose <span className="text-orange-500">Linkzy</span>?
           </h2>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            Stop wasting time and money on expensive, complicated link building solutions. Get 
+            Stop wasting time and money on expensive, complicated link building solutions. Get
             better results for 90% less cost.
           </p>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-20">
           {features.map((feature, index) => (
             <div key={index} className="bg-black border border-gray-600 rounded-2xl p-6 hover:border-orange-500 hover:shadow-[0_0_60px_rgba(249,115,22,0.6)] transition-all duration-300 transform hover:-translate-y-1">
@@ -46,14 +48,21 @@ const Features = () => {
                   <feature.icon className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold text-white mb-3">{feature.title}</h3>
+                  <div className="flex items-center gap-2 mb-3">
+                    <h3 className="text-xl font-bold text-white">{feature.title}</h3>
+                    {feature?.comingSoon && (
+                      <span className="px-2 py-1 bg-orange-500/20 text-orange-400 text-xs font-semibold rounded-full border border-orange-500/30">
+                        Coming Soon
+                      </span>
+                    )}
+                  </div>
                   <p className="text-gray-300 leading-relaxed">{feature.description}</p>
                 </div>
               </div>
             </div>
           ))}
         </div>
-        
+
         {/* Comparison Table */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           <div className="bg-black border border-red-500/50 rounded-2xl p-6">
@@ -69,7 +78,7 @@ const Features = () => {
               <li>• Little control or customization</li>
             </ul>
           </div>
-          
+
           <div className="bg-black border border-orange-500/50 rounded-2xl p-6 hover:border-orange-500 hover:shadow-[0_0_80px_rgba(249,115,22,0.7)] hover:bg-gray-900/30 transition-all duration-300 transform hover:-translate-y-2 hover:scale-105">
             <div className="flex items-center space-x-2 mb-6">
               <span className="text-green-400 text-xl">✓</span>
@@ -78,7 +87,7 @@ const Features = () => {
             <ul className="space-y-3 text-gray-300">
               <li>• Works on ANY website</li>
               <li>• 30-second setup</li>
-              <li>• $10-$49 one-time payment</li>
+              <li>• From $19/month - cancel anytime</li>
               <li>• Complete independence</li>
               <li>• Full control & customization</li>
             </ul>
