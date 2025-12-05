@@ -186,7 +186,7 @@ const Hero = () => {
                   </button>
                   <div className="aspect-video rounded-xl overflow-hidden bg-black">
                     <video
-                      src="/demo-video.mp4"
+                      src="/Linkzy_Dashboard.mp4"
                       className="w-full h-full object-cover"
                       autoPlay
                       loop
@@ -200,7 +200,7 @@ const Hero = () => {
                     <script dangerouslySetInnerHTML={{
                       __html: `
                     (function(){
-                      var v=document.querySelector('video[src="/demo-video.mp4"]');
+                      var v=document.querySelector('video[src="/Linkzy_Dashboard.mp4"]');
                       if(v){ var play=()=>v.play().catch(()=>{}); document.addEventListener('visibilitychange',play,{once:true}); setTimeout(play, 100); }
                     })();
                   `}} />
