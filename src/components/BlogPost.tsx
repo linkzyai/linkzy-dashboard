@@ -4,6 +4,8 @@ import { Calendar, Clock, ArrowLeft, Tag as TagIcon, Folder, Share2 } from 'luci
 import { Helmet } from 'react-helmet-async';
 import { createClient } from '@supabase/supabase-js';
 import { IArticle } from '../types/blog';
+import Header from './Header';
+import Footer from './Footer';
 
 const supabase = createClient(
     import.meta.env.VITE_SUPABASE_URL,
@@ -140,6 +142,7 @@ const BlogPost = () => {
                 {article.image && <meta name="twitter:image" content={article.image} />}
             </Helmet>
 
+            <Header />
             <div className="min-h-screen bg-black">
                 {/* Back Button */}
                 <div className="bg-gray-900 border-b border-gray-800">
@@ -281,6 +284,7 @@ const BlogPost = () => {
                     </div>
                 )}
             </div>
+            <Footer />
         </>
     );
 };

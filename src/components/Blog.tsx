@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Calendar, Clock, Tag as TagIcon, Folder } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { createClient } from '@supabase/supabase-js';
+import Header from './Header';
+import Footer from './Footer';
 
 const supabase = createClient(
     import.meta.env.VITE_SUPABASE_URL,
@@ -122,6 +124,7 @@ const Blog = () => {
                 <meta name="description" content="Read the latest articles about SEO, backlinks, and digital marketing from Linkzy." />
             </Helmet>
 
+            <Header />
             <div className="min-h-screen bg-black">
                 {/* Header */}
                 <div className="bg-gradient-to-br from-orange-900/20 via-black to-black border-b border-gray-800">
@@ -149,8 +152,8 @@ const Blog = () => {
                                     <button
                                         onClick={() => handleFilterChange('category', null)}
                                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!selectedCategory
-                                                ? 'bg-orange-500 text-white'
-                                                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                                            ? 'bg-orange-500 text-white'
+                                            : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                                             }`}
                                     >
                                         All
@@ -160,8 +163,8 @@ const Blog = () => {
                                             key={category.id}
                                             onClick={() => handleFilterChange('category', category.slug)}
                                             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${selectedCategory === category.slug
-                                                    ? 'bg-orange-500 text-white'
-                                                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                                                ? 'bg-orange-500 text-white'
+                                                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                                                 }`}
                                         >
                                             {category.title}
@@ -182,8 +185,8 @@ const Blog = () => {
                                     <button
                                         onClick={() => handleFilterChange('tag', null)}
                                         className={`px-3 py-1 rounded-full text-sm transition-colors ${!selectedTag
-                                                ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                                                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                                            ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                                             }`}
                                     >
                                         All
@@ -193,8 +196,8 @@ const Blog = () => {
                                             key={tag.id}
                                             onClick={() => handleFilterChange('tag', tag.slug)}
                                             className={`px-3 py-1 rounded-full text-sm transition-colors ${selectedTag === tag.slug
-                                                    ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                                                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                                                ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                                                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                                                 }`}
                                         >
                                             {tag.title}
@@ -283,6 +286,7 @@ const Blog = () => {
                     )}
                 </div>
             </div>
+            <Footer />
         </>
     );
 };
