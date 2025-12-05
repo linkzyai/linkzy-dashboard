@@ -11,8 +11,7 @@ const Features = () => {
     {
       icon: Zap,
       title: "Lightning Fast Setup",
-      description: "Get started in under 30 seconds. No complex WordPress plugins or technical configuration required.",
-      codmingSoon: true
+      description: "Get started in under 30 seconds. No complex WordPress plugins or technical configuration required."
     },
     {
       icon: BarChart3,
