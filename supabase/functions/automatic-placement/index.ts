@@ -1,64 +1,185 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
 // @deno-types="https://esm.sh/@supabase/supabase-js@2.39.7/dist/module/index.d.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-interface PlacementRequest {
-  opportunityId: string;
-  userId?: string;
-  manualOverride?: boolean;
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY"); // set in Project Settings
+
+function htmlEscape(s = "") {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
-interface WordPressCredentials {
-  apiUrl: string;
-  username: string;
-  appPassword: string;
+function sanitizeAnchorText(a = "") {
+  return a
+    .replace(/[\r\n]+/g, " ")
+    .trim()
+    .slice(0, 80);
 }
 
-interface PlacementResult {
-  success: boolean;
-  placementUrl?: string;
-  errorMessage?: string;
-  responseTime?: number;
-  verificationSuccess?: boolean;
-  placementMethod?:
-    | "wordpress_api"
-    | "javascript_injection"
-    | "manual_fallback";
-}
-
-interface PlatformDetection {
-  isWordPress: boolean;
-  hasRestAPI: boolean;
-  platform: string;
-  jsInjectionPossible: boolean;
-}
-
-interface PlacementInstructionData {
-  type: string;
-  targetUrl: string;
+async function generateContextualParagraphAI(opts: {
   anchorText: string;
-  opportunityId: string;
-  placementContext: string;
-  keywords: string[];
-  injectionMethod: string;
-  paragraph?: string;
-  rel?: string;
+  targetUrl: string;
+  niche?: string;
+  keywords?: string[];
+  pageTitle?: string; // target page title if available
+  pageExcerpt?: string; // short text from page if available
+  rel?: string; // e.g., "noopener"
+  maxChars?: number; // default 240
+}) {
+  const {
+    anchorText,
+    targetUrl,
+    niche,
+    keywords = [],
+    pageTitle = "",
+    pageExcerpt = "",
+    rel = "noopener",
+    maxChars = 240,
+  } = opts;
+
+  // hard fallback if key missing
+  if (!OPENAI_API_KEY) {
+    return generateContextualParagraph(
+      anchorText,
+      targetUrl,
+      niche,
+      keywords,
+      rel
+    );
+  }
+
+  // guard inputs
+  const safeAnchor = sanitizeAnchorText(anchorText) || "this guide";
+  let safeUrl = "";
+  try {
+    safeUrl = new URL(targetUrl).toString();
+  } catch {
+    /* invalid URL -> fallback */
+  }
+  if (!safeUrl) {
+    return generateContextualParagraph(
+      safeAnchor,
+      targetUrl,
+      niche,
+      keywords,
+      rel
+    );
+  }
+
+  const sys = `
+You write a single, natural sentence (<= ${maxChars} characters) that fits within an article body and introduces a relevant resource.
+Rules:
+- One sentence only. No lists. No headings. No emojis.
+- Include the provided anchor text exactly once, wrapped as: <a href="URL" rel="${rel}" target="_blank">ANCHOR</a>
+- No salesy language, no clickbait, no exclamation marks.
+- Keep it neutral, informational, context-aware (use niche/keywords if helpful), human-sounding.
+- No first-person ("I", "we"). No promises. No superlatives.
+- Output plain HTML for the sentence only.
+`;
+
+  const user = `
+ANCHOR_TEXT: ${safeAnchor}
+TARGET_URL: ${safeUrl}
+NICHE: ${niche || ""}
+KEYWORDS: ${(keywords || []).slice(0, 8).join(", ")}
+PAGE_TITLE: ${pageTitle}
+PAGE_EXCERPT: ${pageExcerpt}
+`;
+
+  let content = "";
+  try {
+    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        temperature: 0.3,
+        messages: [
+          { role: "system", content: sys.trim() },
+          { role: "user", content: user.trim() },
+        ],
+      }),
+    });
+    const json = await resp.json();
+    content = json?.choices?.[0]?.message?.content?.trim() || "";
+  } catch {
+    // network/model error -> fallback
+    return generateContextualParagraph(
+      safeAnchor,
+      safeUrl,
+      niche,
+      keywords,
+      rel
+    );
+  }
+
+  // validate + sanitize
+  if (!content) {
+    return generateContextualParagraph(
+      safeAnchor,
+      safeUrl,
+      niche,
+      keywords,
+      rel
+    );
+  }
+
+  // must include exactly one anchor with correct href + text
+  const hrefOk = content.includes(`href="${safeUrl}"`);
+  const anchorOk = content.includes(`>${safeAnchor}</a>`);
+  const oneSentence =
+    content.split(/[.!?](?=\s|$)/).filter(Boolean).length === 1;
+  const tooLong = content.replace(/\s+/g, " ").length > maxChars;
+  const hasExclaim = /!/.test(content);
+
+  if (!hrefOk || !anchorOk || !oneSentence || tooLong || hasExclaim) {
+    return generateContextualParagraph(
+      safeAnchor,
+      safeUrl,
+      niche,
+      keywords,
+      rel
+    );
+  }
+
+  // minimal HTML hardening: escape any leftover text nodes (anchor already our exact markup)
+  // We'll rebuild sentence around the exact anchor snippet:
+  // Find anchor tag and wrap with safe text parts
+  try {
+    const anchorTag = `<a href="${safeUrl}" rel="${rel}" target="_blank">${safeAnchor}</a>`;
+    // Split on anchor once
+    const parts = content.split(anchorTag);
+    if (parts.length === 2) {
+      const left = htmlEscape(parts[0]);
+      const right = htmlEscape(parts[1]);
+      const final = `${left}${anchorTag}${right}`.replace(/\s+/g, " ").trim();
+      return final;
+    }
+  } catch {
+    /* ignore */
+  }
+
+  return generateContextualParagraph(safeAnchor, safeUrl, niche, keywords, rel);
 }
 
 function generateContextualParagraph(
-  anchorText: string,
-  targetUrl: string,
-  niche: string | undefined,
-  keywords: string[] = [],
-  rel: string = "noopener"
-): string {
+  anchorText,
+  targetUrl,
+  niche,
+  keywords = [],
+  rel = "noopener"
+) {
   const kw = (keywords[0] || niche || "resources").toString();
   const sentences = [
     `If you're exploring ${kw}, you might find ${anchorText} helpful for practical tips and real examples.`,
@@ -71,23 +192,20 @@ function generateContextualParagraph(
     `<a href="${targetUrl}" rel="${rel}" target="_blank">${anchorText}</a>`
   );
 }
-
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
 // Platform detection function
-async function detectPlatform(websiteUrl: string): Promise<PlatformDetection> {
+async function detectPlatform(websiteUrl) {
   try {
     const domain = new URL(websiteUrl).origin;
-
     // Check for WordPress REST API
     const wpApiResponse = await fetch(`${domain}/wp-json/wp/v2/`, {
       method: "HEAD",
-      headers: { "User-Agent": "Linkzy-Bot/1.0" },
+      headers: {
+        "User-Agent": "Linkzy-Bot/1.0",
+      },
     });
-
     if (wpApiResponse.ok) {
       return {
         isWordPress: true,
@@ -96,15 +214,14 @@ async function detectPlatform(websiteUrl: string): Promise<PlatformDetection> {
         jsInjectionPossible: true,
       };
     }
-
     // Check for other platform indicators
     const pageResponse = await fetch(domain, {
-      headers: { "User-Agent": "Linkzy-Bot/1.0" },
+      headers: {
+        "User-Agent": "Linkzy-Bot/1.0",
+      },
     });
-
     if (pageResponse.ok) {
       const html = await pageResponse.text();
-
       // Platform detection patterns
       const platforms = {
         shopify: /shopify/i,
@@ -113,7 +230,6 @@ async function detectPlatform(websiteUrl: string): Promise<PlatformDetection> {
         webflow: /webflow/i,
         wordpress: /wp-content|wordpress/i,
       };
-
       for (const [platform, pattern] of Object.entries(platforms)) {
         if (pattern.test(html)) {
           return {
@@ -125,7 +241,6 @@ async function detectPlatform(websiteUrl: string): Promise<PlatformDetection> {
         }
       }
     }
-
     // Default: assume JavaScript injection is possible
     return {
       isWordPress: false,
@@ -142,39 +257,36 @@ async function detectPlatform(websiteUrl: string): Promise<PlatformDetection> {
       isWordPress: false,
       hasRestAPI: false,
       platform: "unknown",
-      jsInjectionPossible: true, // Default to true - assume JS injection is possible unless proven otherwise
+      jsInjectionPossible: true,
     };
   }
 }
-
 // JavaScript injection placement for non-WordPress sites
-async function attemptJavaScriptPlacement(
-  opportunity: any,
-  targetDomainMetrics: any
-): Promise<PlacementResult> {
+async function attemptJavaScriptPlacement(opportunity, targetDomainMetrics) {
   const startTime = Date.now();
-
   try {
     console.log(
       `🔧 Attempting JavaScript injection placement for ${targetDomainMetrics.website}`
     );
-
     const niche =
       opportunity?.target_user?.niche ||
       opportunity?.source_user?.niche ||
       undefined;
     // Default to dofollow (no 'nofollow'); switch to nofollow for low-quality/experimental cases later if needed
     const rel = "noopener";
-    const paragraph = generateContextualParagraph(
-      opportunity.suggested_anchor_text || "this guide",
-      opportunity.suggested_target_url,
+    const paragraph = await generateContextualParagraphAI({
+      anchorText: opportunity.suggested_anchor_text || "this guide",
+      targetUrl: opportunity.suggested_target_url,
       niche,
-      opportunity.source_content?.keywords || [],
-      rel
-    );
-
+      keywords: opportunity.source_content?.keywords || [],
+      pageTitle: opportunity.target_content_title || "",
+      // if you have a short excerpt/body for the target page, pass it:
+      // pageExcerpt: someSnippetFromTargetContent || "",
+      rel: rel,
+      maxChars: 240,
+    });
     // Create the placement instruction that will be sent to the tracking script
-    const placementInstruction: PlacementInstructionData = {
+    const placementInstruction = {
       type: "backlink_placement",
       targetUrl: opportunity.suggested_target_url,
       anchorText: opportunity.suggested_anchor_text,
@@ -185,7 +297,6 @@ async function attemptJavaScriptPlacement(
       paragraph,
       rel,
     };
-
     // Store the placement instruction in the database for the tracking script to pick up
     const { error: instructionError } = await supabase
       .from("placement_instructions")
@@ -196,44 +307,39 @@ async function attemptJavaScriptPlacement(
         status: "pending",
         created_at: new Date().toISOString(),
       });
-
     if (instructionError) {
       throw new Error(
         `Failed to create placement instruction: ${instructionError.message}`
       );
     }
-
     console.log(
       `✅ JavaScript placement instruction created for opportunity ${opportunity.id}`
     );
-
     return {
       success: true,
       placementUrl: targetDomainMetrics.website,
       placementMethod: "javascript_injection",
       responseTime: Date.now() - startTime,
-      verificationSuccess: false, // Will be verified when tracking script executes
+      verificationSuccess: false,
     };
   } catch (error) {
     console.error("JavaScript placement failed:", error);
     return {
       success: false,
-      errorMessage: (error as any).message,
+      errorMessage: error.message,
       placementMethod: "javascript_injection",
       responseTime: Date.now() - startTime,
     };
   }
 }
-
 // WordPress API client
 async function makeWordPressRequest(
-  credentials: WordPressCredentials,
-  endpoint: string,
-  method: string = "GET",
-  body?: any
-): Promise<Response> {
+  credentials,
+  endpoint,
+  method = "GET",
+  body
+) {
   const auth = btoa(`${credentials.username}:${credentials.appPassword}`);
-
   const response = await fetch(`${credentials.apiUrl}${endpoint}`, {
     method,
     headers: {
@@ -242,61 +348,44 @@ async function makeWordPressRequest(
     },
     body: body ? JSON.stringify(body) : undefined,
   });
-
   return response;
 }
-
 // Find best insertion point in WordPress post content
-function findOptimalInsertionPoint(
-  content: string,
-  keywords: string[]
-): { position: number; context: string } {
+function findOptimalInsertionPoint(content, keywords) {
   const paragraphs = content.split(/\n\s*\n|\<\/p\>/i);
   let bestParagraph = 0;
   let maxScore = 0;
-
   paragraphs.forEach((paragraph, index) => {
     if (index === 0 || index === paragraphs.length - 1) return; // Skip intro and conclusion
-
     const lowerPara = paragraph.toLowerCase();
     let score = 0;
-
     // Score based on keyword matches
     keywords.forEach((keyword) => {
       if (lowerPara.includes(keyword.toLowerCase())) {
         score += 2;
       }
     });
-
     // Prefer paragraphs that aren't too short or too long
     const wordCount = paragraph.split(/\s+/).length;
     if (wordCount >= 20 && wordCount <= 100) {
       score += 1;
     }
-
     // Avoid paragraphs with existing links
     if (paragraph.includes("<a ") || paragraph.includes("href=")) {
       score -= 2;
     }
-
     if (score > maxScore) {
       maxScore = score;
       bestParagraph = index;
     }
   });
-
   return {
     position: bestParagraph,
     context: paragraphs[bestParagraph]?.substring(0, 200) + "...",
   };
 }
-
 // Generate contextual sentence for link insertion
-function generateContextualSentence(
-  anchorText: string,
-  targetUrl: string,
-  keywords: string[]
-): string {
+function generateContextualSentence(anchorText, targetUrl, keywords) {
   const templates = [
     `For more information about ${
       keywords[0] || "this topic"
@@ -312,164 +401,138 @@ function generateContextualSentence(
     }.`,
     `For additional insights, see what ${anchorText} has to offer.`,
   ];
-
   const template = templates[Math.floor(Math.random() * templates.length)];
   return template.replace(
     anchorText,
     `<a href="${targetUrl}" target="_blank">${anchorText}</a>`
   );
 }
-
 // Insert link into WordPress post content
-function insertLinkIntoContent(
-  originalContent: string,
-  insertionPoint: number,
-  linkHtml: string
-): string {
+function insertLinkIntoContent(originalContent, insertionPoint, linkHtml) {
   const paragraphs = originalContent.split(/\n\s*\n|\<\/p\>/i);
-
   if (insertionPoint >= paragraphs.length) {
     // Fallback: insert at the end of content
     return originalContent + "\n\n" + linkHtml;
   }
-
   // Insert the link sentence at the end of the target paragraph
   paragraphs[insertionPoint] =
     paragraphs[insertionPoint].trim() + " " + linkHtml;
-
   return paragraphs.join("\n\n");
 }
-
 // Verify that link was successfully placed
-async function verifyLinkPlacement(
-  postUrl: string,
-  targetUrl: string
-): Promise<{ success: boolean; error?: string }> {
+async function verifyLinkPlacement(postUrl, targetUrl) {
   try {
     const response = await fetch(postUrl, {
-      headers: { "User-Agent": "Linkzy-Verification-Bot/1.0" },
+      headers: {
+        "User-Agent": "Linkzy-Verification-Bot/1.0",
+      },
     });
-
     if (!response.ok) {
-      return { success: false, error: `HTTP ${response.status}` };
+      return {
+        success: false,
+        error: `HTTP ${response.status}`,
+      };
     }
-
     const html = await response.text();
     const linkPattern = new RegExp(
       `href=["']${targetUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}["']`,
       "i"
     );
-
-    return { success: linkPattern.test(html) };
+    return {
+      success: linkPattern.test(html),
+    };
   } catch (error) {
-    return { success: false, error: error.message };
+    return {
+      success: false,
+      error: error.message,
+    };
   }
 }
-
 // Main placement logic for WordPress
-async function attemptWordPressPlacement(
-  opportunity: any,
-  targetDomainMetrics: any
-): Promise<PlacementResult> {
+async function attemptWordPressPlacement(opportunity, targetDomainMetrics) {
   const startTime = Date.now();
-
   try {
-    const credentials: WordPressCredentials = {
+    const credentials = {
       apiUrl: targetDomainMetrics.wordpress_api_url,
       username: targetDomainMetrics.wordpress_username,
       appPassword: targetDomainMetrics.wordpress_app_password,
     };
-
     // Find suitable posts to place the link
     const postsResponse = await makeWordPressRequest(
       credentials,
       "/wp/v2/posts?status=publish&per_page=10&orderby=date&order=desc"
     );
-
     if (!postsResponse.ok) {
       throw new Error(
         `WordPress API error: ${postsResponse.status} ${postsResponse.statusText}`
       );
     }
-
     const posts = await postsResponse.json();
-
     if (!posts.length) {
       throw new Error("No published posts found for placement");
     }
-
     // Find best post based on keyword relevance
     const sourceKeywords = opportunity.tracked_content?.keywords || [];
     let bestPost = null;
     let maxRelevance = 0;
-
     for (const post of posts) {
       const postContent = (post.content?.rendered || "").toLowerCase();
       let relevance = 0;
-
       sourceKeywords.forEach((keyword) => {
         if (postContent.includes(keyword.toLowerCase())) {
           relevance += 1;
         }
       });
-
       if (relevance > maxRelevance) {
         maxRelevance = relevance;
         bestPost = post;
       }
     }
-
     // If no keyword matches, use the most recent post
     if (!bestPost) {
       bestPost = posts[0];
     }
-
     // Find optimal insertion point
     const insertionInfo = findOptimalInsertionPoint(
       bestPost.content.rendered,
       sourceKeywords
     );
-
     // Generate contextual link sentence
     const linkSentence = generateContextualSentence(
       opportunity.suggested_anchor_text,
       opportunity.suggested_target_url,
       sourceKeywords
     );
-
     // Insert link into content
     const updatedContent = insertLinkIntoContent(
       bestPost.content.raw || bestPost.content.rendered,
       insertionInfo.position,
       linkSentence
     );
-
     // Update the WordPress post
     const updateResponse = await makeWordPressRequest(
       credentials,
       `/wp/v2/posts/${bestPost.id}`,
       "POST",
-      { content: updatedContent }
+      {
+        content: updatedContent,
+      }
     );
-
     if (!updateResponse.ok) {
       const errorData = await updateResponse.text();
       throw new Error(
         `Failed to update post: ${updateResponse.status} - ${errorData}`
       );
     }
-
     const updatedPost = await updateResponse.json();
     const postUrl = updatedPost.link;
     const responseTime = Date.now() - startTime;
-
     // Verify placement (with a brief delay for caching)
     await new Promise((resolve) => setTimeout(resolve, 2000));
     const verification = await verifyLinkPlacement(
       postUrl,
       opportunity.suggested_target_url
     );
-
     return {
       success: true,
       placementUrl: postUrl,
@@ -484,19 +547,16 @@ async function attemptWordPressPlacement(
     };
   }
 }
-
 // Credit management functions
-async function holdCredits(userId: string, amount: number): Promise<boolean> {
+async function holdCredits(userId, amount) {
   const { data: user } = await supabase
     .from("users")
     .select("credits")
     .eq("id", userId)
     .single();
-
   if (!user || user.credits < amount) {
     return false;
   }
-
   // Create hold transaction
   await supabase.from("credit_transactions").insert({
     user_id: userId,
@@ -506,20 +566,16 @@ async function holdCredits(userId: string, amount: number): Promise<boolean> {
     balance_after: user.credits - amount,
     description: "Credits held for placement attempt",
   });
-
   // Update user balance
   await supabase
     .from("users")
-    .update({ credits: user.credits - amount })
+    .update({
+      credits: user.credits - amount,
+    })
     .eq("id", userId);
-
   return true;
 }
-
-async function processSuccessfulPlacement(
-  opportunityId: string,
-  placementResult: PlacementResult
-) {
+async function processSuccessfulPlacement(opportunityId, placementResult) {
   // Update opportunity status
   await supabase
     .from("placement_opportunities")
@@ -531,11 +587,10 @@ async function processSuccessfulPlacement(
       placement_url: placementResult.placementUrl,
     })
     .eq("id", opportunityId);
-
   // Log successful attempt
   await supabase.from("placement_attempts").insert({
     opportunity_id: opportunityId,
-    target_domain: new URL(placementResult.placementUrl!).hostname,
+    target_domain: new URL(placementResult.placementUrl).hostname,
     placement_method: placementResult.placementMethod || "unknown",
     success: true,
     response_time_ms: placementResult.responseTime,
@@ -545,12 +600,7 @@ async function processSuccessfulPlacement(
     attempted_at: new Date().toISOString(),
   });
 }
-
-async function processFailedPlacement(
-  opportunityId: string,
-  error: string,
-  responseTime?: number
-) {
+async function processFailedPlacement(opportunityId, error, responseTime) {
   // Update opportunity status
   await supabase
     .from("placement_opportunities")
@@ -562,7 +612,6 @@ async function processFailedPlacement(
       placement_error_message: error,
     })
     .eq("id", opportunityId);
-
   // Log failed attempt
   await supabase.from("placement_attempts").insert({
     opportunity_id: opportunityId,
@@ -573,38 +622,50 @@ async function processFailedPlacement(
     attempted_at: new Date().toISOString(),
   });
 }
-
-serve(async (req: Request) => {
+serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers: corsHeaders });
-  }
-
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(null, {
+      status: 200,
+      headers: corsHeaders,
     });
   }
-
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({
+        error: "Method not allowed",
+      }),
+      {
+        status: 405,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+  }
   try {
     const adminKey = req.headers.get("x-admin-key") || "";
     const requireAdminKey = Deno.env.get("ADMIN_API_KEY") || "";
-    const { opportunityId, userId, manualOverride }: PlacementRequest =
-      await req.json();
-
+    const { opportunityId, userId, manualOverride } = await req.json();
     console.log(`🔍 Placement request:`, {
       opportunityId,
       userId,
       manualOverride,
     });
-
     if (!opportunityId) {
-      return new Response(JSON.stringify({ error: "Missing opportunityId" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error: "Missing opportunityId",
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
-
     // Get opportunity details with related data
     const { data: opportunity, error: oppError } = await supabase
       .from("placement_opportunities")
@@ -618,26 +679,36 @@ serve(async (req: Request) => {
       )
       .eq("id", opportunityId)
       .single();
-
     console.log(`🔍 Get opportunity details with related data:`, {
       opportunity,
       oppError,
     });
-
     if (!opportunity || oppError) {
-      return new Response(JSON.stringify({ error: "Opportunity not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error: "Opportunity not found",
+        }),
+        {
+          status: 404,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
-
     if (manualOverride) {
       if (!requireAdminKey || adminKey !== requireAdminKey) {
         return new Response(
-          JSON.stringify({ error: "Admin key required for manualOverride" }),
+          JSON.stringify({
+            error: "Admin key required for manualOverride",
+          }),
           {
             status: 401,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+            },
           }
         );
       }
@@ -649,12 +720,14 @@ serve(async (req: Request) => {
           }),
           {
             status: 401,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+            },
           }
         );
       }
     }
-
     // Note: temporary disabled
     // // Check if opportunity is in valid state for placement
     // if (!opportunity.auto_approved && !manualOverride) {
@@ -669,14 +742,12 @@ serve(async (req: Request) => {
     //     }
     //   );
     // }
-
     // Get target domain metrics
     const { data: targetDomainMetrics } = await supabase
       .from("domain_metrics")
       .select("*")
       .eq("user_id", opportunity.target_user_id)
       .single();
-
     // Detect target platform to choose placement method
     const targetWebsite =
       opportunity.target_user?.website ||
@@ -684,12 +755,10 @@ serve(async (req: Request) => {
       "https://example.com";
     console.log(`🔍 Target website: ${targetWebsite}`);
     console.log(`🔍 Opportunity data:`, JSON.stringify(opportunity, null, 2));
-
     const platformInfo = await detectPlatform(targetWebsite);
     console.log(
       `🔍 Platform detected: ${platformInfo.platform}, WordPress: ${platformInfo.isWordPress}, JS Injection: ${platformInfo.jsInjectionPossible}`
     );
-
     // Validate placement method availability
     if (
       platformInfo.isWordPress &&
@@ -711,11 +780,13 @@ serve(async (req: Request) => {
         }),
         {
           status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
         }
       );
     }
-
     // Hold credits before attempting placement
     const creditsHeld = await holdCredits(
       opportunity.source_user_id,
@@ -728,17 +799,18 @@ serve(async (req: Request) => {
         }),
         {
           status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
         }
       );
     }
-
     // Attempt automatic placement using detected method
     console.log(
       `🚀 Attempting automatic placement for opportunity ${opportunityId}`
     );
-    let placementResult: PlacementResult;
-
+    let placementResult;
     if (
       platformInfo.isWordPress &&
       platformInfo.hasRestAPI &&
@@ -753,13 +825,13 @@ serve(async (req: Request) => {
       // Use JavaScript injection method
       placementResult = await attemptJavaScriptPlacement(
         opportunity,
-        targetDomainMetrics || { website: opportunity.target_user.website }
+        targetDomainMetrics || {
+          website: opportunity.target_user.website,
+        }
       );
     }
-
     if (placementResult.success) {
       await processSuccessfulPlacement(opportunityId, placementResult);
-
       return new Response(
         JSON.stringify({
           success: true,
@@ -772,23 +844,24 @@ serve(async (req: Request) => {
         }),
         {
           status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
         }
       );
     } else {
       await processFailedPlacement(
         opportunityId,
-        placementResult.errorMessage!,
+        placementResult.errorMessage,
         placementResult.responseTime
       );
-
       // Refund held credits on failure
       const { data: user } = await supabase
         .from("users")
         .select("credits")
         .eq("id", opportunity.source_user_id)
         .single();
-
       if (user) {
         await supabase.from("credit_transactions").insert({
           user_id: opportunity.source_user_id,
@@ -799,13 +872,13 @@ serve(async (req: Request) => {
           description: "Credits refunded for failed placement",
           refund_reason: placementResult.errorMessage,
         });
-
         await supabase
           .from("users")
-          .update({ credits: user.credits + opportunity.estimated_value })
+          .update({
+            credits: user.credits + opportunity.estimated_value,
+          })
           .eq("id", opportunity.source_user_id);
       }
-
       return new Response(
         JSON.stringify({
           success: false,
@@ -815,7 +888,10 @@ serve(async (req: Request) => {
         }),
         {
           status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
         }
       );
     }
@@ -824,11 +900,14 @@ serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         error: "Internal server error",
-        details: (error as any).message,
+        details: error.message,
       }),
       {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
       }
     );
   }
