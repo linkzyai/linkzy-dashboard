@@ -16,8 +16,8 @@
     Access-Control-Allow-Credentials = "true"
     Access-Control-Max-Age = "86400"
     
-    # Updated CSP to allow all Stripe domains and payment processing
-    Content-Security-Policy = "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src 'self' https://*.supabase.co https://sljlwvrtwqmhmjunyplr.supabase.co https://*.manus.space https://js.stripe.com https://api.stripe.com https://checkout.stripe.com https://q.stripe.com https://m.stripe.com https://hooks.stripe.com https://*.stripe.com https://api.resend.com https://*.resend.com wss://*.supabase.co; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.stripe.com; style-src 'self' 'unsafe-inline' https://*.stripe.com; img-src 'self' data: https: https://*.stripe.com; font-src 'self' data: https://*.stripe.com; frame-src https://js.stripe.com https://checkout.stripe.com https://*.stripe.com; form-action 'self' https://*.stripe.com;"
+    # Updated CSP to allow all Stripe domains, payment processing, and video embeds
+    Content-Security-Policy = "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src 'self' https://*.supabase.co https://sljlwvrtwqmhmjunyplr.supabase.co https://*.manus.space https://js.stripe.com https://api.stripe.com https://checkout.stripe.com https://q.stripe.com https://m.stripe.com https://hooks.stripe.com https://*.stripe.com https://api.resend.com https://*.resend.com wss://*.supabase.co; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.stripe.com; style-src 'self' 'unsafe-inline' https://*.stripe.com; img-src 'self' data: https: https://*.stripe.com; font-src 'self' data: https://*.stripe.com; frame-src https://js.stripe.com https://checkout.stripe.com https://*.stripe.com https://*.youtube.com https://*.youtube-nocookie.com https://*.vimeo.com; form-action 'self' https://*.stripe.com;"
 
 # Legacy API proxy (keeping for fallback)
 [[redirects]]

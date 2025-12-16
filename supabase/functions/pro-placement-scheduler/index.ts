@@ -8,7 +8,6 @@ const corsHeaders = {
 };
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY"); // set in Project Settings
-
 function htmlEscape(s = "") {
   return s
     .replace(/&/g, "&amp;")
@@ -16,24 +15,13 @@ function htmlEscape(s = "") {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
-
 function sanitizeAnchorText(a = "") {
   return a
     .replace(/[\r\n]+/g, " ")
     .trim()
     .slice(0, 80);
 }
-
-async function generateContextualParagraphAI(opts: {
-  anchorText: string;
-  targetUrl: string;
-  niche?: string;
-  keywords?: string[];
-  pageTitle?: string; // target page title if available
-  pageExcerpt?: string; // short text from page if available
-  rel?: string; // e.g., "noopener"
-  maxChars?: number; // default 240
-}) {
+async function generateContextualParagraphAI(opts) {
   const {
     anchorText,
     targetUrl,
@@ -44,7 +32,6 @@ async function generateContextualParagraphAI(opts: {
     rel = "noopener",
     maxChars = 240,
   } = opts;
-
   // hard fallback if key missing
   if (!OPENAI_API_KEY) {
     return generateContextualParagraph(
@@ -55,15 +42,12 @@ async function generateContextualParagraphAI(opts: {
       rel
     );
   }
-
   // guard inputs
   const safeAnchor = sanitizeAnchorText(anchorText) || "this guide";
   let safeUrl = "";
   try {
     safeUrl = new URL(targetUrl).toString();
-  } catch {
-    /* invalid URL -> fallback */
-  }
+  } catch {}
   if (!safeUrl) {
     return generateContextualParagraph(
       safeAnchor,
@@ -73,7 +57,6 @@ async function generateContextualParagraphAI(opts: {
       rel
     );
   }
-
   const sys = `
 You write a single, natural sentence (<= ${maxChars} characters) that fits within an article body and introduces a relevant resource.
 Rules:
@@ -84,7 +67,6 @@ Rules:
 - No first-person ("I", "we"). No promises. No superlatives.
 - Output plain HTML for the sentence only.
 `;
-
   const user = `
 ANCHOR_TEXT: ${safeAnchor}
 TARGET_URL: ${safeUrl}
@@ -93,7 +75,6 @@ KEYWORDS: ${(keywords || []).slice(0, 8).join(", ")}
 PAGE_TITLE: ${pageTitle}
 PAGE_EXCERPT: ${pageExcerpt}
 `;
-
   let content = "";
   try {
     const resp = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -106,8 +87,14 @@ PAGE_EXCERPT: ${pageExcerpt}
         model: "gpt-4o-mini",
         temperature: 0.3,
         messages: [
-          { role: "system", content: sys.trim() },
-          { role: "user", content: user.trim() },
+          {
+            role: "system",
+            content: sys.trim(),
+          },
+          {
+            role: "user",
+            content: user.trim(),
+          },
         ],
       }),
     });
@@ -123,7 +110,6 @@ PAGE_EXCERPT: ${pageExcerpt}
       rel
     );
   }
-
   // validate + sanitize
   if (!content) {
     return generateContextualParagraph(
@@ -134,7 +120,6 @@ PAGE_EXCERPT: ${pageExcerpt}
       rel
     );
   }
-
   // must include exactly one anchor with correct href + text
   const hrefOk = content.includes(`href="${safeUrl}"`);
   const anchorOk = content.includes(`>${safeAnchor}</a>`);
@@ -142,7 +127,6 @@ PAGE_EXCERPT: ${pageExcerpt}
     content.split(/[.!?](?=\s|$)/).filter(Boolean).length === 1;
   const tooLong = content.replace(/\s+/g, " ").length > maxChars;
   const hasExclaim = /!/.test(content);
-
   if (!hrefOk || !anchorOk || !oneSentence || tooLong || hasExclaim) {
     return generateContextualParagraph(
       safeAnchor,
@@ -152,7 +136,6 @@ PAGE_EXCERPT: ${pageExcerpt}
       rel
     );
   }
-
   // minimal HTML hardening: escape any leftover text nodes (anchor already our exact markup)
   // We'll rebuild sentence around the exact anchor snippet:
   // Find anchor tag and wrap with safe text parts
@@ -166,10 +149,7 @@ PAGE_EXCERPT: ${pageExcerpt}
       const final = `${left}${anchorTag}${right}`.replace(/\s+/g, " ").trim();
       return final;
     }
-  } catch {
-    /* ignore */
-  }
-
+  } catch {}
   return generateContextualParagraph(safeAnchor, safeUrl, niche, keywords, rel);
 }
 
@@ -262,18 +242,21 @@ async function detectPlatform(websiteUrl) {
   }
 }
 // JavaScript injection placement for non-WordPress sites
-async function attemptJavaScriptPlacement(opportunity, targetDomainMetrics) {
+async function attemptJavaScriptPlacement(
+  opportunity,
+  targetDomainMetrics,
+  targetUser
+) {
   const startTime = Date.now();
   try {
     console.log(
-      `🔧 Attempting JavaScript injection placement for ${targetDomainMetrics.website}`
+      `🔧 Attempting JavaScript injection placement for ${targetUser?.website}`
     );
     const niche =
-      opportunity?.target_user?.niche ||
-      opportunity?.source_user?.niche ||
-      undefined;
+      targetUser?.niche || opportunity?.source_user?.niche || undefined;
     // Default to dofollow (no 'nofollow'); switch to nofollow for low-quality/experimental cases later if needed
     const rel = "noopener";
+    console.log("Getting paragraph");
     const paragraph = await generateContextualParagraphAI({
       anchorText: opportunity.suggested_anchor_text || "this guide",
       targetUrl: opportunity.suggested_target_url,
@@ -285,6 +268,7 @@ async function attemptJavaScriptPlacement(opportunity, targetDomainMetrics) {
       rel: rel,
       maxChars: 240,
     });
+    console.log("Paragraph", paragraph);
     // Create the placement instruction that will be sent to the tracking script
     const placementInstruction = {
       type: "backlink_placement",
@@ -300,13 +284,25 @@ async function attemptJavaScriptPlacement(opportunity, targetDomainMetrics) {
     // Store the placement instruction in the database for the tracking script to pick up
     const { error: instructionError } = await supabase
       .from("placement_instructions")
-      .insert({
-        opportunity_id: opportunity.id,
-        target_user_id: opportunity.target_user_id,
-        instruction_data: placementInstruction,
-        status: "pending",
-        created_at: new Date().toISOString(),
-      });
+      .upsert(
+        {
+          opportunity_id: opportunity.id,
+          source_user_id: opportunity.source_user_id,
+          target_url: opportunity.suggested_target_url,
+          anchor_text: opportunity.suggested_anchor_text,
+          placement_text: opportunity.suggested_placement_context,
+          title: opportunity.target_content_title,
+          target_user_id: opportunity.target_user_id,
+          target_content_id: opportunity.target_content_id,
+          instruction_data: placementInstruction,
+          domain_authority: opportunity.domain_authority_score,
+          status: "pending",
+          created_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "opportunity_id",
+        }
+      );
     if (instructionError) {
       throw new Error(
         `Failed to create placement instruction: ${instructionError.message}`
@@ -317,7 +313,7 @@ async function attemptJavaScriptPlacement(opportunity, targetDomainMetrics) {
     );
     return {
       success: true,
-      placementUrl: targetDomainMetrics.website,
+      placementUrl: targetUser?.website,
       placementMethod: "javascript_injection",
       responseTime: Date.now() - startTime,
       verificationSuccess: false,
@@ -575,7 +571,29 @@ async function holdCredits(userId, amount) {
     .eq("id", userId);
   return true;
 }
-async function processSuccessfulPlacement(opportunityId, placementResult) {
+async function processSuccessfulPlacement(opportunity, placementResult) {
+  //update credits
+  const { data: user } = await supabase
+    .from("users")
+    .select("credits")
+    .eq("id", opportunity.source_user_id)
+    .single();
+  if (user) {
+    await supabase.from("credit_transactions").insert({
+      user_id: opportunity.source_user_id,
+      transaction_type: "credit",
+      amount: 1,
+      balance_before: user.credits,
+      balance_after: user.credits - 1,
+      description: "Credits removed for successfull placement",
+    });
+    await supabase
+      .from("users")
+      .update({
+        credits: user.credits - 1,
+      })
+      .eq("id", opportunity.source_user_id);
+  }
   // Update opportunity status
   await supabase
     .from("placement_opportunities")
@@ -586,10 +604,10 @@ async function processSuccessfulPlacement(opportunityId, placementResult) {
       placement_success: true,
       placement_url: placementResult.placementUrl,
     })
-    .eq("id", opportunityId);
+    .eq("id", opportunity.id);
   // Log successful attempt
   await supabase.from("placement_attempts").insert({
-    opportunity_id: opportunityId,
+    opportunity_id: opportunity.id,
     target_domain: new URL(placementResult.placementUrl).hostname,
     placement_method: placementResult.placementMethod || "unknown",
     success: true,
@@ -599,6 +617,12 @@ async function processSuccessfulPlacement(opportunityId, placementResult) {
     link_still_live: placementResult.verificationSuccess,
     attempted_at: new Date().toISOString(),
   });
+  await supabase
+    .from("placement_instructions")
+    .update({
+      status: "completed",
+    })
+    .eq("opportunity_id", opportunity.id);
 }
 async function processFailedPlacement(opportunityId, error, responseTime) {
   // Update opportunity status
@@ -629,6 +653,7 @@ serve(async (req) => {
       headers: corsHeaders,
     });
   }
+  console.log("Scheduler hit:", req.method, Object.fromEntries(req.headers));
   if (req.method !== "POST") {
     return new Response(
       JSON.stringify({
@@ -646,47 +671,15 @@ serve(async (req) => {
   try {
     const adminKey = req.headers.get("x-admin-key") || "";
     const requireAdminKey = Deno.env.get("ADMIN_API_KEY") || "";
-    const { opportunityId, userId, manualOverride } = await req.json();
-    console.log(`🔍 Placement request:`, {
-      opportunityId,
-      userId,
-      manualOverride,
-    });
-    if (!opportunityId) {
+    const { data: users, error: usersError } = await supabase.from("users")
+      .select(`
+        *
+      `);
+    if (usersError) {
+      console.error("error:", usersError);
       return new Response(
         JSON.stringify({
-          error: "Missing opportunityId",
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    }
-    // Get opportunity details with related data
-    const { data: opportunity, error: oppError } = await supabase
-      .from("placement_opportunities")
-      .select(
-        `
-        *,
-        tracked_content (id, title, keywords, content, url),
-        source_user:users!source_user_id (id, website, credits),
-        target_user:users!target_user_id (id, website, credits)
-      `
-      )
-      .eq("id", opportunityId)
-      .single();
-    console.log(`🔍 Get opportunity details with related data:`, {
-      opportunity,
-      oppError,
-    });
-    if (!opportunity || oppError) {
-      return new Response(
-        JSON.stringify({
-          error: "Opportunity not found",
+          error: `Users not found: ${usersError}`,
         }),
         {
           status: 404,
@@ -697,204 +690,364 @@ serve(async (req) => {
         }
       );
     }
-    if (manualOverride) {
-      if (!requireAdminKey || adminKey !== requireAdminKey) {
-        return new Response(
-          JSON.stringify({
-            error: "Admin key required for manualOverride",
-          }),
-          {
-            status: 401,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+    const results = [];
+    for (const u of users) {
+      if (u.plan != "pro") {
+        console.log("not pro plan");
+        continue;
       }
-    } else {
-      if (!userId || userId !== opportunity.source_user_id) {
-        return new Response(
-          JSON.stringify({
-            error: "Unauthorized: user must own the opportunity",
-          }),
-          {
-            status: 401,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+      console.log("starting placement for user:", u.email);
+      if (u.credits < 1) {
+        console.log("not enough credit, continue", u.email);
+        continue;
       }
-    }
-    // Note: temporary disabled
-    // // Check if opportunity is in valid state for placement
-    // if (!opportunity.auto_approved && !manualOverride) {
-    //   return new Response(
-    //     JSON.stringify({
-    //       error: "Opportunity must be approved before placement",
-    //       status: opportunity.status,
-    //     }),
-    //     {
-    //       status: 400,
-    //       headers: { ...corsHeaders, "Content-Type": "application/json" },
-    //     }
-    //   );
-    // }
-    // Get target domain metrics
-    const { data: targetDomainMetrics } = await supabase
-      .from("domain_metrics")
-      .select("*")
-      .eq("user_id", opportunity.target_user_id)
-      .single();
-    // Detect target platform to choose placement method
-    const targetWebsite =
-      opportunity.target_user?.website ||
-      targetDomainMetrics?.website ||
-      "https://example.com";
-    console.log(`🔍 Target website: ${targetWebsite}`);
-    console.log(`🔍 Opportunity data:`, JSON.stringify(opportunity, null, 2));
-    const platformInfo = await detectPlatform(targetWebsite);
-    console.log(
-      `🔍 Platform detected: ${platformInfo.platform}, WordPress: ${platformInfo.isWordPress}, JS Injection: ${platformInfo.jsInjectionPossible}`
-    );
-    // Validate placement method availability
-    if (
-      platformInfo.isWordPress &&
-      platformInfo.hasRestAPI &&
-      targetDomainMetrics?.wordpress_api_enabled
-    ) {
-      console.log("📝 Using WordPress API method");
-    } else if (platformInfo.jsInjectionPossible) {
-      console.log("🔧 Using JavaScript injection method");
-    } else {
-      return new Response(
-        JSON.stringify({
-          error: "No suitable placement method available for target website",
-          platform: platformInfo.platform,
-          wordpress_available:
-            platformInfo.isWordPress &&
-            targetDomainMetrics?.wordpress_api_enabled,
-          js_injection_possible: platformInfo.jsInjectionPossible,
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    }
-    // Hold credits before attempting placement
-    const creditsHeld = await holdCredits(
-      opportunity.source_user_id,
-      opportunity.estimated_value
-    );
-    if (!creditsHeld) {
-      return new Response(
-        JSON.stringify({
-          error: "Insufficient credits for placement",
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    }
-    // Attempt automatic placement using detected method
-    console.log(
-      `🚀 Attempting automatic placement for opportunity ${opportunityId}`
-    );
-    let placementResult;
-    if (
-      platformInfo.isWordPress &&
-      platformInfo.hasRestAPI &&
-      targetDomainMetrics?.wordpress_api_enabled
-    ) {
-      // Use WordPress API method
-      placementResult = await attemptWordPressPlacement(
-        opportunity,
-        targetDomainMetrics
-      );
-    } else {
-      // Use JavaScript injection method
-      placementResult = await attemptJavaScriptPlacement(
-        opportunity,
-        targetDomainMetrics || {
-          website: opportunity.target_user.website,
-        }
-      );
-    }
-    if (placementResult.success) {
-      await processSuccessfulPlacement(opportunityId, placementResult);
-      return new Response(
-        JSON.stringify({
-          success: true,
-          placement_url: placementResult.placementUrl,
-          placement_method: placementResult.placementMethod,
-          platform_detected: platformInfo.platform,
-          response_time_ms: placementResult.responseTime,
-          verification_success: placementResult.verificationSuccess,
-          credits_charged: opportunity.estimated_value,
-        }),
-        {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    } else {
-      await processFailedPlacement(
-        opportunityId,
-        placementResult.errorMessage,
-        placementResult.responseTime
-      );
-      // Refund held credits on failure
-      const { data: user } = await supabase
-        .from("users")
-        .select("credits")
-        .eq("id", opportunity.source_user_id)
-        .single();
-      if (user) {
-        await supabase.from("credit_transactions").insert({
-          user_id: opportunity.source_user_id,
-          transaction_type: "credit",
-          amount: opportunity.estimated_value,
-          balance_before: user.credits,
-          balance_after: user.credits + opportunity.estimated_value,
-          description: "Credits refunded for failed placement",
-          refund_reason: placementResult.errorMessage,
+      const { data: opportunities, error: oppError } = await supabase
+        .from("placement_opportunities")
+        .select(
+          `
+        *,
+        source_user:users!source_user_id (id, website, credits),
+        target_user:users!target_user_id (id, website, credits)
+      `
+        )
+        .eq("source_user_id", u.id)
+        .order("overall_match_score", {
+          ascending: false,
         });
-        await supabase
-          .from("users")
-          .update({
-            credits: user.credits + opportunity.estimated_value,
-          })
-          .eq("id", opportunity.source_user_id);
+      if (!opportunities || oppError) {
+        console.log("Opportunity not found for user: ", u.email);
+        console.error(oppError);
+        continue;
       }
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: placementResult.errorMessage,
-          response_time_ms: placementResult.responseTime,
-          credits_refunded: opportunity.estimated_value,
-        }),
-        {
-          status: 500,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
+      for (const opportunity of opportunities) {
+        console.log("starting placement for opportunity:", opportunity.id);
+        if (opportunity.status === "placed") {
+          continue;
         }
-      );
+        console.log("status", opportunity.status);
+        const { data: placements, error: placementsError } = await supabase
+          .from("placement_instructions")
+          .select("*")
+          .eq("target_content_id", opportunity.target_content_id);
+        console.log("length", placements?.length);
+        if ((placements?.length ?? 0) > 2) continue;
+        console.log("continue");
+        const { data: targetDomainMetrics } = await supabase
+          .from("domain_metrics")
+          .select("*")
+          .eq("user_id", opportunity.target_user_id)
+          .single();
+        // Detect target platform to choose placement method
+        const { data: targetUser, error: targetUserError } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", opportunity.target_user_id)
+          .single();
+        const targetWebsite =
+          targetUser.website ||
+          targetDomainMetrics?.website ||
+          "https://example.com";
+        console.log(`🔍 Target website: ${targetWebsite}`);
+        console.log(
+          `🔍 Opportunity data:`,
+          JSON.stringify(opportunity, null, 2)
+        );
+        const platformInfo = await detectPlatform(targetWebsite);
+        console.log(
+          `🔍 Platform detected: ${platformInfo.platform}, WordPress: ${platformInfo.isWordPress}, JS Injection: ${platformInfo.jsInjectionPossible}`
+        );
+        // Validate placement method availability
+        if (
+          platformInfo.isWordPress &&
+          platformInfo.hasRestAPI &&
+          targetDomainMetrics?.wordpress_api_enabled
+        ) {
+          console.log("📝 Using WordPress API method");
+        } else if (platformInfo.jsInjectionPossible) {
+          console.log("🔧 Using JavaScript injection method");
+        } else {
+          console.log(
+            "No suitable placement method available for target website"
+          );
+          continue;
+        }
+        // Hold credits before attempting placement
+        // const creditsHeld = await holdCredits(opportunity.source_user_id, opportunity.estimated_value);
+        // if (!creditsHeld) {
+        //   return new Response(JSON.stringify({
+        //     error: "Insufficient credits for placement"
+        //   }), {
+        //     status: 400,
+        //     headers: {
+        //       ...corsHeaders,
+        //       "Content-Type": "application/json"
+        //     }
+        //   });
+        // }
+        // Attempt automatic placement using detected method
+        console.log(
+          `🚀 Attempting automatic placement for opportunity ${opportunity.id}`
+        );
+        let placementResult;
+        if (
+          platformInfo.isWordPress &&
+          platformInfo.hasRestAPI &&
+          targetDomainMetrics?.wordpress_api_enabled
+        ) {
+          // Use WordPress API method
+          placementResult = await attemptWordPressPlacement(
+            opportunity,
+            targetDomainMetrics
+          );
+        } else {
+          // Use JavaScript injection method
+          placementResult = await attemptJavaScriptPlacement(
+            opportunity,
+            targetDomainMetrics,
+            targetUser
+          );
+        }
+        if (placementResult.success) {
+          await processSuccessfulPlacement(opportunity, placementResult);
+          results.push({
+            opportunityId: opportunity.id,
+            success: true,
+            placementUrl: placementResult.placementUrl,
+          });
+          break;
+        } else {
+          await processFailedPlacement(
+            opportunity.id,
+            placementResult.errorMessage,
+            placementResult.responseTime
+          );
+          results.push({
+            opportunityId: opportunity.id,
+            success: false,
+            error: placementResult.errorMessage,
+          });
+          // Refund held credits on failure
+          // const { data: user } = await supabase.from("users").select("credits").eq("id", opportunity.source_user_id).single();
+          // if (user) {
+          //   await supabase.from("credit_transactions").insert({
+          //     user_id: opportunity.source_user_id,
+          //     transaction_type: "credit",
+          //     amount: opportunity.estimated_value,
+          //     balance_before: user.credits,
+          //     balance_after: user.credits + opportunity.estimated_value,
+          //     description: "Credits refunded for failed placement",
+          //     refund_reason: placementResult.errorMessage
+          //   });
+          //   await supabase.from("users").update({
+          //     credits: user.credits + opportunity.estimated_value
+          //   }).eq("id", opportunity.source_user_id);
+          // }
+          // return new Response(JSON.stringify({
+          //   success: false,
+          //   error: placementResult.errorMessage,
+          //   response_time_ms: placementResult.responseTime,
+          //   credits_refunded: opportunity.estimated_value
+          // }), {
+          //   status: 500,
+          //   headers: {
+          //     ...corsHeaders,
+          //     "Content-Type": "application/json"
+          //   }
+          // });
+        }
+      }
     }
+    return new Response(
+      JSON.stringify({
+        success: true,
+        results,
+      }),
+      {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    // const { opportunityId, userId, manualOverride } = await req.json();
+    // console.log(`🔍 Placement request:`, {
+    //   opportunityId,
+    //   userId,
+    //   manualOverride
+    // });
+    // if (!opportunityId) {
+    //   return new Response(JSON.stringify({
+    //     error: "Missing opportunityId"
+    //   }), {
+    //     status: 400,
+    //     headers: {
+    //       ...corsHeaders,
+    //       "Content-Type": "application/json"
+    //     }
+    //   });
+    // }
+    // // Get opportunity details with related data
+    // const { data: opportunity, error: oppError } = await supabase.from("placement_opportunities").select(`
+    //     *,
+    //     tracked_content (id, title, keywords, content, url),
+    //     source_user:users!source_user_id (id, website, credits),
+    //     target_user:users!target_user_id (id, website, credits)
+    //   `).eq("id", opportunityId).single();
+    // console.log(`🔍 Get opportunity details with related data:`, {
+    //   opportunity,
+    //   oppError
+    // });
+    // if (!opportunity || oppError) {
+    //   return new Response(JSON.stringify({
+    //     error: "Opportunity not found"
+    //   }), {
+    //     status: 404,
+    //     headers: {
+    //       ...corsHeaders,
+    //       "Content-Type": "application/json"
+    //     }
+    //   });
+    // }
+    // if (manualOverride) {
+    //   if (!requireAdminKey || adminKey !== requireAdminKey) {
+    //     return new Response(JSON.stringify({
+    //       error: "Admin key required for manualOverride"
+    //     }), {
+    //       status: 401,
+    //       headers: {
+    //         ...corsHeaders,
+    //         "Content-Type": "application/json"
+    //       }
+    //     });
+    //   }
+    // } else {
+    //   if (!userId || userId !== opportunity.source_user_id) {
+    //     return new Response(JSON.stringify({
+    //       error: "Unauthorized: user must own the opportunity"
+    //     }), {
+    //       status: 401,
+    //       headers: {
+    //         ...corsHeaders,
+    //         "Content-Type": "application/json"
+    //       }
+    //     });
+    //   }
+    // }
+    // // Note: temporary disabled
+    // // // Check if opportunity is in valid state for placement
+    // // if (!opportunity.auto_approved && !manualOverride) {
+    // //   return new Response(
+    // //     JSON.stringify({
+    // //       error: "Opportunity must be approved before placement",
+    // //       status: opportunity.status,
+    // //     }),
+    // //     {
+    // //       status: 400,
+    // //       headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // //     }
+    // //   );
+    // // }
+    // // Get target domain metrics
+    // const { data: targetDomainMetrics } = await supabase.from("domain_metrics").select("*").eq("user_id", opportunity.target_user_id).single();
+    // // Detect target platform to choose placement method
+    // const targetWebsite = opportunity.target_user?.website || targetDomainMetrics?.website || "https://example.com";
+    // console.log(`🔍 Target website: ${targetWebsite}`);
+    // console.log(`🔍 Opportunity data:`, JSON.stringify(opportunity, null, 2));
+    // const platformInfo = await detectPlatform(targetWebsite);
+    // console.log(`🔍 Platform detected: ${platformInfo.platform}, WordPress: ${platformInfo.isWordPress}, JS Injection: ${platformInfo.jsInjectionPossible}`);
+    // // Validate placement method availability
+    // if (platformInfo.isWordPress && platformInfo.hasRestAPI && targetDomainMetrics?.wordpress_api_enabled) {
+    //   console.log("📝 Using WordPress API method");
+    // } else if (platformInfo.jsInjectionPossible) {
+    //   console.log("🔧 Using JavaScript injection method");
+    // } else {
+    //   return new Response(JSON.stringify({
+    //     error: "No suitable placement method available for target website",
+    //     platform: platformInfo.platform,
+    //     wordpress_available: platformInfo.isWordPress && targetDomainMetrics?.wordpress_api_enabled,
+    //     js_injection_possible: platformInfo.jsInjectionPossible
+    //   }), {
+    //     status: 400,
+    //     headers: {
+    //       ...corsHeaders,
+    //       "Content-Type": "application/json"
+    //     }
+    //   });
+    // }
+    // // Hold credits before attempting placement
+    // const creditsHeld = await holdCredits(opportunity.source_user_id, opportunity.estimated_value);
+    // if (!creditsHeld) {
+    //   return new Response(JSON.stringify({
+    //     error: "Insufficient credits for placement"
+    //   }), {
+    //     status: 400,
+    //     headers: {
+    //       ...corsHeaders,
+    //       "Content-Type": "application/json"
+    //     }
+    //   });
+    // }
+    // // Attempt automatic placement using detected method
+    // console.log(`🚀 Attempting automatic placement for opportunity ${opportunityId}`);
+    // let placementResult;
+    // if (platformInfo.isWordPress && platformInfo.hasRestAPI && targetDomainMetrics?.wordpress_api_enabled) {
+    //   // Use WordPress API method
+    //   placementResult = await attemptWordPressPlacement(opportunity, targetDomainMetrics);
+    // } else {
+    //   // Use JavaScript injection method
+    //   placementResult = await attemptJavaScriptPlacement(opportunity, targetDomainMetrics || {
+    //     website: opportunity.target_user.website
+    //   });
+    // }
+    // if (placementResult.success) {
+    //   await processSuccessfulPlacement(opportunityId, placementResult);
+    //   return new Response(JSON.stringify({
+    //     success: true,
+    //     placement_url: placementResult.placementUrl,
+    //     placement_method: placementResult.placementMethod,
+    //     platform_detected: platformInfo.platform,
+    //     response_time_ms: placementResult.responseTime,
+    //     verification_success: placementResult.verificationSuccess,
+    //     credits_charged: opportunity.estimated_value
+    //   }), {
+    //     status: 200,
+    //     headers: {
+    //       ...corsHeaders,
+    //       "Content-Type": "application/json"
+    //     }
+    //   });
+    // } else {
+    //   await processFailedPlacement(opportunityId, placementResult.errorMessage, placementResult.responseTime);
+    //   // Refund held credits on failure
+    //   const { data: user } = await supabase.from("users").select("credits").eq("id", opportunity.source_user_id).single();
+    //   if (user) {
+    //     await supabase.from("credit_transactions").insert({
+    //       user_id: opportunity.source_user_id,
+    //       transaction_type: "credit",
+    //       amount: opportunity.estimated_value,
+    //       balance_before: user.credits,
+    //       balance_after: user.credits + opportunity.estimated_value,
+    //       description: "Credits refunded for failed placement",
+    //       refund_reason: placementResult.errorMessage
+    //     });
+    //     await supabase.from("users").update({
+    //       credits: user.credits + opportunity.estimated_value
+    //     }).eq("id", opportunity.source_user_id);
+    //   }
+    //   return new Response(JSON.stringify({
+    //     success: false,
+    //     error: placementResult.errorMessage,
+    //     response_time_ms: placementResult.responseTime,
+    //     credits_refunded: opportunity.estimated_value
+    //   }), {
+    //     status: 500,
+    //     headers: {
+    //       ...corsHeaders,
+    //       "Content-Type": "application/json"
+    //     }
+    //   });
+    // }
   } catch (error) {
     console.error("Automatic placement error:", error);
     return new Response(
