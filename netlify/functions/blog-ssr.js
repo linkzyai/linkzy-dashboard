@@ -2,20 +2,48 @@
 
 exports.handler = async (event) => {
   try {
-    // 1) Get the slug from the function path
-    // Example: /.netlify/functions/blog-ssr/small-business-seo-checklist-rank-higher
-    const parts = (event.path || "").split("/blog-ssr/"); // ["...functions", "slug"]
-    const slug = (parts[1] || "").replace(/^\/+|\/+$/g, ""); // trim slashes
+    // Accept slug coming from:
+    //  - /.netlify/functions/blog-ssr/<slug>   (via _redirects)
+    //  - or (in some edge cases) /blog/<slug>
+    const path = event.path || "";
+    let slug = "";
+
+    // Most common when proxied to function:
+    // "/.netlify/functions/blog-ssr/small-business-seo-checklist-rank-higher"
+    const m1 = path.match(/\/blog-ssr\/(.+)$/);
+    if (m1 && m1[1]) slug = m1[1];
+
+    // Fallback if needed:
+    const m2 = !slug ? path.match(/\/blog\/(.+)$/) : null;
+    if (m2 && m2[1]) slug = m2[1];
+
+    slug = (slug || "").replace(/^\/+|\/+$/g, ""); // trim slashes
+
+    // If we somehow got called without a slug, return SPA shell (NOT a redirect)
+    // This prevents redirect loops.
+    const host = event.headers?.host || "linkzy.ai";
+    const origin = `https://${host}`;
+
+    const htmlRes = await fetch(`${origin}/index.html`, {
+      headers: {
+        "User-Agent": event.headers?.["user-agent"] || "Mozilla/5.0",
+      },
+    });
+
+    let html = await htmlRes.text();
 
     if (!slug) {
       return {
-        statusCode: 302,
-        headers: { Location: "/blog" },
-        body: "",
+        statusCode: 200,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "public, max-age=60",
+        },
+        body: html,
       };
     }
 
-    // 2) Pull article SEO from Supabase (REST)
+    // --- Supabase ---
     const SUPABASE_URL = process.env.SUPABASE_URL;
     const SUPABASE_KEY =
       process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
@@ -23,7 +51,8 @@ exports.handler = async (event) => {
     if (!SUPABASE_URL || !SUPABASE_KEY) {
       return {
         statusCode: 500,
-        body: "Missing SUPABASE_URL or SUPABASE_*_KEY env vars",
+        body:
+          "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY / SUPABASE_ANON_KEY env vars",
       };
     }
 
@@ -40,24 +69,8 @@ exports.handler = async (event) => {
       },
     });
 
-    const rows = await articleRes.json();
-    const article = Array.isArray(rows) ? rows[0] : null;
-
-    // 3) Fetch your base HTML (IMPORTANT: fetch /index.html so we don't recurse)
-    const host = event.headers?.host || "linkzy.ai";
-    const origin = `https://${host}`;
-
-    const htmlRes = await fetch(`${origin}/index.html`, {
-      headers: {
-        // helpful for debugging; not required
-        "User-Agent": event.headers?.["user-agent"] || "Mozilla/5.0",
-      },
-    });
-
-    let html = await htmlRes.text();
-
-    // If we didn't find the article, return your normal SPA shell (still 200)
-    if (!article) {
+    // If Supabase errors, return SPA shell (still 200) so the page doesn't die
+    if (!articleRes.ok) {
       return {
         statusCode: 200,
         headers: {
@@ -68,15 +81,32 @@ exports.handler = async (event) => {
       };
     }
 
-    // 4) Inject SEO tags
+    const rows = await articleRes.json();
+    const article = Array.isArray(rows) ? rows[0] : null;
+
+    if (!article || !article.headline) {
+      return {
+        statusCode: 200,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "public, max-age=60",
+        },
+        body: html,
+      };
+    }
+
+    // --- Inject SEO ---
     const title = `${article.headline} - Linkzy Blog`;
     const desc = (article.meta_description || "").trim();
     const canonical = `${origin}/blog/${article.slug}`;
 
     // Title
-    html = html.replace(/<title>.*?<\/title>/i, `<title>${escapeHtml(title)}</title>`);
+    html = html.replace(
+      /<title>.*?<\/title>/i,
+      `<title>${escapeHtml(title)}</title>`
+    );
 
-    // Meta description (replace if exists, otherwise insert)
+    // Meta description
     if (/<meta\s+name=["']description["']\s+content=/i.test(html)) {
       html = html.replace(
         /<meta\s+name=["']description["']\s+content=["'][^"']*["']\s*\/?>/i,
@@ -89,7 +119,7 @@ exports.handler = async (event) => {
       );
     }
 
-    // Canonical (replace if exists, otherwise insert)
+    // Canonical
     if (/<link\s+rel=["']canonical["']/i.test(html)) {
       html = html.replace(
         /<link\s+rel=["']canonical["']\s+href=["'][^"']*["']\s*\/?>/i,
@@ -102,43 +132,37 @@ exports.handler = async (event) => {
       );
     }
 
-    // OG + Twitter (simple add; duplicates are usually fine, but we’ll avoid if already present)
-    if (!/property=["']og:title["']/i.test(html)) {
-      html = html.replace(
-        /<\/head>/i,
-        `  <meta property="og:title" content="${escapeHtml(title)}" />\n</head>`
-      );
-    }
-    if (!/property=["']og:description["']/i.test(html)) {
-      html = html.replace(
-        /<\/head>/i,
-        `  <meta property="og:description" content="${escapeHtml(desc)}" />\n</head>`
-      );
-    }
-    if (!/property=["']og:url["']/i.test(html)) {
-      html = html.replace(
-        /<\/head>/i,
-        `  <meta property="og:url" content="${escapeHtml(canonical)}" />\n</head>`
-      );
-    }
-    if (!/name=["']twitter:title["']/i.test(html)) {
-      html = html.replace(
-        /<\/head>/i,
-        `  <meta name="twitter:title" content="${escapeHtml(title)}" />\n</head>`
-      );
-    }
-    if (!/name=["']twitter:description["']/i.test(html)) {
-      html = html.replace(
-        /<\/head>/i,
-        `  <meta name="twitter:description" content="${escapeHtml(desc)}" />\n</head>`
-      );
-    }
+    // OG + Twitter
+    html = injectOnce(
+      html,
+      /property=["']og:title["']/i,
+      `  <meta property="og:title" content="${escapeHtml(title)}" />\n`
+    );
+    html = injectOnce(
+      html,
+      /property=["']og:description["']/i,
+      `  <meta property="og:description" content="${escapeHtml(desc)}" />\n`
+    );
+    html = injectOnce(
+      html,
+      /property=["']og:url["']/i,
+      `  <meta property="og:url" content="${escapeHtml(canonical)}" />\n`
+    );
+    html = injectOnce(
+      html,
+      /name=["']twitter:title["']/i,
+      `  <meta name="twitter:title" content="${escapeHtml(title)}" />\n`
+    );
+    html = injectOnce(
+      html,
+      /name=["']twitter:description["']/i,
+      `  <meta name="twitter:description" content="${escapeHtml(desc)}" />\n`
+    );
 
     return {
       statusCode: 200,
       headers: {
         "Content-Type": "text/html; charset=utf-8",
-        // short cache while you test; you can bump later
         "Cache-Control": "public, max-age=300",
       },
       body: html,
@@ -150,6 +174,11 @@ exports.handler = async (event) => {
     };
   }
 };
+
+function injectOnce(html, testRegex, tagLine) {
+  if (testRegex.test(html)) return html;
+  return html.replace(/<\/head>/i, `${tagLine}</head>`);
+}
 
 function escapeHtml(str) {
   return String(str || "")
