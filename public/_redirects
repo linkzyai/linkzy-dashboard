@@ -1,2 +1,9 @@
-/blog/*  /.netlify/functions/blog-ssr/:splat  200
-/*      /index.html                          200
+# 1) Blog INDEX should be handled by React (NOT the SSR function)
+/blog        /index.html    200
+/blog/       /index.html    200
+
+# 2) ONLY blog detail pages go to SSR function
+/blog/:slug  /.netlify/functions/blog-ssr/:slug  200
+
+# 3) Everything else goes to React SPA
+/*           /index.html    200
