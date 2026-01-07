@@ -1,10 +1,1 @@
-# 1) Blog detail pages -> SSR function
-/blog/:slug  /.netlify/functions/blog-ssr/:slug  200
-
-# 2) Blog index -> React SPA
-/blog        /index.html                         200
-/blog/       /index.html                         200
-
-# 3) Everything else -> React SPA
-/*          /index.html                          200
-
+/*    /index.html   200
