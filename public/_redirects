@@ -1,1 +1,2 @@
-/*    /index.html   200
+/blog/*  /.netlify/functions/blog-ssr/:splat  200
+/*      /index.html                          200
