@@ -1,7 +1,8 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 exports.handler = async (event, context) => {
-  if (event.httpMethod !== 'POST' ) {
+  // Only allow POST requests
+  if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
       body: JSON.stringify({ error: 'Method not allowed' }),
@@ -9,18 +10,10 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const { 
-      plan_name, 
-      credits, 
-      price, 
-      user_id, 
-      user_email, 
-      success_url, 
-      cancel_url,
-      promotion_code_id // ← NEW: accept promotion code from frontend
-    } = JSON.parse(event.body);
+    const { plan_name, credits, price, user_id, user_email, success_url, cancel_url } = JSON.parse(event.body);
 
-    const sessionConfig = {
+    // Create Stripe checkout session
+    const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
         {
@@ -30,7 +23,7 @@ exports.handler = async (event, context) => {
               name: plan_name,
               description: `${credits} Credits for Linkzy AI`,
             },
-            unit_amount: price * 100,
+            unit_amount: price * 100, // Convert to cents
           },
           quantity: 1,
         },
@@ -44,14 +37,7 @@ exports.handler = async (event, context) => {
         credits: credits.toString(),
         plan_name: plan_name,
       },
-    };
-
-    // Apply discount if promotion code was provided
-    if (promotion_code_id) {
-      sessionConfig.discounts = [{ promotion_code: promotion_code_id }];
-    }
-
-    const session = await stripe.checkout.sessions.create(sessionConfig);
+    });
 
     return {
       statusCode: 200,
@@ -69,4 +55,4 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ error: error.message }),
     };
   }
-};
+}; 
