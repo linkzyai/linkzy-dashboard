@@ -38,17 +38,3 @@
   to = "/index.html"
   status = 200
 
-# Environment variables for Supabase
-[context.production.environment]
-  VITE_SUPABASE_URL = "https://sljlwvrtwqmhmjunyplr.supabase.co"
-  VITE_SUPABASE_ANON_KEY = "..."
-  VITE_SITE_URL = "https://linkzy.ai"
-  STRIPE_SECRET_KEY = "sk_test_YOUR_STRIPE_SECRET_KEY_HERE"
-  SUPABASE_SERVICE_ROLE_KEY = "YOUR_SUPABASE_SERVICE_ROLE_KEY_HERE"
-
-[context.deploy-preview.environment]
-  VITE_SUPABASE_URL = "https://sljlwvrtwqmhmjunyplr.supabase.co"
-  VITE_SUPABASE_ANON_KEY = "..."
-  VITE_SITE_URL = "https://linkzy.ai"
-  STRIPE_SECRET_KEY = "sk_test_YOUR_STRIPE_SECRET_KEY_HERE"
-  SUPABASE_SERVICE_ROLE_KEY = "YOUR_SUPABASE_SERVICE_ROLE_KEY_HERE"
