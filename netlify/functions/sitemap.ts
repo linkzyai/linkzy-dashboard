@@ -1,16 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 
 export const handler = async () => {
+  // We use the safe Anon Key already in your Netlify settings
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
   const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
-  // Fetch based on your exact columns: slug, published, deleted, published_at
+  // We match your RLS policy EXACTLY: published = true
   const { data: posts, error } = await supabase
     .from('articles')
-    .select('slug, published, deleted, published_at')
-    .eq('published', true)
-    .eq('deleted', false);
+    .select('slug, published_at')
+    .eq('published', true); // This matches your "Public can view published articles" policy
 
   if (error) {
     console.error("Supabase error:", error);
@@ -44,11 +44,8 @@ export const handler = async () => {
     statusCode: 200,
     headers: {
       'Content-Type': 'application/xml',
-      'Cache-Control': 'public, max-age=0, must-revalidate'
+      'Cache-Control': 'public, max-age=3600'
     },
     body: xml
   };
 };
-
-
-
