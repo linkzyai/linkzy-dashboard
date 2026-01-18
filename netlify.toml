@@ -1,6 +1,9 @@
 # Netlify Configuration for Linkzy with Supabase Integration
 # Fixed CSP to allow Supabase connections
 
+[functions]
+  directory = "netlify/functions"
+
 [build]
   publish = "dist"
   command = "npm run build"
