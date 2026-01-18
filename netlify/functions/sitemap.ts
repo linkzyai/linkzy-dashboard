@@ -1,24 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
 
 export const handler = async () => {
-  // Use the environment variables from Netlify
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    console.error("Missing Supabase environment variables");
-  }
-
   const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
-  // Fetch all articles - we'll be less strict with the query to ensure we get results
-  const { data: posts, error } = await supabase
+  // 1. Try to fetch from 'articles' table (common for SEObot)
+  let { data: posts, error } = await supabase
     .from('articles')
-    .select('slug, updated_at, status')
-    .eq('status', 'published');
+    .select('*');
 
-  if (error) {
-    console.error("Supabase error:", error);
+  // 2. If that fails or is empty, try 'posts' table
+  if (!posts || posts.length === 0) {
+    const { data: altPosts } = await supabase.from('posts').select('*');
+    posts = altPosts;
   }
 
   const baseUrl = 'https://linkzy.ai';
@@ -35,8 +30,17 @@ export const handler = async () => {
   // Add dynamic blog posts
   if (posts && posts.length > 0) {
     posts.forEach(post => {
-      const lastMod = post.updated_at ? new Date(post.updated_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-      xml += `\n  <url>\n    <loc>${baseUrl}/blog/${post.slug}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>`;
+      // Handle different possible column names for slug and date
+      const slug = post.slug || post.id;
+      const date = post.updated_at || post.created_at || new Date().toISOString();
+      const lastMod = new Date(date).toISOString().split('T')[0];
+      
+      // Only add if it's published (check different possible status columns)
+      const isPublished = post.status === 'published' || post.published === true || !post.status;
+      
+      if (isPublished && slug) {
+        xml += `\n  <url>\n    <loc>${baseUrl}/blog/${slug}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>`;
+      }
     });
   }
 
@@ -46,9 +50,10 @@ export const handler = async () => {
     statusCode: 200,
     headers: {
       'Content-Type': 'application/xml',
-      'Cache-Control': 'public, max-age=0, must-revalidate' // Disable cache for testing
+      'Cache-Control': 'no-cache'
     },
     body: xml
   };
 };
+
 
