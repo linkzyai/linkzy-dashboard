@@ -1,40 +1,43 @@
 import { createClient } from '@supabase/supabase-js';
 
 export const handler = async () => {
-  // We use the safe Anon Key already in your Netlify settings
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
-  const supabase = createClient(supabaseUrl || '', supabaseKey || '');
+  
+  // DEBUG: Check if keys exist
+  if (!supabaseUrl || !supabaseKey) {
+    return {
+      statusCode: 200,
+      body: `<?xml version="1.0" encoding="UTF-8"?><error>Missing Keys: URL=${!!supabaseUrl}, Key=${!!supabaseKey}</error>`
+    };
+  }
 
-  // We match your RLS policy EXACTLY: published = true
+  const supabase = createClient(supabaseUrl, supabaseKey);
   const { data: posts, error } = await supabase
     .from('articles')
-    .select('slug, published_at')
-    .eq('published', true); // This matches your "Public can view published articles" policy
+    .select('slug')
+    .eq('published', true);
 
+  // DEBUG: Check for Supabase error
   if (error) {
-    console.error("Supabase error:", error);
+    return {
+      statusCode: 200,
+      body: `<?xml version="1.0" encoding="UTF-8"?><error>Supabase Error: ${error.message}</error>`
+    };
   }
 
   const baseUrl = 'https://linkzy.ai';
   const staticPages = ['', '/blog', '/features', '/pricing', '/how-it-works', '/about', '/terms', '/privacy'];
 
-  let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
 
-  // Add static pages
   staticPages.forEach(page => {
-    xml += `\n  <url>\n    <loc>${baseUrl}${page}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>${page === '' ? '1.0' : '0.8'}</priority>\n  </url>`;
+    xml += `\n  <url><loc>${baseUrl}${page}</loc><priority>0.8</priority></url>`;
   } );
 
-  // Add dynamic blog posts
-  if (posts && posts.length > 0) {
+  if (posts) {
     posts.forEach(post => {
-      if (post.slug) {
-        const date = post.published_at || new Date().toISOString();
-        const lastMod = new Date(date).toISOString().split('T')[0];
-        xml += `\n  <url>\n    <loc>${baseUrl}/blog/${post.slug}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>`;
-      }
+      xml += `\n  <url><loc>${baseUrl}/blog/${post.slug}</loc><priority>0.7</priority></url>`;
     });
   }
 
@@ -42,10 +45,8 @@ export const handler = async () => {
 
   return {
     statusCode: 200,
-    headers: {
-      'Content-Type': 'application/xml',
-      'Cache-Control': 'public, max-age=3600'
-    },
+    headers: { 'Content-Type': 'application/xml' },
     body: xml
   };
 };
+
