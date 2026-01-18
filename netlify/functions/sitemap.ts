@@ -5,15 +5,15 @@ export const handler = async () => {
   const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
   const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
-  // 1. Try to fetch from 'articles' table (common for SEObot)
-  let { data: posts, error } = await supabase
+  // Fetch based on your exact columns: slug, published, deleted, published_at
+  const { data: posts, error } = await supabase
     .from('articles')
-    .select('*');
+    .select('slug, published, deleted, published_at')
+    .eq('published', true)
+    .eq('deleted', false);
 
-  // 2. If that fails or is empty, try 'posts' table
-  if (!posts || posts.length === 0) {
-    const { data: altPosts } = await supabase.from('posts').select('*');
-    posts = altPosts;
+  if (error) {
+    console.error("Supabase error:", error);
   }
 
   const baseUrl = 'https://linkzy.ai';
@@ -30,16 +30,10 @@ export const handler = async () => {
   // Add dynamic blog posts
   if (posts && posts.length > 0) {
     posts.forEach(post => {
-      // Handle different possible column names for slug and date
-      const slug = post.slug || post.id;
-      const date = post.updated_at || post.created_at || new Date().toISOString();
-      const lastMod = new Date(date).toISOString().split('T')[0];
-      
-      // Only add if it's published (check different possible status columns)
-      const isPublished = post.status === 'published' || post.published === true || !post.status;
-      
-      if (isPublished && slug) {
-        xml += `\n  <url>\n    <loc>${baseUrl}/blog/${slug}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>`;
+      if (post.slug) {
+        const date = post.published_at || new Date().toISOString();
+        const lastMod = new Date(date).toISOString().split('T')[0];
+        xml += `\n  <url>\n    <loc>${baseUrl}/blog/${post.slug}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>`;
       }
     });
   }
@@ -50,10 +44,11 @@ export const handler = async () => {
     statusCode: 200,
     headers: {
       'Content-Type': 'application/xml',
-      'Cache-Control': 'no-cache'
+      'Cache-Control': 'public, max-age=0, must-revalidate'
     },
     body: xml
   };
 };
+
 
 
