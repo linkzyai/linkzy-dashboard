@@ -15,11 +15,11 @@
     Access-Control-Allow-Headers = "Content-Type, Authorization, Accept, X-Requested-With, Stripe-Version, Stripe-Account"
     Access-Control-Allow-Credentials = "true"
     Access-Control-Max-Age = "86400"
-    
-    # Updated CSP to allow all Stripe domains, payment processing, and video embeds
-    Content-Security-Policy = "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src 'self' https://*.supabase.co https://sljlwvrtwqmhmjunyplr.supabase.co https://*.manus.space https://js.stripe.com https://api.stripe.com https://checkout.stripe.com https://q.stripe.com https://m.stripe.com https://hooks.stripe.com https://*.stripe.com https://api.resend.com https://*.resend.com wss://*.supabase.co; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.stripe.com; style-src 'self' 'unsafe-inline' https://*.stripe.com; img-src 'self' data: https: https://*.stripe.com; font-src 'self' data: https://*.stripe.com; frame-src https://js.stripe.com https://checkout.stripe.com https://*.stripe.com https://*.youtube.com https://*.youtube-nocookie.com https://*.vimeo.com; form-action 'self' https://*.stripe.com;"
 
-# Legacy API proxy (keeping for fallback)
+    # Updated CSP to allow all Stripe domains, payment processing, video embeds, and Wrapifai tools
+    Content-Security-Policy = "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src 'self' https://*.supabase.co https://sljlwvrtwqmhmjunyplr.supabase.co https://*.manus.space https://js.stripe.com https://api.stripe.com https://checkout.stripe.com https://q.stripe.com https://m.stripe.com https://hooks.stripe.com https://*.stripe.com https://api.resend.com https://*.resend.com wss://*.supabase.co; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.stripe.com; style-src 'self' 'unsafe-inline' https://*.stripe.com; img-src 'self' data: https: https://*.stripe.com; font-src 'self' data: https://*.stripe.com; frame-src https://js.stripe.com https://checkout.stripe.com https://x.stripe.com https://*.stripe.com https://*.youtube.com https://*.youtube-nocookie.com https://*.vimeo.com https://app.wrapifai.com; form-action 'self' https://*.stripe.com;"
+
+# Legacy API proxy (keeping for fallback )
 [[redirects]]
   from = "/proxy/register"
   to = "https://dyh6i3cqkq07.manus.space/register"
@@ -27,12 +27,12 @@
   force = true
 
 [[redirects]]
-  from = "/proxy/*"
+  from = "/proxy/**"
   to = "https://dyh6i3cqkq07.manus.space/:splat"
   status = 200
   force = true
 
-# SPA fallback (must be last)
+# SPA fallback (must be last )
 [[redirects]]
   from = "/*"
   to = "/index.html"
@@ -41,14 +41,14 @@
 # Environment variables for Supabase
 [context.production.environment]
   VITE_SUPABASE_URL = "https://sljlwvrtwqmhmjunyplr.supabase.co"
-  VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU"
+  VITE_SUPABASE_ANON_KEY = "..."
   VITE_SITE_URL = "https://linkzy.ai"
   STRIPE_SECRET_KEY = "sk_test_YOUR_STRIPE_SECRET_KEY_HERE"
   SUPABASE_SERVICE_ROLE_KEY = "YOUR_SUPABASE_SERVICE_ROLE_KEY_HERE"
 
 [context.deploy-preview.environment]
   VITE_SUPABASE_URL = "https://sljlwvrtwqmhmjunyplr.supabase.co"
-  VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsamx3dnJ0d3FtaG1qdW55cGxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTkzMDMsImV4cCI6MjA2NjQzNTMwM30.xJNGPIQ51XpdekFSQQ0Ymk4G3A86PZ4KRqKptRb-ozU"
+  VITE_SUPABASE_ANON_KEY = "..."
   VITE_SITE_URL = "https://linkzy.ai"
   STRIPE_SECRET_KEY = "sk_test_YOUR_STRIPE_SECRET_KEY_HERE"
   SUPABASE_SERVICE_ROLE_KEY = "YOUR_SUPABASE_SERVICE_ROLE_KEY_HERE"
