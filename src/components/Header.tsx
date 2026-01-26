@@ -41,7 +41,14 @@ const Header = () => {
 
   return (
     <>
-      <header className="bg-black/95 backdrop-blur-sm border-b border-gray-800 sticky top-0 z-50">
+      {/* Top Announcement Bar */}
+      <div className="bg-orange-500 text-white text-center py-2 px-4 fixed top-0 left-0 right-0 z-[60]">
+        <p className="text-xs sm:text-sm font-semibold">
+          🚀 Public Beta: First 100 members get LIFETIME Pro Access (100% FREE) with code "FOUNDERS250"
+        </p>
+      </div>
+      
+      <header className="bg-black/95 backdrop-blur-sm border-b border-gray-800 sticky top-[40px] z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center space-x-2">
