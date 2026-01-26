@@ -41,11 +41,11 @@ const Hero = () => {
           />
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 z-10">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-16 z-10">
           {/* Top Banner */}
           <div className="text-center mb-12">
             <div className="inline-flex items-center bg-orange-500/10 border border-orange-500/20 rounded-full px-4 py-2 text-sm text-orange-400">
-              🔥 Automated Curated Links • No Per-Link Fees
+              🚀 Public Beta: First 100 members get LIFETIME Pro Access (100% FREE) with code "FOUNDERS250"
             </div>
           </div>
 
@@ -57,8 +57,7 @@ const Hero = () => {
               <span className="text-orange-500 uppercase">actually work</span>
             </h1>
             <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-              Stop wasting money on expensive link building. Get high-quality backlinks
-              from real niche blogs for 90% less than competitors.
+              Join our Public Beta. Get high-quality backlinks for 90% less. First 100 members get Lifetime Pro access free with code "FOUNDERS250".
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
