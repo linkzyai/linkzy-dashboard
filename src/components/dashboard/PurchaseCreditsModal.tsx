@@ -159,10 +159,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   const [checkingDiscount, setCheckingDiscount] = useState(false);
 
   // Validate discount via Supabase Edge Function
-  const validateDiscountCode = async (code: string) => {
+  const validateDiscountCode = async (code: string): Promise<boolean> => {
     if (!code.trim()) {
       setDiscountApplied(null);
-      return;
+      return false;
     }
 
     setCheckingDiscount(true);
@@ -174,7 +174,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         }
       );
 
-      if (!error && couponData) {
+      if (!error && couponData && couponData.valid) {
         setDiscountApplied({
           code,
           amount_off: couponData.amount_off,
@@ -182,12 +182,17 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           promotion_code_id: couponData.promotion_code_id,
           valid: true,
         });
+        return true;
       } else {
+        // Handle specific error messages
+        const errorMessage = error?.message || couponData?.error || "Invalid discount code";
         setDiscountApplied({ code, valid: false });
+        return false;
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error validating discount code:", err);
       setDiscountApplied({ code, valid: false });
+      return false;
     } finally {
       setCheckingDiscount(false);
     }
@@ -224,6 +229,27 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     onError("");
 
     try {
+      // Validate coupon code if entered before processing payment
+      if (discountCode.trim()) {
+        // If code entered but not validated, or validation failed
+        if (!discountApplied || !discountApplied.valid || discountApplied.code !== discountCode.trim()) {
+          // Validate now before proceeding with payment
+          const isValid = await validateDiscountCode(discountCode.trim());
+          
+          // Check again after validation
+          if (!isValid || !discountApplied || !discountApplied.valid || discountApplied.code !== discountCode.trim()) {
+            setIsProcessing(false);
+            // Provide specific error message based on validation result
+            if (discountApplied && !discountApplied.valid) {
+              onError("This discount code is invalid or has expired. Please check your code and try again.");
+            } else {
+              onError("Invalid discount code. Please check your code and try again.");
+            }
+            return;
+          }
+        }
+      }
+
       // Prefer auth user; fall back to local storage if needed
       const localUser = JSON.parse(localStorage.getItem("linkzy_user") || "{}");
       const userId = authUser.id || localUser.id;
@@ -419,7 +445,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                 )}
               </div>
             ) : (
-              <span>❌ Invalid discount code</span>
+              <span>❌ Invalid discount code. This code may be expired or no longer valid.</span>
             )}
           </div>
         )}
