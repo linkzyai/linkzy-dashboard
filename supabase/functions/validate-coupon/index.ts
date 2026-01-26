@@ -9,7 +9,7 @@ import Stripe from "npm:stripe@14";
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Admin-Key",
+  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info, prefer",
 };
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), {
@@ -44,11 +44,25 @@ serve(async (req) => {
     // - If you use Promotion Codes (recommended), you'd query `promotionCodes.list({ code: coupon_code, active: true })`
     //   and read `promotionCode.coupon`.
     // - Your Netlify code used `coupons.retrieve(coupon_code)`, so we keep parity here.
-    const coupon = await stripe.coupons.retrieve(coupon_code);
+    const promoCodes = await stripe.promotionCodes.list({
+      code: coupon_code,
+      active: true,
+      limit: 1,
+      expand: ["data.coupon"],
+    });
+
+    if (!promoCodes.data.length) {
+      return json(200, { valid: false, error: "Invalid discount code" });
+    }
+
+    const promo = promoCodes.data[0];
+    const coupon = promo.coupon;
+
 
     if (coupon.valid) {
       return json(200, {
         valid: true,
+        promotion_code_id: promo.id,
         id: coupon.id,
         percent_off: coupon.percent_off,
         amount_off: coupon.amount_off,
@@ -57,7 +71,7 @@ serve(async (req) => {
         name: coupon.name,
       });
     } else {
-      return json(400, { error: "Coupon is not valid" });
+      return json(200, { valid: false, error: "Coupon is not valid" });
     }
   } catch (err: any) {
     console.error("validate-coupon error:", err);
