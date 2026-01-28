@@ -1,0 +1,38 @@
+name: Generate Sitemap
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:  # Manual trigger button
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/generate-sitemap-github.js'
+
+jobs:
+  generate-sitemap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      
+      - name: Install Supabase client
+        run: npm install @supabase/supabase-js
+      
+      - name: Generate sitemap
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/generate-sitemap-github.js
+      
+      - name: Commit and push sitemap
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add public/sitemap.xml
+          git diff --quiet && git diff --staged --quiet || (git commit -m "🗺️ Auto-update sitemap [skip ci]" && git push)
