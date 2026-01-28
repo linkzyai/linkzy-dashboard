@@ -25,16 +25,12 @@
     # Updated CSP to allow all Stripe domains, payment processing, video embeds, and Wrapifai tools
     Content-Security-Policy = "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src 'self' https://*.supabase.co https://sljlwvrtwqmhmjunyplr.supabase.co https://*.manus.space https://js.stripe.com https://api.stripe.com https://checkout.stripe.com https://q.stripe.com https://m.stripe.com https://hooks.stripe.com https://*.stripe.com https://api.resend.com https://*.resend.com wss://*.supabase.co; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.stripe.com; style-src 'self' 'unsafe-inline' https://*.stripe.com; img-src 'self' data: https: https://*.stripe.com; font-src 'self' data: https://*.stripe.com; frame-src https://js.stripe.com https://checkout.stripe.com https://x.stripe.com https://*.stripe.com https://*.youtube.com https://*.youtube-nocookie.com https://*.vimeo.com https://app.wrapifai.com; form-action 'self' https://*.stripe.com;"
 
-# Sitemap redirects (MUST come before SPA fallback)
-[[redirects]]
-  from = "/sitemap.xml"
-  to = "/.netlify/functions/generate-sitemap"
-  status = 200
-
-[[redirects]]
-  from = "/sitemap-xml"
-  to = "/.netlify/functions/generate-sitemap"
-  status = 200
+# Header specifically for sitemap
+[[headers]]
+  for = "/sitemap.xml"
+  [headers.values]
+    Content-Type = "application/xml"
+    Cache-Control = "public, max-age=3600"
 
 # Legacy API proxy (keeping for fallback)
 [[redirects]]
