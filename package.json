@@ -3,12 +3,13 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "start": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+ "scripts": {
+  "dev": "vite",
+  "start": "vite",
+  "build": "vite build && node scripts/generate-sitemap.js",
+  "lint": "eslint .",
+  "preview": "vite preview",
+  "generate-sitemap": "node scripts/generate-sitemap.js"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^3.7.0",
