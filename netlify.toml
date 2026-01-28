@@ -10,7 +10,7 @@
   command = "npm run build"
 
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "20"
 
 # Headers configuration for CORS and Supabase
 [[headers]]
