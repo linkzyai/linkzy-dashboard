@@ -1,8 +1,8 @@
 name: Generate Sitemap
 on:
   schedule:
-    - cron: '0 */6 * * *'
-  workflow_dispatch:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:  # Manual trigger button
   push:
     branches:
       - main
@@ -35,8 +35,14 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add public/sitemap.xml
-          git diff --quiet && git diff --staged --quiet || (git commit -m "🗺️ Auto-update sitemap" && git push)
+          if git diff --staged --quiet; then
+            echo "No changes to sitemap, skipping commit"
+          else
+            git commit -m "🗺️ Auto-update sitemap"
+            git push
+          fi
       
       - name: Trigger Netlify Deploy
+        if: success()
         run: |
           curl -X POST -d {} https://api.netlify.com/build_hooks/${{ secrets.NETLIFY_BUILD_HOOK }}
