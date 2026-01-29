@@ -275,17 +275,18 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               user_id: userId,
               user_email: userEmail,
               promotion_code_id: discountApplied?.valid ? discountApplied.promotion_code_id : undefined,
+              coupon_code: discountApplied?.valid ? discountApplied.code : undefined, // 🔴 ADDED THIS LINE
             },
           }
         );
 
-        if (subErr || !subData?.client_secret) {
+        if (subErr || !subData?.clientSecret) {
           throw new Error(
             subErr?.message || "Failed to create subscription."
           );
         }
 
-        const clientSecret = subData.client_secret as string;
+        const clientSecret = subData.clientSecret as string;
 
         // Confirm the subscription payment
         const { error: confirmError } = await stripe.confirmCardPayment(
