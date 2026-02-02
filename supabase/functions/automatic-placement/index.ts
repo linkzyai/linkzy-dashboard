@@ -728,20 +728,19 @@ serve(async (req) => {
         );
       }
     }
-    // Note: temporary disabled
-    // // Check if opportunity is in valid state for placement
-    // if (!opportunity.auto_approved && !manualOverride) {
-    //   return new Response(
-    //     JSON.stringify({
-    //       error: "Opportunity must be approved before placement",
-    //       status: opportunity.status,
-    //     }),
-    //     {
-    //       status: 400,
-    //       headers: { ...corsHeaders, "Content-Type": "application/json" },
-    //     }
-    //   );
-    // }
+    // Check if opportunity is in valid state for placement
+    if (!opportunity.auto_approved && !manualOverride) {
+      return new Response(
+        JSON.stringify({
+          error: "Opportunity must be approved before placement",
+          status: opportunity.status,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
     // Get target domain metrics
     const { data: targetDomainMetrics } = await supabase
       .from("domain_metrics")
