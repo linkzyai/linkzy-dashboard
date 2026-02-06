@@ -8,6 +8,8 @@ import Footer from './components/Footer';
 import Hero from './components/Hero';
 import Features from './components/Features';
 import HowItWorks from './components/HowItWorks';
+import Timeline from './components/Timeline';
+import DATiers from './components/DATiers';
 import Pricing from './components/Pricing';
 import Success from './components/Success';
 import Cancel from './components/Cancel';
@@ -38,6 +40,8 @@ const HomePage = () => (
     <Hero />
     <Features />
     <HowItWorks />
+    <Timeline />
+    <DATiers /> 
     <Pricing />
     <BlogSection />
     <Footer />
