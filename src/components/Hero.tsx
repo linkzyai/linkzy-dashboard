@@ -45,7 +45,7 @@ const Hero = () => {
           {/* Top Banner */}
           <div className="text-center mb-12">
             <div className="inline-flex items-center bg-orange-500/10 border border-orange-500/20 rounded-full px-4 py-2 text-sm text-orange-400">
-              🚀 Public Beta: First 250 founders get LIFETIME Pro Access FREE (127 spots claimed) with code "FOUNDERS250"
+              🚀 Limited Beta: First 250 founders get LIFETIME Pro Access FREE (127 spots claimed) with code "FOUNDERS250"
             </div>
           </div>
 
@@ -57,7 +57,7 @@ const Hero = () => {
               <span className="text-orange-500 uppercase">Exchange for Website Owners</span>
             </h1>
             <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-              Join 127 website owners exchanging high-quality backlinks. Get 15 backlinks per month for $29. No outreach, no agencies, no hassle.
+              Join 127 website owners exchanging high-quality backlinks. Get 5-15 backlinks per month starting at $19. No outreach, no agencies, no hassle.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
