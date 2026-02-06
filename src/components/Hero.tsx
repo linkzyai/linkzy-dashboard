@@ -45,19 +45,19 @@ const Hero = () => {
           {/* Top Banner */}
           <div className="text-center mb-12">
             <div className="inline-flex items-center bg-orange-500/10 border border-orange-500/20 rounded-full px-4 py-2 text-sm text-orange-400">
-              🚀 Public Beta: First 100 members get LIFETIME Pro Access (100% FREE) with code "FOUNDERS250"
+              🚀 Public Beta: First 250 founders get LIFETIME Pro Access FREE (127 spots claimed) with code "FOUNDERS250"
             </div>
           </div>
 
           {/* Main Heading */}
           <div className="text-center max-w-4xl mx-auto mb-16">
             <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight uppercase">
-              Backlinks that
+              Automated Backlink
               <br />
-              <span className="text-orange-500 uppercase">actually work</span>
+              <span className="text-orange-500 uppercase">Exchange for Website Owners</span>
             </h1>
             <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-              Join our Public Beta. Get high-quality backlinks for 90% less. First 100 members get Lifetime Pro access free with code "FOUNDERS250".
+              Join 127 website owners exchanging high-quality backlinks. Get 15 backlinks per month for $29. No outreach, no agencies, no hassle.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
