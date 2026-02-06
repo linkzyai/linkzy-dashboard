@@ -49,11 +49,11 @@ const Pricing = () => {
               <div className="text-2xl mb-4">🎁</div>
               <h3 className="text-xl font-bold mb-3 text-white">Free Plan</h3>
               <div className="text-3xl font-bold mb-4 text-green-400">$0</div>
-              <p className="text-gray-300 mb-6 flex-grow">Get 3 free credits on signup. Perfect for testing our service.</p>
+              <p className="text-gray-300 mb-6 flex-grow">Get 3 free backlinks on signup. Perfect for testing our service.</p>
               <ul className="text-left text-gray-400 text-sm mb-6 space-y-2">
                 <li className="flex items-center">
                   <span className="text-green-400 mr-2">✓</span>
-                  3 credits on signup
+                  3 backlinks on signup
                 </li>
                 <li className="flex items-center">
                   <span className="text-green-400 mr-2">✓</span>
@@ -79,11 +79,11 @@ const Pricing = () => {
               <div className="text-3xl font-bold mb-4 text-white">
                 $19<span className="text-lg text-gray-400">/mo</span>
               </div>
-              <p className="text-gray-300 mb-6 flex-grow">Perfect for small businesses – 5 credits every month</p>
+              <p className="text-gray-300 mb-6 flex-grow">Perfect for small businesses – 5 backlinks every month</p>
               <ul className="text-left text-gray-400 text-sm mb-6 space-y-2">
                 <li className="flex items-center">
                   <span className="text-green-400 mr-2">✓</span>
-                  5 credits monthly
+                  5 backlinks monthly
                 </li>
                 <li className="flex items-center">
                   <span className="text-green-400 mr-2">✓</span>
@@ -114,11 +114,11 @@ const Pricing = () => {
               <div className="text-3xl font-bold mb-4 text-white">
                 $29<span className="text-lg text-gray-400">/mo</span>
               </div>
-              <p className="text-gray-300 mb-6 flex-grow">For growing businesses – 15 credits every month</p>
+              <p className="text-gray-300 mb-6 flex-grow">For growing businesses – 15 backlinks every month</p>
               <ul className="text-left text-gray-400 text-sm mb-6 space-y-2">
                 <li className="flex items-center">
                   <span className="text-green-400 mr-2">✓</span>
-                  15 credits monthly
+                  15 backlinks monthly
                 </li>
                 <li className="flex items-center">
                   <span className="text-green-400 mr-2">✓</span>
