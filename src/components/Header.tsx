@@ -44,7 +44,7 @@ const Header = () => {
       {/* Top Announcement Bar */}
       <div className="bg-orange-500 text-white text-center py-2 px-4 fixed top-0 left-0 right-0 z-[60]">
         <p className="text-xs sm:text-sm font-semibold">
-          🚀 Public Beta: First 100 members get LIFETIME Pro Access (100% FREE) with code "FOUNDERS250"
+          🚀 Limited Beta: First 250 founders get LIFETIME Pro Access FREE (127 spots claimed) - Code: FOUNDERS250"
         </p>
       </div>
       
