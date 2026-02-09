@@ -9,6 +9,15 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+const MATCH_CONFIG = {
+  PHASE_1_RANGE: 10,      // ±10 DA (perfect matches)
+  PHASE_2_RANGE: 20,      // ±20 DA (good matches)
+  PHASE_3_RANGE: 15,      // ±15 DA (fallback, adjacent tier)
+  MIN_MATCHES: 3,         // Minimum matches before fallback
+  MAX_MATCHES: 10,        // Maximum matches to return
+};
+
 // Geographic distance calculation (Haversine formula)
 function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 3959; // Earth's radius in miles
@@ -17,9 +26,9 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
@@ -63,9 +72,9 @@ function generateAnchorTextSuggestions(keywords, targetUrl) {
   try {
     const domain = new URL(targetUrl).hostname.replace("/^www./", "");
     const brandName = domain.split(".")[0];
-    suggestions.push(brandName);
-    suggestions.push(`visit ${brandName}`);
-    suggestions.push(`${brandName} services`);
+    suggestions.push(brandName as never);
+    suggestions.push(`visit ${brandName}` as never);
+    suggestions.push(`${brandName} services` as never);
   } catch (e) {
     // Invalid URL, skip branded suggestions
     console.error(
@@ -75,16 +84,16 @@ function generateAnchorTextSuggestions(keywords, targetUrl) {
   }
   // Keyword-based anchors
   if (keywords.length > 0) {
-    suggestions.push(keywords[0]); // Primary keyword
+    suggestions.push(keywords[0] as never); // Primary keyword
     if (keywords.length > 1) {
-      suggestions.push(`${keywords[0]} ${keywords[1]}`); // Compound
+      suggestions.push(`${keywords[0]} ${keywords[1]}` as never); // Compound
     }
-    suggestions.push(`${keywords[0]} solutions`);
-    suggestions.push(`professional ${keywords[0]}`);
-    suggestions.push(`${keywords[0]} services`);
+    suggestions.push(`${keywords[0]} solutions` as never);
+    suggestions.push(`professional ${keywords[0]}` as never);
+    suggestions.push(`${keywords[0]} services` as never);
   }
   // Generic anchors
-  suggestions.push("learn more", "click here", "read more", "this resource");
+  suggestions.push("learn more" as never, "click here" as never, "read more" as never, "this resource" as never);
   return [...new Set(suggestions)].slice(0, 5); // Remove duplicates, limit to 5
 }
 // Calculate niche proximity score
@@ -100,7 +109,7 @@ async function getNicheProximityScore(sourceNiche, targetNiche) {
   return data?.proximity_score || 0.1; // Default low score for unrelated niches
 }
 // Main matching logic
-async function findMatchingOpportunities(contentId, userId) {
+async function findMatchingOpportunities(contentId: string, userId: string) {
   console.log(`🔍 Finding matches for content ${contentId} by user ${userId}`);
   // Get source content and user details (simplified)
   const { data: sourceContent } = await supabase
@@ -114,8 +123,16 @@ async function findMatchingOpportunities(contentId, userId) {
   // Get source user details separately
   const { data: sourceUser } = await supabase
     .from("users")
-    .select("niche, website")
-    .eq("id", sourceContent.user_id)
+    .select(`
+      id,
+      tier,
+      website,
+      niche,
+      domain_metrics!inner (
+        domain_authority
+      )
+    `)
+    .eq("id", sourceContent.user_id as string)
     .single();
   if (!sourceUser) {
     throw new Error("Source user not found");
@@ -123,16 +140,64 @@ async function findMatchingOpportunities(contentId, userId) {
   console.log(
     `📄 Source content: ${sourceContent.title}, niche: ${sourceUser.niche}`
   );
+
+  const sourceDa = sourceUser.domain_metrics.domain_authority || 0;
+  const sourceTier = sourceUser.tier || 'bronze';
+
   // Domain metrics table doesn't exist in current schema - skip geographic scoring
   // Find potential target users (exclude the source user) - simplified
-  const { data: potentialUsers } = await supabase
-    .from("users")
-    .select("id, niche, website, credits")
-    .neq("id", userId);
-  if (!potentialUsers?.length) {
-    console.log("⚠️ No potential target users found");
-    return [];
+  let potentialUsers: any[] = [];
+  // PHASE 1: Perfect matches (±10 DA, same tier)
+  const phase1 = await findMatchesInRange(
+    sourceUser.id as string,
+    sourceDa,
+    sourceTier,
+    MATCH_CONFIG.PHASE_1_RANGE,
+    true // all tiers
+  );
+  potentialUsers.push(...phase1);
+  console.log(`Phase 1 found: ${phase1.length} matches`);
+
+  // PHASE 2: Good matches (±20 DA, same tier)
+  if (potentialUsers.length < MATCH_CONFIG.MIN_MATCHES) {
+    console.log('Phase 2: Good matches (±20 DA, same tier)');
+    const phase2 = await findMatchesInRange(
+      sourceUser.id as string,
+      sourceDa,
+      sourceTier,
+      MATCH_CONFIG.PHASE_2_RANGE,
+      true // same tier only
+    );
+
+    // Add only new candidates (not already in phase1)
+    const existingIds = new Set(potentialUsers.map(c => c.id));
+    const newCandidates = phase2.filter(c => !existingIds.has(c.id));
+    potentialUsers.push(...newCandidates);
+    console.log(`Phase 2 found: ${newCandidates.length} new matches`);
   }
+
+  // PHASE 3: Fallback matches (±15 DA, adjacent tier)
+  if (potentialUsers.length < MATCH_CONFIG.MIN_MATCHES) {
+    console.log('Phase 3: Fallback matches (adjacent tier)');
+    const adjacentTier = getAdjacentTier(sourceTier, sourceDa);
+
+    if (adjacentTier) {
+      const phase3 = await findMatchesInRange(
+        sourceUser.id as string,
+        sourceDa,
+        adjacentTier,
+        MATCH_CONFIG.PHASE_3_RANGE,
+        false // adjacent tier
+      );
+
+      // Add only new candidates
+      const existingIds = new Set(potentialUsers.map(c => c.id));
+      const newCandidates = phase3.filter(c => !existingIds.has(c.id));
+      potentialUsers.push(...newCandidates);
+      console.log(`Phase 3 found: ${newCandidates.length} new matches in ${adjacentTier} tier`);
+    }
+  }
+
   // Attach content count
   const usersWithContent = [];
   for (const u of potentialUsers) {
@@ -143,31 +208,31 @@ async function findMatchingOpportunities(contentId, userId) {
       .limit(5);
     if (tc?.length) {
       usersWithContent.push({
-        ...u,
-        tracked_content: tc,
-      });
+        ...(u as object),
+        tracked_content: tc as never,
+      } as never);
     }
   }
   const withScores = [];
   for (const u of usersWithContent) {
-    const proximity = await getNicheProximityScore(sourceUser.niche, u.niche);
+    const proximity = await getNicheProximityScore(sourceUser.niche, (u as any).niche);
     withScores.push({
-      ...u,
+      ...(u as object),
       proximity,
-    });
+    } as never);
   }
   const sortedUsers = withScores
-    .filter((u) => u.proximity > 0) // skip totally unrelated
-    .sort((a, b) => b.proximity - a.proximity)
+    .filter((u: any) => u.proximity > 0) // skip totally unrelated
+    .sort((a: any, b: any) => b.proximity - a.proximity)
     .slice(0, 50);
   console.log(`🎯 Found ${sortedUsers.length} potential targets`);
   const opportunities = [];
   for (const target of sortedUsers) {
-    if (!target.tracked_content?.length) continue;
+    if (!(target as any).tracked_content?.length) continue;
     // Partner relationship check removed - table doesn't exist in current schema
     // All users are considered potential partners for now
     // For each piece of target content, calculate match scores
-    for (const targetContent of target.tracked_content) {
+    for (const targetContent of (target as any).tracked_content) {
       try {
         const scores = {
           keywordOverlap: 0,
@@ -185,7 +250,7 @@ async function findMatchingOpportunities(contentId, userId) {
         // 2. Niche proximity score (25% weight)
         scores.nicheProximity = await getNicheProximityScore(
           sourceUser.niche,
-          target.niche
+          (target as any).niche
         );
         // 3. Domain Authority score (20% weight) - Default since domain_metrics table doesn't exist
         scores.domainAuthority = 0.5; // Default neutral DA score
@@ -207,36 +272,36 @@ async function findMatchingOpportunities(contentId, userId) {
             sourceContent.url || sourceUser.website // error found - need to change sourceContent.users.website -> .url
           );
           opportunities.push({
-            source_content_id: contentId,
-            target_content_id: targetContent.id,
-            target_user_id: target.id,
-            source_user_id: userId,
-            keyword_overlap_score: scores.keywordOverlap,
-            niche_proximity_score: scores.nicheProximity,
-            domain_authority_score: scores.domainAuthority,
-            geographic_relevance_score: scores.geographicRelevance,
-            partner_quality_score: scores.partnerQuality,
-            overall_match_score: scores.overall,
-            suggested_anchor_text: anchorSuggestions[0] ?? "Read more",
-            suggested_target_url: sourceUser.website,
-            suggested_placement_context: `Natural placement opportunity in content about "${targetContent.title}"`,
-            estimated_value: Math.ceil(scores.overall * 3),
-            auto_approved: scores.overall >= 0.7,
-            status: scores.overall >= 0.7 ? "approved" : "pending",
-            target_content_title: targetContent.title,
-            target_content_url: targetContent.url,
-          });
+            source_content_id: contentId as string,
+            target_content_id: (targetContent as any).id as string,
+            target_user_id: (target as any).id as string,
+            source_user_id: userId as string,
+            keyword_overlap_score: scores.keywordOverlap as number,
+            niche_proximity_score: scores.nicheProximity as number,
+            domain_authority_score: scores.domainAuthority as number,
+            geographic_relevance_score: scores.geographicRelevance as number,
+            partner_quality_score: scores.partnerQuality as number,
+            overall_match_score: scores.overall as number,
+            suggested_anchor_text: anchorSuggestions[0] ?? "Read more" as never,
+            suggested_target_url: sourceUser.website as string,
+            suggested_placement_context: `Natural placement opportunity in content about "${targetContent.title}"` as never,
+            estimated_value: Math.ceil(scores.overall as number * 3),
+            auto_approved: scores.overall >= 0.7 as boolean,
+            status: scores.overall >= 0.7 ? "approved" : "pending" as never,
+            target_content_title: targetContent.title as string,
+            target_content_url: targetContent.url as string,
+          } as never);
         }
       } catch (error) {
         console.error(
-          `Error calculating scores for target ${target.id}:`,
+          `Error calculating scores for target ${(target as any).id}:`,
           error
         );
       }
     }
   }
   // Sort by overall match score
-  opportunities.sort((a, b) => b.overall_match_score - a.overall_match_score);
+  opportunities.sort((a: any, b: any) => b.overall_match_score - a.overall_match_score);
   console.log(`✅ Generated ${opportunities.length} opportunities`);
   return opportunities.slice(0, 20); // Return top 20 opportunities
 }
@@ -293,6 +358,74 @@ async function findMatchingOpportunities(contentId, userId) {
     throw error;
   }
 }
+
+async function findMatchesInRange(
+  sourceUserId: string,
+  sourceDa: number,
+  targetTier: string,
+  daRange: number,
+  sameTierOnly: boolean
+): Promise<any[]> {
+
+  const minDa = Math.max(0, sourceDa - daRange);
+  const maxDa = Math.min(100, sourceDa + daRange);
+
+  let query = supabase
+    .from('users')
+    .select(`
+      id,
+      email,
+      website,
+      niche,
+      tier,
+      credits,
+      domain_metrics!inner (
+        domain_authority
+      )
+    `)
+    .neq('id', sourceUserId)
+    .gte('domain_metrics.domain_authority', minDa)
+    .lte('domain_metrics.domain_authority', maxDa);
+
+  // Apply tier filter
+  if (sameTierOnly) {
+    query = query.eq('tier', targetTier);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error finding matches:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Get adjacent tier for fallback matching
+ */
+function getAdjacentTier(currentTier: string, da: number): string | null {
+  switch (currentTier) {
+    case 'bronze':
+      // Bronze users can fallback to low Silver
+      return 'silver';
+
+    case 'silver':
+      // Silver users fallback based on their DA
+      // Low silver (30-44) → Bronze
+      // High silver (45-59) → Gold
+      return da < 45 ? 'bronze' : 'gold';
+
+    case 'gold':
+      // Gold users can fallback to high Silver
+      return 'silver';
+
+    default:
+      return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -415,15 +548,15 @@ serve(async (req) => {
           opportunities_created: opportunities.length,
           auto_approved: autoApproved,
           average_score:
-            opportunities.reduce((sum, op) => sum + op.overall_match_score, 0) /
+            opportunities.reduce((sum: number, op: any) => sum + op.overall_match_score as number, 0) /
             opportunities.length,
           top_opportunity: opportunities[0]
             ? {
-                target_user_id: opportunities[0].target_user_id,
-                score: opportunities[0].overall_match_score,
-                suggested_anchor_text: opportunities[0].suggested_anchor_text,
-              }
-            : null,
+              target_user_id: (opportunities[0] as any).target_user_id as string,
+              score: (opportunities[0] as any).overall_match_score as number,
+              suggested_anchor_text: (opportunities[0] as any).suggested_anchor_text as string,
+            }
+            : null as any,
         }),
         {
           status: 200,

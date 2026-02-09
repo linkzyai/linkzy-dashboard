@@ -33,6 +33,14 @@ function normalizeWebsite(website: string | null): string | null {
   return trimmed;
 }
 
+// Determine tier based on Domain Authority
+function getTierFromDA(da: number | null | undefined): "bronze" | "silver" | "gold" | null {
+  if (da === null || da === undefined || typeof da !== "number") return null;
+  if (da >= 60) return "gold";
+  if (da >= 30) return "silver";
+  return "bronze";
+}
+
 async function fetchMozSiteMetrics(
   token: string,
   url: string
@@ -166,6 +174,21 @@ serve(async (req) => {
         failed += 1;
       } else {
         updated += 1;
+        
+        // Update user tier based on Domain Authority
+        const tier = getTierFromDA(metrics.domain_authority);
+        if (tier) {
+          const { error: tierUpdateError } = await supabase
+            .from("users")
+            .update({ tier })
+            .eq("id", u.id);
+          
+          if (tierUpdateError) {
+            console.warn(`Failed to update tier for user ${u.id}:`, tierUpdateError);
+          } else {
+            console.log(`✅ Updated tier for user ${u.id}: ${tier} (DA: ${metrics.domain_authority})`);
+          }
+        }
       }
 
       // Avoid rate limiting (Moz has limits)

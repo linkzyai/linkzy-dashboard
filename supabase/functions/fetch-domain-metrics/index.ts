@@ -33,6 +33,14 @@ function normalizeWebsite(website: string | null | undefined): string | null {
   return trimmed;
 }
 
+// Determine tier based on Domain Authority
+function getTierFromDA(da: number | null | undefined): "bronze" | "silver" | "gold" | null {
+  if (da === null || da === undefined || typeof da !== "number") return null;
+  if (da >= 60) return "gold";
+  if (da >= 30) return "silver";
+  return "bronze";
+}
+
 async function fetchMozSiteMetrics(
   token: string,
   url: string
@@ -174,6 +182,23 @@ serve(async (req) => {
     }
 
     console.log(`✅ Successfully saved domain_metrics for user ${user_id} (DA: ${metrics.domain_authority ?? 'N/A'})`);
+    
+    // Update user tier based on Domain Authority
+    const tier = getTierFromDA(metrics.domain_authority);
+    if (tier) {
+      const { error: tierUpdateError } = await supabase
+        .from("users")
+        .update({ tier })
+        .eq("id", user_id);
+      
+      if (tierUpdateError) {
+        console.warn(`⚠️ Failed to update tier for user ${user_id}:`, tierUpdateError);
+      } else {
+        console.log(`✅ Updated tier for user ${user_id}: ${tier} (DA: ${metrics.domain_authority})`);
+      }
+    } else {
+      console.log(`⏭️ No tier update for user ${user_id} - DA not available`);
+    }
     
     return json(200, {
       success: true,
