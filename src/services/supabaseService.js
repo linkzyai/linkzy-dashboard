@@ -1467,6 +1467,14 @@ If you're testing, try these workarounds:
       }
 
       console.log("✅ User profile updated successfully");
+      
+      // Fetch Domain Authority in background (non-blocking)
+      if (website && website !== 'yourdomain.com') {
+        this.fetchDomainMetrics(user.id, website).catch((err) => {
+          console.warn("⚠️ Background DA fetch failed:", err);
+        });
+      }
+      
       return { success: true };
     } catch (error) {
       console.error("❌ Update user profile failed:", error);
@@ -1491,6 +1499,31 @@ If you're testing, try these workarounds:
         success: false,
         error: errorMessage,
       };
+    }
+  }
+
+  // Fetch Domain Authority from Moz API and save to domain_metrics
+  async fetchDomainMetrics(userId, website) {
+    try {
+      console.log("🔍 Fetching Domain Authority for:", website);
+      const { data, error } = await supabase.functions.invoke("fetch-domain-metrics", {
+        body: { user_id: userId, website: website },
+      });
+
+      if (error) {
+        console.warn("⚠️ fetch-domain-metrics error:", error);
+        return { success: false, error: error.message };
+      }
+
+      if (data?.success) {
+        console.log(`✅ Domain Authority fetched: ${data.domain_authority ?? 'N/A'}`);
+        return { success: true, domain_authority: data.domain_authority, spam_score: data.spam_score };
+      }
+
+      return { success: false, message: data?.message || "Failed to fetch metrics" };
+    } catch (error) {
+      console.warn("⚠️ fetchDomainMetrics error:", error);
+      return { success: false, error: error.message };
     }
   }
 

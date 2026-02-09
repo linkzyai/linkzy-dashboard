@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { X, Globe, Target, CheckCircle, AlertCircle } from 'lucide-react';
-// @ts-expect-error: No type declarations for supabase.js
 import { supabase } from '../lib/supabase';
 
 interface ProfileCompletionModalProps {
@@ -62,6 +61,22 @@ const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
       
       // Mark profile completion as seen
       localStorage.setItem('linkzy_profile_completion_seen', 'true');
+      
+      // Fetch Domain Authority in background
+      try {
+        const { default: supabaseService } = await import('../services/supabaseService');
+        if (website && website !== 'yourdomain.com') {
+          supabaseService.fetchDomainMetrics(user.id, website).then(result => {
+            if (result.success) {
+              console.log(`✅ Domain Authority fetched: ${result.domain_authority ?? 'N/A'}`);
+            }
+          }).catch(error => {
+            console.warn('⚠️ Background DA fetch failed:', error);
+          });
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to start DA fetch:', error);
+      }
       
       // Trigger automatic website scan
       try {
