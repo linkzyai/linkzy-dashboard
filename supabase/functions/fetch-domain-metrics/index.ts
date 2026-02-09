@@ -87,44 +87,65 @@ async function fetchMozSiteMetrics(
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
-  if (req.method !== "POST") {
-    return json(405, { error: "Method not allowed" });
+  if (req.method === "OPTIONS") {
+    console.log("✅ CORS preflight request");
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
+  
+  if (req.method !== "POST") {
+    console.warn(`⚠️ Invalid method: ${req.method}`);
+    return json(405, { error: "Method not allowed", headers: corsHeaders });
+  }
+
+  console.log("📥 POST request received to fetch-domain-metrics");
 
   const MOZ_TOKEN = Deno.env.get("MOZ_TOKEN");
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
   if (!MOZ_TOKEN) {
-    console.warn("MOZ_TOKEN is not set - skipping DA fetch");
-    return json(200, { success: false, message: "MOZ_TOKEN not configured" });
+    console.warn("⚠️ MOZ_TOKEN is not set - skipping DA fetch");
+    return json(200, { success: false, message: "MOZ_TOKEN not configured", headers: corsHeaders });
   }
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return json(500, { error: "Supabase configuration missing" });
+    console.error("❌ Supabase configuration missing");
+    return json(500, { error: "Supabase configuration missing", headers: corsHeaders });
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
-    const { user_id, website } = await req.json();
+    const body = await req.json();
+    console.log("📦 Request body:", body);
+    const { user_id, website } = body;
 
     if (!user_id || !website) {
-      return json(400, { error: "Missing required fields: user_id, website" });
+      console.error("❌ Missing required fields:", { user_id: !!user_id, website: !!website });
+      return json(400, { error: "Missing required fields: user_id, website", headers: corsHeaders });
     }
+
+    console.log(`🔍 Processing DA fetch for user ${user_id}, website: ${website}`);
 
     const normalizedUrl = normalizeWebsite(website);
     if (!normalizedUrl) {
-      return json(400, { error: "Invalid website URL" });
+      console.warn("⚠️ Invalid website URL after normalization:", website);
+      return json(400, { error: "Invalid website URL", headers: corsHeaders });
     }
 
+    console.log(`🌐 Normalized URL: ${normalizedUrl}`);
+    console.log("📡 Calling Moz API...");
+    
     const metrics = await fetchMozSiteMetrics(MOZ_TOKEN, normalizedUrl);
     if (!metrics) {
+      console.warn("⚠️ Failed to fetch metrics from Moz API");
       return json(200, {
         success: false,
         message: "Failed to fetch metrics from Moz API",
+        headers: corsHeaders,
       });
     }
+
+    console.log("✅ Moz API response:", metrics);
 
     const now = new Date().toISOString();
     const { error: upsertError } = await supabase.from("domain_metrics").upsert(
@@ -143,23 +164,28 @@ serve(async (req) => {
     );
 
     if (upsertError) {
-      console.error(`Failed to save domain_metrics for user ${user_id}:`, upsertError);
+      console.error(`❌ Failed to save domain_metrics for user ${user_id}:`, upsertError);
       return json(500, {
         success: false,
         error: "Failed to save metrics",
         details: upsertError.message,
+        headers: corsHeaders,
       });
     }
 
+    console.log(`✅ Successfully saved domain_metrics for user ${user_id} (DA: ${metrics.domain_authority ?? 'N/A'})`);
+    
     return json(200, {
       success: true,
       domain_authority: metrics.domain_authority,
       spam_score: metrics.spam_score,
+      headers: corsHeaders,
     });
   } catch (err: unknown) {
-    console.error("fetch-domain-metrics error:", err);
+    console.error("❌ fetch-domain-metrics exception:", err);
     return json(500, {
       error: err instanceof Error ? err.message : "Internal server error",
+      headers: corsHeaders,
     });
   }
 });

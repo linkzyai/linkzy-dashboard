@@ -65,17 +65,24 @@ const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
       // Fetch Domain Authority in background
       try {
         const { default: supabaseService } = await import('../services/supabaseService');
-        if (website && website !== 'yourdomain.com') {
-          supabaseService.fetchDomainMetrics(user.id, website).then(result => {
-            if (result.success) {
-              console.log(`✅ Domain Authority fetched: ${result.domain_authority ?? 'N/A'}`);
-            }
-          }).catch(error => {
-            console.warn('⚠️ Background DA fetch failed:', error);
-          });
+        if (website && website !== 'yourdomain.com' && website.trim() !== '') {
+          console.log('🚀 ProfileCompletionModal: Starting DA fetch for:', website, 'user:', user.id);
+          supabaseService.fetchDomainMetrics(user.id, website)
+            .then(result => {
+              if (result.success) {
+                console.log(`✅ Domain Authority fetched: ${result.domain_authority ?? 'N/A'}`);
+              } else {
+                console.warn('⚠️ DA fetch returned unsuccessful:', result);
+              }
+            })
+            .catch(error => {
+              console.error('❌ Background DA fetch exception:', error);
+            });
+        } else {
+          console.log('⏭️ ProfileCompletionModal: Skipping DA fetch - invalid website:', website);
         }
       } catch (error) {
-        console.warn('⚠️ Failed to start DA fetch:', error);
+        console.error('❌ Failed to start DA fetch:', error);
       }
       
       // Trigger automatic website scan
