@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import supabaseService from '../../services/supabaseService';
+import TierBadge from './TierBadge';
 
 // Types for dashboard data
 export type Backlink = {
@@ -424,7 +425,7 @@ const Dashboard = () => {
         <div className="p-6">
           {/* Welcome Section */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3 flex-wrap">
               {hasBacklinks ? 'Welcome back!' : 'Welcome to Linkzy'}
               <span
                 className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${userData.isPro
@@ -434,6 +435,9 @@ const Dashboard = () => {
               >
                 {planLabel}
               </span>
+              {user?.tier && ['bronze', 'silver', 'gold'].includes(user.tier) && (
+                <TierBadge tier={user.tier} size="md" />
+              )}
               {!hasBacklinks && (
                 <ContextualHelp
                   title="Getting Started"

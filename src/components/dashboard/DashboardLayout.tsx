@@ -12,6 +12,7 @@ import {
   X,
   Search
 } from 'lucide-react';
+import TierBadge from './TierBadge';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -106,6 +107,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
             </div>
 
             <div className="flex items-center space-x-4">
+              {/* {user?.tier && ['bronze', 'silver', 'gold'].includes(user.tier) && (
+                <TierBadge tier={user.tier} size="sm" />
+              )} */}
               <div className="text-sm text-gray-300">
                 <span className="text-orange-500 font-semibold">
                   {(() => {
@@ -173,8 +177,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
                   <p className="text-sm font-medium text-white truncate">
                     {user?.email?.split('@')[0] || 'User'}
                   </p>
-                  <p className="text-xs text-gray-400 truncate">
-                    {user?.plan && user.plan !== 'free' ? 'Pro' : 'Free'} Plan
+                  <p className="text-xs text-gray-400 flex items-center gap-2 flex-wrap">
+                    <span className="truncate">{user?.plan === 'pro' ? 'Pro' : user?.plan === 'starter' ? 'Starter' : 'Free'} Plan</span>
+                    {/* {user?.tier && ['bronze', 'silver', 'gold'].includes(user.tier) && (
+                      <TierBadge tier={user.tier} size="sm" />
+                    )} */}
                   </p>
                 </div>
               </div>

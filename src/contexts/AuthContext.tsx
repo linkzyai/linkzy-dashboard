@@ -21,6 +21,7 @@ export type AppProfile = {
   api_key?: string | null; // keep in memory only
   subscription_status?: string | null;
   created_at?: string | null;
+  tier?: "bronze" | "silver" | "gold" | null;
 };
 
 interface AuthContextType {
@@ -45,7 +46,7 @@ async function fetchProfile(userId: string): Promise<AppProfile | null> {
   const { data, error } = await supabase
     .from("users") // consider 'profiles' to avoid confusion with auth.users
     .select(
-      "id, email, website, niche, plan, credits, api_key, subscription_status, created_at"
+      "id, email, website, niche, plan, credits, api_key, subscription_status, created_at, tier"
     )
     .eq("id", userId)
     .single();
@@ -65,6 +66,7 @@ async function fetchProfile(userId: string): Promise<AppProfile | null> {
     api_key: data.api_key ?? null,
     subscription_status: data.subscription_status ?? null,
     created_at: data.created_at ?? null,
+    tier: data.tier ?? null,
   };
 }
 
@@ -109,6 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             credits: null,
             api_key: null,
             subscription_status: null,
+            tier: null,
             // auth.users has created_at, use as a fallback until profile row loads
             created_at: (supaUser as any).created_at ?? null,
           });
@@ -127,6 +130,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             credits: profile.credits,
             api_key: profile.api_key,
             subscription_status: profile.subscription_status,
+            tier: profile.tier ?? null,
             // prefer app profile created_at, fallback to auth user if missing
             created_at:
               profile.created_at ??
@@ -179,6 +183,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             credits: prev?.credits ?? null,
             api_key: prev?.api_key ?? null,
             subscription_status: prev?.subscription_status ?? null,
+            tier: prev?.tier ?? null,
             created_at:
               prev?.created_at ??
               ((supaUser as any).created_at as string | undefined) ??
@@ -198,6 +203,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               credits: profile.credits,
               api_key: profile.api_key,
               subscription_status: profile.subscription_status,
+              tier: profile.tier ?? null,
               created_at:
                 profile.created_at ??
                 ((supaUser as any).created_at as string | undefined) ??
@@ -231,6 +237,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         credits: profile.credits,
         api_key: profile.api_key,
         subscription_status: profile.subscription_status,
+        tier: profile.tier ?? null,
         created_at:
           profile.created_at ??
           ((supaUser as any).created_at as string | undefined) ??
@@ -256,6 +263,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       api_key: apiKey,
       subscription_status:
         userProfile?.subscription_status ?? user?.subscription_status ?? null,
+      tier: userProfile?.tier ?? user?.tier ?? null,
       created_at:
         userProfile?.created_at ?? user?.created_at ?? null,
     };
