@@ -1467,6 +1467,25 @@ If you're testing, try these workarounds:
       }
 
       console.log("✅ User profile updated successfully");
+      
+      // Fetch Domain Authority in background (non-blocking)
+      if (website && website !== 'yourdomain.com' && website.trim() !== '') {
+        console.log("🚀 Starting background DA fetch for:", website);
+        this.fetchDomainMetrics(user.id, website)
+          .then((result) => {
+            if (result.success) {
+              console.log("✅ Background DA fetch completed:", result);
+            } else {
+              console.warn("⚠️ Background DA fetch returned unsuccessful:", result);
+            }
+          })
+          .catch((err) => {
+            console.error("❌ Background DA fetch exception:", err);
+          });
+      } else {
+        console.log("⏭️ Skipping DA fetch - invalid website:", website);
+      }
+      
       return { success: true };
     } catch (error) {
       console.error("❌ Update user profile failed:", error);
@@ -1491,6 +1510,56 @@ If you're testing, try these workarounds:
         success: false,
         error: errorMessage,
       };
+    }
+  }
+
+  // Fetch Domain Authority from Moz API and save to domain_metrics
+  async fetchDomainMetrics(userId, website) {
+    try {
+      console.log("🔍 [fetchDomainMetrics] Starting - website:", website, "user:", userId);
+      
+      if (!userId || !website) {
+        console.warn("⚠️ [fetchDomainMetrics] Missing userId or website:", { userId, website });
+        return { success: false, error: "Missing userId or website" };
+      }
+
+      if (website === 'yourdomain.com' || website.trim() === '') {
+        console.log("⏭️ [fetchDomainMetrics] Skipping - invalid website:", website);
+        return { success: false, error: "Invalid website" };
+      }
+
+      console.log("📡 [fetchDomainMetrics] Calling supabase.functions.invoke...");
+      
+      const invokePromise = supabase.functions.invoke("fetch-domain-metrics", {
+        body: { user_id: String(userId), website: String(website) },
+      });
+
+      console.log("⏳ [fetchDomainMetrics] Waiting for response...");
+      const { data, error } = await invokePromise;
+      
+      console.log("📥 [fetchDomainMetrics] Response received:", { 
+        hasData: !!data, 
+        hasError: !!error,
+        dataKeys: data ? Object.keys(data) : [],
+        errorMessage: error?.message 
+      });
+
+      if (error) {
+        console.error("❌ [fetchDomainMetrics] Error from invoke:", error);
+        return { success: false, error: error.message || "Unknown error" };
+      }
+
+      if (data?.success) {
+        console.log(`✅ [fetchDomainMetrics] Success - DA: ${data.domain_authority ?? 'N/A'}`);
+        return { success: true, domain_authority: data.domain_authority, spam_score: data.spam_score };
+      }
+
+      console.warn("⚠️ [fetchDomainMetrics] Unsuccessful response:", data);
+      return { success: false, message: data?.message || "Failed to fetch metrics" };
+    } catch (error) {
+      console.error("❌ [fetchDomainMetrics] Exception caught:", error);
+      console.error("❌ [fetchDomainMetrics] Error stack:", error.stack);
+      return { success: false, error: error.message || "Unknown exception" };
     }
   }
 

@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import DashboardLayout from "./DashboardLayout";
 import CelebrationModal from "../CelebrationModal";
 import PurchaseCreditsModal from "./PurchaseCreditsModal";
+import TierBadge from "./TierBadge";
 import {
   AlertTriangle,
   CreditCard,
@@ -103,6 +104,7 @@ const DashboardAccount = () => {
 
   // Listen for credit updates from success page
   useEffect(() => {
+    console.log("User tier in dashboard account:", user?.tier);
     const handleCreditsUpdate = async (event: Event) => {
       const customEvent = event as CustomEvent;
       const { newCredits, oldCredits, creditsAdded } = customEvent.detail;
@@ -1115,7 +1117,7 @@ const DashboardAccount = () => {
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Account Type
             </label>
-            <div className="p-3 bg-gray-800 border border-gray-700 rounded-lg text-white opacity-75">
+            <div className="p-3 bg-gray-800 border border-gray-700 rounded-lg text-white opacity-75 flex flex-wrap items-center gap-2">
               {userData.plan === "starter" && "Starter (subscription)"}
               {userData.plan === "pro" && "Pro (subscription)"}
               {userData.plan === "free" && "Free"}
@@ -1123,6 +1125,9 @@ const DashboardAccount = () => {
                 userData.plan !== "pro" &&
                 userData.plan !== "free" &&
                 userData.plan}
+              {user?.tier && ["bronze", "silver", "gold"].includes(user.tier) && (
+                <TierBadge tier={user.tier} size="sm" />
+              )}
             </div>
           </div>
 
@@ -1137,6 +1142,28 @@ const DashboardAccount = () => {
               className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white opacity-75"
             />
           </div>
+        </div>
+
+        {/* Network Tiers explanation */}
+        <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700 mt-4">
+          <h3 className="text-lg font-semibold mb-4 text-gray-300">Network Tiers</h3>
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <TierBadge tier="bronze" size="sm" />
+              <p className="text-sm text-gray-300">DA 0-29: Build your authority</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <TierBadge tier="silver" size="sm" />
+              <p className="text-sm text-gray-300">DA 30-59: Established publishers</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <TierBadge tier="gold" size="sm" />
+              <p className="text-sm text-gray-300">DA 60+: Elite network</p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-4">
+            Tiers based on domain authority. You only match with sites in your tier.
+          </p>
         </div>
 
         {/* API Test Button */}

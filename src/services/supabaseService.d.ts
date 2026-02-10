@@ -32,6 +32,7 @@ declare class SupabaseService {
   getApiUsage?(): Promise<any>;
   getKeywordAnalytics(): Promise<any>;
   getBillingHistory(userId: string): Promise<any[]>;
+  fetchDomainMetrics(userId: string, website: string): Promise<any>;
 }
 
 declare const supabaseService: SupabaseService;

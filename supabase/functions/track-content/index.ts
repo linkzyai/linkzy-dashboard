@@ -1,98 +1,85 @@
+// supabase/functions/track-content/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import OpenAI from "npm:openai@4";
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-// Import Supabase client for Edge Functions
 // @deno-types="https://esm.sh/@supabase/supabase-js@2.39.7/dist/module/index.d.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-// Environment variables for service role key and project URL
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-const openai = new OpenAI({
-  apiKey: Deno.env.get("OPENAI_API_KEY") || "",
-});
-async function llmExtractKeywords(text, langHint) {
-  if (!openai.apiKey) return null;
-  const prompt = `
-Extract up to 15 keyphrases (unigram–trigram) from the text. Prefer domain terms, named entities, products/brands, and concrete topics over generic words.
-Return strict JSON: {"lang":"<iso639-1 or null>","keywords":[{"phrase":"...","score":0.0,"type":"entity|topic|tech|brand"}, ...]}
-Scoring: 0.0–1.0 (higher means more salient in this text). Avoid duplicates (case-insensitive). No explanations.
+import OpenAI from "npm:openai@4";
 
-Lang hint: ${langHint ?? "unknown"}
-Text:
-${text.slice(0, 6000)}
-  `.trim();
-  const resp = await openai.responses.create({
-    model: "gpt-5",
-    input: prompt,
+const corsHeaders: Record<string, string> = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  // ✅ include apikey so browser requests can pass preflight
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
+};
+
+const json = (status: number, body: unknown) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
-  try {
-    const json = JSON.parse(resp.output_text || "{}");
-    if (!json || !Array.isArray(json.keywords)) return null;
-    // sanitize
-    const result = {
-      lang: typeof json.lang === "string" ? json.lang : undefined,
-      keywords: json.keywords
-        .map((k) => ({
-          phrase: String(k.phrase || "").trim(),
-          score:
-            typeof k.score === "number"
-              ? Math.min(Math.max(k.score, 0), 1)
-              : 0.5,
-          type: ["entity", "topic", "tech", "brand"].includes(k.type)
-            ? k.type
-            : undefined,
-        }))
-        .filter((k) => k.phrase.length > 0)
-        .slice(0, 15),
-    };
-    return result;
-  } catch {
-    return null;
-  }
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") ?? "";
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
 }
-function heuristicCandidates(text, maxPhrases = 20) {
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+
+/** -------- Keyword extraction helpers -------- */
+
+const STOPWORDS = new Set([
+  "the", "and", "for", "are", "but", "not", "you", "with", "this", "that", "from", "have", "was", "your", "all", "can", "will", "has",
+  "our", "they", "their", "what", "when", "where", "which", "who", "how", "why", "about", "into", "more", "than", "then", "them", "out",
+  "use", "any", "had", "his", "her", "its", "one", "two", "three", "four", "five", "on", "in", "at", "by", "to", "of", "a", "an", "is", "it",
+  "as", "be", "or", "if", "so", "do", "we", "he", "she", "i", "my", "me", "no", "yes", "up", "down", "over", "under", "again", "new", "just",
+  "now", "only", "very", "also", "after", "before", "such", "each", "other", "some", "most", "many", "much", "like", "see", "get", "got",
+  "make", "made", "back", "off", "own", "too", "via", "per", "should", "could", "would", "may", "might", "must", "shall", "let", "let's",
+  "did", "does", "done", "being", "were", "been", "because", "while", "during", "between", "among", "within", "without", "across", "through",
+  "upon", "against", "toward", "towards", "around", "amongst", "beside", "besides", "behind", "ahead", "along", "alongside", "amid", "amidst",
+  "beyond", "despite", "except", "inside", "outside", "since", "though", "unless", "until", "versus", "whether", "yet", "etc",
+]);
+
+function heuristicCandidates(text: string, maxPhrases = 20) {
   if (!text) return [];
   const cleaned = text
     .replace(/[\u0000-\u001F]+/g, " ")
     .replace(/[^\p{L}\p{N}\s'-]/gu, " ")
     .toLowerCase();
+
   const tokens = cleaned
     .split(/\s+/)
     .filter((w) => w.length > 2 && !STOPWORDS.has(w));
-  const counts = {};
+
+  const counts: Record<string, number> = {};
+
   // unigrams
   for (const t of tokens) counts[t] = (counts[t] || 0) + 1;
-  // bigrams & trigrams (simple sliding window)
+
+  // bigrams & trigrams
   for (let i = 0; i < tokens.length; i++) {
     if (i + 1 < tokens.length) {
       const bi = `${tokens[i]} ${tokens[i + 1]}`;
-      counts[bi] = (counts[bi] || 0) + 1.5; // weight phrases a bit higher
+      counts[bi] = (counts[bi] || 0) + 1.5;
     }
     if (i + 2 < tokens.length) {
       const tri = `${tokens[i]} ${tokens[i + 1]} ${tokens[i + 2]}`;
       counts[tri] = (counts[tri] || 0) + 2.0;
     }
   }
+
   const entries = Object.entries(counts)
-    .map(([phrase, score]) => ({
-      phrase,
-      score,
-    })) // drop phrases starting/ending with stopwords
+    .map(([phrase, score]) => ({ phrase, score }))
     .filter((k) => {
       const parts = k.phrase.split(" ");
-      return !(
-        STOPWORDS.has(parts[0]) || STOPWORDS.has(parts[parts.length - 1])
-      );
+      return !(STOPWORDS.has(parts[0]) || STOPWORDS.has(parts[parts.length - 1]));
     })
     .sort((a, b) => b.score - a.score);
-  // de-dup near duplicates by prefix
-  const seen = new Set();
-  const out = [];
+
+  const seen = new Set<string>();
+  const out: Array<{ phrase: string; score: number }> = [];
   for (const k of entries) {
     const key = k.phrase;
     if (seen.has(key)) continue;
@@ -102,535 +89,279 @@ function heuristicCandidates(text, maxPhrases = 20) {
   }
   return out;
 }
-function mergeAndRankKeywords(llm, heur, limit = 15) {
-  const map = new Map();
-  // add heuristic with normalized score 0..1
-  const maxHeur = Math.max(1, ...heur.map((h) => h.score));
+
+async function llmExtractKeywords(text: string, langHint?: string | null) {
+  if (!openai.apiKey) return null;
+
+  const prompt = `
+Extract up to 15 keyphrases (unigram–trigram) from the text. Prefer domain terms, named entities, products/brands, and concrete topics over generic words.
+Return strict JSON: {"lang":"<iso639-1 or null>","keywords":[{"phrase":"...","score":0.0,"type":"entity|topic|tech|brand"}, ...]}
+Scoring: 0.0–1.0 (higher means more salient in this text). Avoid duplicates (case-insensitive). No explanations.
+
+Lang hint: ${langHint ?? "unknown"}
+Text:
+${text.slice(0, 6000)}
+  `.trim();
+
+  const resp = await openai.responses.create({
+    model: "gpt-5",
+    input: prompt,
+  });
+
+  const raw = resp.output_text || "{}";
+  const jsonObj = JSON.parse(raw);
+
+  if (!jsonObj || !Array.isArray(jsonObj.keywords)) return null;
+
+  return {
+    lang: typeof jsonObj.lang === "string" ? jsonObj.lang : undefined,
+    keywords: jsonObj.keywords
+      .map((k: any) => ({
+        phrase: String(k.phrase || "").trim(),
+        score: typeof k.score === "number" ? Math.min(Math.max(k.score, 0), 1) : 0.5,
+        type: ["entity", "topic", "tech", "brand"].includes(k.type) ? k.type : undefined,
+      }))
+      .filter((k: any) => k.phrase.length > 0)
+      .slice(0, 15),
+  };
+}
+
+function mergeAndRankKeywords(llm: any, heur: any, limit = 15) {
+  const map = new Map<string, any>();
+
+  const maxHeur = Math.max(1, ...heur.map((h: any) => h.score));
   for (const h of heur) {
     const key = h.phrase.toLowerCase();
-    const s = h.score / maxHeur;
-    map.set(key, {
-      phrase: h.phrase,
-      score: s,
-      source: "heur",
-    });
+    map.set(key, { phrase: h.phrase, score: h.score / maxHeur, source: "heur" });
   }
-  // add llm; if exists, blend: score = 0.6*llm + 0.4*heur
+
   if (llm?.keywords) {
     for (const k of llm.keywords) {
       const key = k.phrase.toLowerCase();
       const prev = map.get(key);
       if (prev) {
         const blended = 0.6 * k.score + 0.4 * prev.score;
-        map.set(key, {
-          phrase: prev.phrase,
-          score: blended,
-          source: "both",
-          type: k.type,
-        });
+        map.set(key, { phrase: prev.phrase, score: blended, source: "both", type: k.type });
       } else {
-        map.set(key, {
-          phrase: k.phrase,
-          score: k.score,
-          source: "llm",
-          type: k.type,
-        });
+        map.set(key, { phrase: k.phrase, score: k.score, source: "llm", type: k.type });
       }
     }
   }
-  // rank: prefer longer phrases slightly, then score
-  const ranked = Array.from(map.values()).sort((a, b) => {
+
+  const ranked = Array.from(map.values()).sort((a: any, b: any) => {
     const lenDiff = b.phrase.split(" ").length - a.phrase.split(" ").length;
-    if (lenDiff !== 0) return lenDiff; // prefer bi/tri-grams
+    if (lenDiff !== 0) return lenDiff;
     return b.score - a.score;
   });
+
   return ranked.slice(0, limit);
 }
-// Real-time ecosystem matching trigger
-async function triggerEcosystemMatching(contentId, userId) {
+
+/** -------- Ecosystem matching trigger (safe) -------- */
+
+async function triggerEcosystemMatching(contentId: string, userId: string) {
+  console.log(`🎯 Starting real-time ecosystem matching for content ${contentId}`);
+
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/ecosystem-matcher`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      // ✅ include BOTH for reliability when calling Supabase endpoints
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+    },
+    body: JSON.stringify({
+      contentId,
+      userId,
+      forceReprocess: false,
+      realTime: true,
+    }),
+  });
+
+  // If upstream returns non-JSON, .json() would throw.
+  const text = await response.text();
+  let parsed: any = null;
   try {
-    console.log(
-      `🎯 Starting real-time ecosystem matching for content ${contentId}`
-    );
-    // Call the ecosystem-matcher function directly
-    const response = await fetch(
-      `${SUPABASE_URL}/functions/v1/ecosystem-matcher`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        },
-        body: JSON.stringify({
-          contentId: contentId,
-          userId: userId,
-          forceReprocess: false,
-          realTime: true,
-        }),
-      }
-    );
-    const result = await response.json();
-    if (result.success && result.opportunities_created > 0) {
-      console.log(
-        `✅ Real-time matching success: ${result.opportunities_created} opportunities created`
-      );
-      // TODO: Send notifications to potential partners
-      // await notifyPartners(result.opportunities);
-    } else {
-      console.log(`ℹ️ No new opportunities found for content ${contentId}`);
-    }
-  } catch (error) {
-    console.error(`❌ Real-time ecosystem matching failed:`, error);
-    throw error;
+    parsed = JSON.parse(text);
+  } catch {
+    parsed = { success: false, raw: text };
+  }
+
+  if (!response.ok) {
+    // Make it throw so the caller can decide whether it's fatal or not
+    throw new Error(`ecosystem-matcher ${response.status}: ${text}`);
+  }
+
+  return parsed;
+}
+
+async function safeTriggerMatching(contentId: string, userId: string) {
+  try {
+    await triggerEcosystemMatching(contentId, userId);
+  } catch (e) {
+    console.error("⚠️ ecosystem-matcher failed (non-fatal):", e);
   }
 }
-// Simple stopwords list for English
-const STOPWORDS = new Set([
-  "the",
-  "and",
-  "for",
-  "are",
-  "but",
-  "not",
-  "you",
-  "with",
-  "this",
-  "that",
-  "from",
-  "have",
-  "was",
-  "your",
-  "all",
-  "can",
-  "will",
-  "has",
-  "our",
-  "they",
-  "their",
-  "what",
-  "when",
-  "where",
-  "which",
-  "who",
-  "how",
-  "why",
-  "about",
-  "into",
-  "more",
-  "than",
-  "then",
-  "them",
-  "out",
-  "use",
-  "any",
-  "had",
-  "his",
-  "her",
-  "its",
-  "one",
-  "two",
-  "three",
-  "four",
-  "five",
-  "on",
-  "in",
-  "at",
-  "by",
-  "to",
-  "of",
-  "a",
-  "an",
-  "is",
-  "it",
-  "as",
-  "be",
-  "or",
-  "if",
-  "so",
-  "do",
-  "we",
-  "he",
-  "she",
-  "i",
-  "my",
-  "me",
-  "no",
-  "yes",
-  "up",
-  "down",
-  "over",
-  "under",
-  "again",
-  "new",
-  "just",
-  "now",
-  "only",
-  "very",
-  "also",
-  "after",
-  "before",
-  "such",
-  "each",
-  "other",
-  "some",
-  "most",
-  "many",
-  "much",
-  "like",
-  "see",
-  "get",
-  "got",
-  "make",
-  "made",
-  "back",
-  "off",
-  "own",
-  "too",
-  "via",
-  "per",
-  "via",
-  "should",
-  "could",
-  "would",
-  "may",
-  "might",
-  "must",
-  "shall",
-  "let",
-  "let's",
-  "did",
-  "does",
-  "done",
-  "being",
-  "were",
-  "been",
-  "because",
-  "while",
-  "during",
-  "between",
-  "among",
-  "within",
-  "without",
-  "across",
-  "through",
-  "upon",
-  "against",
-  "toward",
-  "towards",
-  "upon",
-  "around",
-  "amongst",
-  "beside",
-  "besides",
-  "behind",
-  "ahead",
-  "along",
-  "alongside",
-  "amid",
-  "amidst",
-  "among",
-  "amongst",
-  "beyond",
-  "despite",
-  "except",
-  "inside",
-  "outside",
-  "since",
-  "than",
-  "though",
-  "unless",
-  "until",
-  "upon",
-  "versus",
-  "via",
-  "whether",
-  "yet",
-  "etc",
-]);
-function extractKeywords(text) {
-  if (!text) return [];
-  // Remove punctuation, lowercase, split by whitespace
-  const words = text
-    .replace(/[^a-zA-Z0-9\s]/g, " ")
-    .toLowerCase()
-    .split(/\s+/)
-    .filter((w) => w.length > 2 && !STOPWORDS.has(w));
-  // Count frequency
-  const freq = {};
-  for (const w of words) freq[w] = (freq[w] || 0) + 1;
-  // Sort by frequency
-  const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]);
-  // Return top 20 keywords
-  return sorted.slice(0, 20).map(([word, count]) => ({
-    word,
-    count,
-  }));
-}
-function keywordDensity(words, totalWords) {
-  const density = {};
-  for (const { word, count } of words) {
-    density[word] = ((count / totalWords) * 100).toFixed(2);
-  }
-  return density;
-}
+
+/** -------- Main handler -------- */
+
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
+  // CORS preflight
+  if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
+
+  if (req.method !== "POST") return json(405, { error: "Method not allowed" });
+
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return json(500, { error: "Server misconfigured: missing Supabase env vars" });
   }
-  if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({
-        error: "Method not allowed",
-      }),
-      {
-        status: 405,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-  }
-  let payload;
+
+  let payload: any;
   try {
     payload = await req.json();
-  } catch (e) {
-    return new Response(
-      JSON.stringify({
-        error: "Invalid JSON",
-      }),
-      {
-        status: 400,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+  } catch {
+    return json(400, { error: "Invalid JSON" });
   }
-  // Basic validation
+
   if (!payload.apiKey || !payload.url || !payload.timestamp) {
-    return new Response(
-      JSON.stringify({
-        error: "Missing required fields: apiKey, url, timestamp",
-      }),
-      {
-        status: 400,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    return json(400, { error: "Missing required fields: apiKey, url, timestamp" });
   }
-  // Extract keywords and calculate density
-  const contentText = payload.content || "";
+
+  const contentText = String(payload.content || "");
+
+  // Keywords (best-effort, never fatal)
   const heur = heuristicCandidates(contentText, 30);
-  // Optional: you may already have detected language via your summarize step
-  const langHint = null; // or pass detected lang if you computed it elsewhere
-  const llm = await llmExtractKeywords(contentText, langHint);
-  console.log("LLM Keyword", llm);
+  let llm: any = null;
+  try {
+    llm = await llmExtractKeywords(contentText, null);
+  } catch (e) {
+    console.error("⚠️ LLM keyword extraction failed (non-fatal):", e);
+    llm = null;
+  }
+
   const merged = mergeAndRankKeywords(llm, heur, 15);
-  const keywordArray = merged.map((k) => k.phrase);
+  const keywordArray = merged.map((k: any) => k.phrase);
+
   const totalWords = contentText
     .replace(/[^\p{L}\p{N}\s'-]/gu, " ")
     .split(/\s+/)
     .filter(Boolean).length;
-  const density = {};
-  for (const { phrase } of merged) {
-    const re = new RegExp(
-      `\\b${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
-      "gi"
-    );
+
+  const density: Record<string, string> = {};
+  for (const { phrase } of merged as any[]) {
+    const re = new RegExp(`\\b${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi");
     const matches = contentText.match(re);
     const count = matches ? matches.length : 0;
     density[phrase] = ((count / Math.max(totalWords, 1)) * 100).toFixed(2);
   }
-  // const keywordList = extractKeywords(contentText);
-  // const totalWords = contentText.replace(/[^a-zA-Z0-9\s]/g, ' ').toLowerCase().split(/\s+/).filter((w) => w.length > 2 && !STOPWORDS.has(w)).length;
-  // const density = keywordDensity(keywordList, totalWords || 1);
-  // Validate API key and get user_id (service role bypasses RLS)
+
+  // Validate API key -> user id (service role bypasses RLS)
   const { data: userData, error: userError } = await supabase
     .from("users")
     .select("id")
     .eq("api_key", payload.apiKey)
     .single();
+
   if (userError || !userData) {
-    return new Response(
-      JSON.stringify({
-        error: "Invalid API key",
-      }),
-      {
-        status: 401,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    return json(401, { error: "Invalid API key" });
   }
-  // Check if this URL is already tracked
+
+  // Try to find existing tracked content (0 rows is NOT fatal)
   const { data: existing, error: fetchError } = await supabase
     .from("tracked_content")
     .select("id, content")
     .eq("user_id", userData.id)
     .eq("url", payload.url)
-    .single();
-  //If found, compare content hashes
-  if (existing) {
-    // Simple string hash comparison
+    .maybeSingle();
+
+  if (fetchError) {
+    console.error("Fetch existing tracked_content error:", fetchError);
+    return json(500, { error: "Failed to query tracked_content", details: fetchError.message });
+  }
+
+  // If found, compare hashes
+  if (existing?.id) {
     const newContentHash = await crypto.subtle.digest(
       "SHA-256",
-      new TextEncoder().encode(payload.content)
+      new TextEncoder().encode(String(payload.content || ""))
     );
     const existingHash = await crypto.subtle.digest(
       "SHA-256",
       new TextEncoder().encode(existing.content || "")
     );
-    const newHashHex = Array.from(new Uint8Array(newContentHash))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    const existingHashHex = Array.from(new Uint8Array(existingHash))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
+
+    const toHex = (buf: ArrayBuffer) =>
+      Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+
+    const newHashHex = toHex(newContentHash);
+    const existingHashHex = toHex(existingHash);
+
     if (newHashHex === existingHashHex) {
-      // ✅ No content change detected
-      await triggerEcosystemMatching(existing.id, userData.id);
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: "Content unchanged — skipping update",
-        }),
-        {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      // ✅ non-fatal matching trigger
+      await safeTriggerMatching(existing.id, userData.id);
+
+      return json(200, { success: true, message: "Content unchanged — skipping update" });
     }
-    // ✅ Content changed — update record
+
+    // Update record
     const { error: updateError } = await supabase
       .from("tracked_content")
       .update({
-        content: payload.content,
-        title: payload.title,
-        referrer: payload.referrer,
+        content: String(payload.content || ""),
+        title: String(payload.title || ""),
+        referrer: String(payload.referrer || ""),
         timestamp: payload.timestamp,
         updated_at: new Date().toISOString(),
-        // keywords: keywordList.map((k) => k.word),
         keywords: keywordArray,
         keyword_density: density,
       })
       .eq("id", existing.id);
-    if (updateError) throw updateError;
-    console.log(
-      `♻️ Content changed — updated tracked_content ID ${existing.id}`
-    );
-    // (Optional) re-trigger ecosystem matching for updated content
-    await triggerEcosystemMatching(existing.id, userData.id);
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Content updated successfully",
-      }),
-      {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+
+    if (updateError) {
+      console.error("Update tracked_content error:", updateError);
+      return json(500, { error: "Failed to update tracked_content", details: updateError.message });
+    }
+
+    await safeTriggerMatching(existing.id, userData.id);
+
+    return json(200, { success: true, message: "Content updated successfully" });
   }
-  // Store tracked content in the database
-  const { error } = await supabase.from("tracked_content").insert([
-    {
-      user_id: userData.id,
-      api_key: payload.apiKey,
-      url: payload.url,
-      title: payload.title || "",
-      referrer: payload.referrer || "",
-      timestamp: payload.timestamp,
-      content: payload.content || "",
-      // keywords: keywordList.map((k) => k.word),
-      keywords: keywordArray,
-      keyword_density: density,
-    },
-  ]);
-  if (error) {
-    console.error("Database insert error:", error);
-    return new Response(
-      JSON.stringify({
-        error: "Failed to store tracked content",
-        details: error.message,
-      }),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-  }
-  // Get the content ID from the insert
-  const { data: insertedContent } = await supabase
+
+  // Insert new tracked content
+  const { data: inserted, error: insertError } = await supabase
     .from("tracked_content")
+    .insert([
+      {
+        user_id: userData.id,
+        api_key: payload.apiKey,
+        url: payload.url,
+        title: String(payload.title || ""),
+        referrer: String(payload.referrer || ""),
+        timestamp: payload.timestamp,
+        content: String(payload.content || ""),
+        keywords: keywordArray,
+        keyword_density: density,
+      },
+    ])
     .select("id")
-    .eq("user_id", userData.id)
-    .eq("url", payload.url)
-    .order("created_at", {
-      ascending: false,
-    })
-    .limit(1)
     .single();
-  // 🚀 REAL-TIME ECOSYSTEM MATCHING: Trigger automatic opportunity generation
-  let ecosystemResult = null;
-  if (insertedContent?.id) {
-    console.log(
-      `🔄 Triggering real-time ecosystem matching for content ${insertedContent.id}`
-    );
-    try {
-      // Make ecosystem matching synchronous to see results
-      ecosystemResult = await triggerEcosystemMatching(
-        insertedContent.id,
-        userData.id
-      );
-      console.log("✅ Ecosystem matching completed:", ecosystemResult);
-    } catch (error) {
-      console.error("⚠️ Ecosystem matching failed:", error);
-      ecosystemResult = {
-        error: error.message,
-      };
-    }
+
+  if (insertError || !inserted?.id) {
+    console.error("Insert tracked_content error:", insertError);
+    return json(500, { error: "Failed to store tracked content", details: insertError?.message });
   }
-  return new Response(
-    JSON.stringify({
-      success: true,
-      message: "Content tracked successfully",
-      realTimeMatching: insertedContent?.id ? "triggered" : "skipped",
-      ecosystemResult: ecosystemResult,
-      analytics: {
-        // keywordsExtracted: keywordList.length,
-        keywordsExtracted: keywordArray.length,
-        // topKeywords: keywordList.slice(0, 5).map((k) => k.word),
-        topKeywords: keywordArray.slice(0, 5),
-        contentLength: contentText.length,
-        wordCount: totalWords,
-      },
-    }),
-    {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-      },
-    }
-  );
+
+  // Trigger matching safely (do not fail tracking)
+  await safeTriggerMatching(inserted.id, userData.id);
+
+  return json(200, {
+    success: true,
+    message: "Content tracked successfully",
+    realTimeMatching: "triggered",
+    analytics: {
+      keywordsExtracted: keywordArray.length,
+      topKeywords: keywordArray.slice(0, 5),
+      contentLength: contentText.length,
+      wordCount: totalWords,
+    },
+  });
 });
