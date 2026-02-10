@@ -142,6 +142,7 @@ async function findMatchingOpportunities(contentId: string, userId: string) {
   );
 
   const sourceDa = sourceUser.domain_metrics.domain_authority || 0;
+  console.log(`Source DA: ${sourceDa}`);
   const sourceTier = sourceUser.tier || 'bronze';
 
   // Domain metrics table doesn't exist in current schema - skip geographic scoring
@@ -252,8 +253,11 @@ async function findMatchingOpportunities(contentId: string, userId: string) {
           sourceUser.niche,
           (target as any).niche
         );
-        // 3. Domain Authority score (20% weight) - Default since domain_metrics table doesn't exist
-        scores.domainAuthority = 0.5; // Default neutral DA score
+        // 3. Domain Authority score
+        const targetDa = (target as any).domain_metrics.domain_authority || 0;
+        console.log(`Target DA: ${targetDa}`);
+        scores.domainAuthority = daClosenessScore(sourceDa, targetDa, MATCH_CONFIG.PHASE_2_RANGE);
+        console.log(`Domain Authority closeness score: ${scores.domainAuthority}`);
         // 4. Geographic relevance score (15% weight) - Default since domain_metrics table doesn't exist
         scores.geographicRelevance = 0.5; // Neutral score since no geographic data available
         // 5. Partner quality score (10% weight)
@@ -424,6 +428,15 @@ function getAdjacentTier(currentTier: string, da: number): string | null {
     default:
       return null;
   }
+}
+
+/**
+ * Calculate DA closeness score
+ */
+function daClosenessScore(sourceDa: number, targetDa: number, maxDiff: number) {
+  const diff = Math.abs((sourceDa ?? 0) - (targetDa ?? 0));
+  const s = 1 - diff / Math.max(1, maxDiff);
+  return Math.max(0, Math.min(1, s));
 }
 
 serve(async (req) => {
