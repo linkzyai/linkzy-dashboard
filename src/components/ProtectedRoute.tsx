@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Link, Shield, AlertCircle } from "lucide-react";
-// @ts-expect-error
 import { supabase } from "../lib/supabase";
 import RegistrationModal from "./RegistrationModal";
 
