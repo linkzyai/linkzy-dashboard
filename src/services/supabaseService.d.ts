@@ -15,6 +15,9 @@ declare class SupabaseService {
   generateApiKey(email: string): string;
   sendWelcomeEmail(email: string, apiKey: string, website: string, niche: string, verificationToken?: string): Promise<any>;
   updateUserProfile(website: string, niche: string): Promise<{ success: boolean; error?: string }>;
+  updateUserFirstBacklink(first_backlink: boolean): Promise<{ success: boolean; error?: string }>;
+  updateUserCompletedProfile(completed_profile: boolean): Promise<{ success: boolean; error?: string }>;
+  updateUserCompletedOnboarding(completed_onboarding: boolean): Promise<{ success: boolean; error?: string }>;
   getDashboardStats(): Promise<any>;
   getBacklinks(page?: number, limit?: number): Promise<any>;
   updateUserCredits(userId: string, creditsToAdd: number, paymentDetails: any): Promise<any>;

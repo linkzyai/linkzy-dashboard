@@ -948,8 +948,8 @@ const DashboardAccount = () => {
     // This handles cases where user navigates back from Stripe without URL parameters
     console.log("🔄 DashboardAccount loaded - checking authentication state");
 
-    const existingUser = localStorage.getItem("linkzy_user");
-    const existingApiKey = localStorage.getItem("linkzy_api_key");
+    const existingUser = user ? JSON.stringify(user) : localStorage.getItem("linkzy_user");
+    const existingApiKey = user ? user.api_key : localStorage.getItem("linkzy_api_key");
 
     // If we have stored auth but user appears unauthenticated, restore it
     if (existingUser && existingApiKey && (!user || !isAuthenticated)) {
@@ -1014,8 +1014,8 @@ const DashboardAccount = () => {
         );
 
         // When user returns to the page, check if authentication needs restoration
-        const existingUser = localStorage.getItem("linkzy_user");
-        const existingApiKey = localStorage.getItem("linkzy_api_key");
+        const existingUser = user ? JSON.stringify(user) : localStorage.getItem("linkzy_user");
+        const existingApiKey = user ? user.api_key : localStorage.getItem("linkzy_api_key");
 
         if (existingUser && existingApiKey && (!user || !isAuthenticated)) {
           console.log("🔧 Restoring authentication after page return");
@@ -1034,7 +1034,7 @@ const DashboardAccount = () => {
     // Also handle window focus for additional coverage
     const handleFocus = () => {
       console.log("🔄 Window focused - checking authentication");
-      const existingUser = localStorage.getItem("linkzy_user");
+      const existingUser = user ? JSON.stringify(user) : localStorage.getItem("linkzy_user");
       const existingApiKey = localStorage.getItem("linkzy_api_key");
 
       if (existingUser && existingApiKey && (!user || !isAuthenticated)) {

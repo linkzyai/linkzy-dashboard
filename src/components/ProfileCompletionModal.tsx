@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Globe, Target, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import supabaseService from '../services/supabaseService';
 
 interface ProfileCompletionModalProps {
   isOpen: boolean;
@@ -60,7 +61,12 @@ const ProfileCompletionModal: React.FC<ProfileCompletionModalProps> = ({
       console.log('✅ Profile updated successfully:', { website, niche });
       
       // Mark profile completion as seen
-      localStorage.setItem('linkzy_profile_completion_seen', 'true');
+      const result = await supabaseService.updateUserCompletedProfile(true);
+      if (result.success) {
+        console.log('✅ Profile completion marked as seen');
+      } else {
+        console.error('❌ Failed to mark profile completion as seen:', result.error);
+      }
       
       // Fetch Domain Authority in background
       try {

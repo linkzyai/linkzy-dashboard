@@ -82,7 +82,7 @@ function App() {
               <Route path="/verify-email" element={<EmailVerification />} />
 
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/admin" element={<AdminTools />} />
+              {/* <Route path="/admin" element={<AdminTools />} /> */}
             </Routes>
           </div>
         </Router>

@@ -22,6 +22,9 @@ export type AppProfile = {
   subscription_status?: string | null;
   created_at?: string | null;
   tier?: "bronze" | "silver" | "gold" | null;
+  first_backlink?: boolean | null;
+  completed_onboarding?: boolean | null;
+  completed_profile?: boolean | null;
 };
 
 interface AuthContextType {
@@ -46,7 +49,7 @@ async function fetchProfile(userId: string): Promise<AppProfile | null> {
   const { data, error } = await supabase
     .from("users") // consider 'profiles' to avoid confusion with auth.users
     .select(
-      "id, email, website, niche, plan, credits, api_key, subscription_status, created_at, tier"
+      "id, email, website, niche, plan, credits, api_key, subscription_status, created_at, tier, first_backlink, completed_onboarding, completed_profile"
     )
     .eq("id", userId)
     .single();
@@ -67,6 +70,9 @@ async function fetchProfile(userId: string): Promise<AppProfile | null> {
     subscription_status: data.subscription_status ?? null,
     created_at: data.created_at ?? null,
     tier: data.tier ?? null,
+    first_backlink: data.first_backlink ?? null,
+    completed_onboarding: data.completed_onboarding ?? null,
+    completed_profile: data.completed_profile ?? null,
   };
 }
 
@@ -131,6 +137,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             api_key: profile.api_key,
             subscription_status: profile.subscription_status,
             tier: profile.tier ?? null,
+            first_backlink: profile.first_backlink ?? null,
+            completed_onboarding: profile.completed_onboarding ?? null,
+            completed_profile: profile.completed_profile ?? null,
             // prefer app profile created_at, fallback to auth user if missing
             created_at:
               profile.created_at ??
@@ -184,6 +193,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             api_key: prev?.api_key ?? null,
             subscription_status: prev?.subscription_status ?? null,
             tier: prev?.tier ?? null,
+            first_backlink: prev?.first_backlink ?? null,
+            completed_onboarding: prev?.completed_onboarding ?? null,
+            completed_profile: prev?.completed_profile ?? null,
             created_at:
               prev?.created_at ??
               ((supaUser as any).created_at as string | undefined) ??
@@ -204,6 +216,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               api_key: profile.api_key,
               subscription_status: profile.subscription_status,
               tier: profile.tier ?? null,
+              first_backlink: profile.first_backlink ?? null,
+              completed_onboarding: profile.completed_onboarding ?? null,
+              completed_profile: profile.completed_profile ?? null,
               created_at:
                 profile.created_at ??
                 ((supaUser as any).created_at as string | undefined) ??
@@ -238,6 +253,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         api_key: profile.api_key,
         subscription_status: profile.subscription_status,
         tier: profile.tier ?? null,
+        first_backlink: profile.first_backlink ?? null,
+        completed_onboarding: profile.completed_onboarding ?? null,
+        completed_profile: profile.completed_profile ?? null,
         created_at:
           profile.created_at ??
           ((supaUser as any).created_at as string | undefined) ??
@@ -264,6 +282,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       subscription_status:
         userProfile?.subscription_status ?? user?.subscription_status ?? null,
       tier: userProfile?.tier ?? user?.tier ?? null,
+      first_backlink: userProfile?.first_backlink ?? user?.first_backlink ?? null,
+      completed_onboarding: userProfile?.completed_onboarding ?? user?.completed_onboarding ?? null,
+      completed_profile: userProfile?.completed_profile ?? user?.completed_profile ?? null,
       created_at:
         userProfile?.created_at ?? user?.created_at ?? null,
     };

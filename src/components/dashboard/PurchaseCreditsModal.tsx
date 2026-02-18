@@ -251,9 +251,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       }
 
       // Prefer auth user; fall back to local storage if needed
-      const localUser = JSON.parse(localStorage.getItem("linkzy_user") || "{}");
-      const userId = authUser.id || localUser.id;
-      const userEmail = authUser.email || localUser.email;
+      const userId = authUser.id
+      const userEmail = authUser.email
 
       if (!userId || !userEmail) {
         throw new Error("Missing user information for payment.");

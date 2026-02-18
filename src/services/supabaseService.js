@@ -76,7 +76,7 @@ class SupabaseService {
     apiKey,
     website,
     niche,
-    verificationToken = null
+    verificationToken = null,
   ) {
     try {
       console.log("📧 Sending welcome email via resend-email function...");
@@ -174,7 +174,7 @@ class SupabaseService {
                 ${
                   niche
                     ? `<p><strong>🎯 Niche:</strong> ${getNicheDisplay(
-                        niche
+                        niche,
                       )}</p>`
                     : ""
                 }
@@ -240,7 +240,7 @@ class SupabaseService {
       }
 
       console.log(
-        "✅ Welcome email sent successfully via resend-email function"
+        "✅ Welcome email sent successfully via resend-email function",
       );
       return true;
     } catch (error) {
@@ -286,7 +286,7 @@ class SupabaseService {
 
       console.log(
         "✅ Supabase Auth registration successful - confirmation email sent:",
-        data
+        data,
       );
 
       // No manual insert to users table here!
@@ -302,7 +302,7 @@ class SupabaseService {
     } catch (error) {
       console.error("❌ Registration failed:", error);
       throw new Error(
-        "Registration failed: " + (error.message || "Unknown error")
+        "Registration failed: " + (error.message || "Unknown error"),
       );
     }
   }
@@ -336,11 +336,11 @@ class SupabaseService {
           authError.message?.includes("fetch")
         ) {
           throw new Error(
-            "Network error connecting to authentication service. Please check your connection and try again."
+            "Network error connecting to authentication service. Please check your connection and try again.",
           );
         } else if (authError.message?.includes("auth/too-many-requests")) {
           throw new Error(
-            "Too many login attempts. Please wait a few minutes and try again."
+            "Too many login attempts. Please wait a few minutes and try again.",
           );
         }
 
@@ -389,7 +389,7 @@ class SupabaseService {
               if (process.env.NODE_ENV !== "production") {
                 console.info(
                   "Unable to update last sign in data:",
-                  result.error
+                  result.error,
                 );
               }
             } else {
@@ -420,7 +420,7 @@ class SupabaseService {
         error.message?.includes("auth/invalid-credential")
       ) {
         throw new Error(
-          "Invalid email or password. Please check your credentials."
+          "Invalid email or password. Please check your credentials.",
         );
       }
 
@@ -530,14 +530,14 @@ class SupabaseService {
         // Handle specific error types
         if (error.message?.includes("rate_limit")) {
           throw new Error(
-            "Too many password reset attempts. Please wait 5 minutes before trying again."
+            "Too many password reset attempts. Please wait 5 minutes before trying again.",
           );
         } else if (
           error.message?.includes("not_found") ||
           error.message?.includes("user_not_found")
         ) {
           throw new Error(
-            "No account found with this email address. Please check your email or create a new account."
+            "No account found with this email address. Please check your email or create a new account.",
           );
         } else if (error.message?.includes("invalid_email")) {
           throw new Error("Please enter a valid email address.");
@@ -546,7 +546,7 @@ class SupabaseService {
             `Password reset failed: ${
               error.message ||
               "Email delivery may be temporarily unavailable. Please try again in a few minutes."
-            }`
+            }`,
           );
         }
       }
@@ -638,7 +638,7 @@ class SupabaseService {
         user.id,
         {
           password: newPassword,
-        }
+        },
       );
 
       if (error) {
@@ -708,7 +708,7 @@ class SupabaseService {
         if (error) {
           console.warn(
             "⚠️ Supabase Auth reset failed, trying alternative:",
-            error
+            error,
           );
           throw error;
         }
@@ -727,7 +727,7 @@ The reset link expires in 24 hours.`);
           const resetUrl = `${
             window.location.origin
           }/reset-password?token=${resetToken}&email=${encodeURIComponent(
-            email
+            email,
           )}`;
 
           // Store reset token information
@@ -738,7 +738,7 @@ The reset link expires in 24 hours.`);
               created: Date.now(),
               expires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
               used: false,
-            })
+            }),
           );
 
           // Try to use send-password-reset function if it exists
@@ -746,19 +746,19 @@ The reset link expires in 24 hours.`);
             "send-password-reset",
             {
               body: { email, resetUrl },
-            }
+            },
           );
 
           if (error) {
             console.warn(
               "⚠️ send-password-reset function failed, using resend-email:",
-              error
+              error,
             );
             throw error;
           }
 
           console.log(
-            "✅ Password reset email sent via send-password-reset function"
+            "✅ Password reset email sent via send-password-reset function",
           );
           alert(`Password reset email sent! Check your email inbox and spam folder.
                 
@@ -773,7 +773,7 @@ If you're testing, try these workarounds:
 2. Try the password-reset-test page to diagnose issues
 3. Contact support if the problem persists`);
           throw new Error(
-            "Password reset failed: " + edgeFunctionError.message
+            "Password reset failed: " + edgeFunctionError.message,
           );
         }
       }
@@ -827,7 +827,7 @@ If you're testing, try these workarounds:
         } catch (authUpdateError) {
           console.warn(
             "⚠️ Auth update failed, updating users table:",
-            authUpdateError
+            authUpdateError,
           );
 
           // Fallback to direct database update (just touch the record)
@@ -867,12 +867,6 @@ If you're testing, try these workarounds:
   // Get user profile with improved fallbacks
   async getUserProfile() {
     try {
-      // First try localStorage for cached data
-      const storedUser = localStorage.getItem("linkzy_user");
-      if (storedUser) {
-        const userData = JSON.parse(storedUser);
-        return userData;
-      }
 
       // Then try to get current session from Supabase Auth
       const {
@@ -968,7 +962,7 @@ If you're testing, try these workarounds:
         const existingApiKey = this.getApiKey();
         if (!existingApiKey) {
           console.error(
-            "❌ No API key found in database or localStorage for authenticated user"
+            "❌ No API key found in database or localStorage for authenticated user",
           );
           // Don't generate a new one, this should not happen for existing users
         }
@@ -984,30 +978,6 @@ If you're testing, try these workarounds:
 
         localStorage.setItem("linkzy_user", JSON.stringify(authUser));
         return { isAuthenticated: true, user: authUser };
-      }
-
-      // No active session, try fallbacks
-
-      // Check for API key in localStorage
-      const apiKey = this.getApiKey();
-      if (apiKey) {
-        // Try to get user from localStorage
-        const storedUser = localStorage.getItem("linkzy_user");
-        if (storedUser) {
-          return {
-            isAuthenticated: true,
-            user: JSON.parse(storedUser),
-          };
-        }
-
-        // If we have an API key but no stored user, construct a basic user
-        // This is a fallback to maintain user experience
-        const fallbackUser = {
-          id: `local_${Date.now()}`,
-          api_key: apiKey,
-        };
-
-        return { isAuthenticated: true, user: fallbackUser };
       }
 
       return { isAuthenticated: false, user: null };
@@ -1109,15 +1079,15 @@ If you're testing, try these workarounds:
         (b) =>
           b.status === "completed" ||
           b.status === "placed" ||
-          b.status === "active"
+          b.status === "active",
       ).length;
 
       const pendingBacklinks = backlinks.filter(
-        (b) => b.status === "pending" || b.status === "processing"
+        (b) => b.status === "pending" || b.status === "processing",
       ).length;
 
       const failedBacklinks = backlinks.filter(
-        (b) => b.status === "failed" || b.status === "rejected"
+        (b) => b.status === "failed" || b.status === "rejected",
       ).length;
 
       const successRate =
@@ -1132,7 +1102,7 @@ If you're testing, try these workarounds:
 
       const monthStart = new Date(Date.UTC(year, monthIndex, 1)).toISOString();
       const nextMonthStart = new Date(
-        Date.UTC(year, monthIndex + 1, 1)
+        Date.UTC(year, monthIndex + 1, 1),
       ).toISOString();
 
       const { data: billingData, error: billingError } = await supabase
@@ -1149,7 +1119,7 @@ If you're testing, try these workarounds:
       const monthlySpend =
         billingData?.reduce(
           (sum, record) => sum + Number(record.amount || 0),
-          0
+          0,
         ) || 0;
 
       // 4) Shape recentBacklinks for the UI
@@ -1331,7 +1301,7 @@ If you're testing, try these workarounds:
           keywordMap[word].urls.push(row.url);
           if (row.keyword_density && row.keyword_density[word]) {
             keywordMap[word].density.push(
-              parseFloat(row.keyword_density[word])
+              parseFloat(row.keyword_density[word]),
             );
           }
           totalKeywordCount += 1;
@@ -1399,7 +1369,7 @@ If you're testing, try these workarounds:
   async signUpWithGoogle(website, niche) {
     try {
       console.log(
-        "🔄 Initiating Google OAuth sign-up with business profile..."
+        "🔄 Initiating Google OAuth sign-up with business profile...",
       );
 
       // Store the business profile data temporarily for after OAuth callback
@@ -1409,7 +1379,7 @@ If you're testing, try these workarounds:
           website,
           niche,
           timestamp: Date.now(),
-        })
+        }),
       );
 
       const { data, error } = await this.supabase.auth.signInWithOAuth({
@@ -1467,16 +1437,19 @@ If you're testing, try these workarounds:
       }
 
       console.log("✅ User profile updated successfully");
-      
+
       // Fetch Domain Authority in background (non-blocking)
-      if (website && website !== 'yourdomain.com' && website.trim() !== '') {
+      if (website && website !== "yourdomain.com" && website.trim() !== "") {
         console.log("🚀 Starting background DA fetch for:", website);
         this.fetchDomainMetrics(user.id, website)
           .then((result) => {
             if (result.success) {
               console.log("✅ Background DA fetch completed:", result);
             } else {
-              console.warn("⚠️ Background DA fetch returned unsuccessful:", result);
+              console.warn(
+                "⚠️ Background DA fetch returned unsuccessful:",
+                result,
+              );
             }
           })
           .catch((err) => {
@@ -1485,7 +1458,7 @@ If you're testing, try these workarounds:
       } else {
         console.log("⏭️ Skipping DA fetch - invalid website:", website);
       }
-      
+
       return { success: true };
     } catch (error) {
       console.error("❌ Update user profile failed:", error);
@@ -1513,35 +1486,129 @@ If you're testing, try these workarounds:
     }
   }
 
+  // Update user first backlink
+  async updateUserFirstBacklink(first_backlink) {
+    try {
+      console.log("🔄 Updating user first backlink...", { first_backlink });
+      const {
+        data: { user },
+      } = await this.supabase.auth.getUser();
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+      const { error } = await this.supabase
+        .from("users")
+        .update({ first_backlink: first_backlink })
+        .eq("id", user.id)
+        .select();
+      if (error) {
+        console.error("❌ User first backlink update error:", error);
+        throw error;
+      }
+      console.log("✅ User first backlink updated successfully");
+      return { success: true };
+    } catch (error) {
+      console.error("❌ Update user first backlink failed:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Update user completed profile
+  async updateUserCompletedProfile(completed_profile) {
+    try {
+      console.log("🔄 Updating user completed profile...", {
+        completed_profile,
+      });
+      const {
+        data: { user },
+      } = await this.supabase.auth.getUser();
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+      const { error } = await this.supabase
+        .from("users")
+        .update({ completed_profile: completed_profile })
+        .eq("id", user.id)
+        .select();
+      if (error) {
+        console.error("❌ User completed profile update error:", error);
+        throw error;
+      }
+      console.log("✅ User completed profile updated successfully");
+      return { success: true };
+    } catch (error) {
+      console.error("❌ Update user completed profile failed:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Update user completed onboarding
+  async updateUserCompletedOnboarding(completed_onboarding) {
+    try {
+      console.log("🔄 Updating user completed onboarding...", { completed_onboarding });
+      const { data: { user }, error } = await this.supabase.auth.getUser();
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+      const { error: updateError } = await this.supabase
+        .from("users")
+        .update({ completed_onboarding: completed_onboarding })
+        .eq("id", user.id)
+        .select();
+      if (updateError) {
+        console.error("❌ User completed onboarding update error:", error);
+        throw error;
+      }
+      console.log("✅ User completed onboarding updated successfully");
+      return { success: true };
+    } catch (error) {
+      console.error("❌ Update user completed onboarding failed:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
   // Fetch Domain Authority from Moz API and save to domain_metrics
   async fetchDomainMetrics(userId, website) {
     try {
-      console.log("🔍 [fetchDomainMetrics] Starting - website:", website, "user:", userId);
-      
+      console.log(
+        "🔍 [fetchDomainMetrics] Starting - website:",
+        website,
+        "user:",
+        userId,
+      );
+
       if (!userId || !website) {
-        console.warn("⚠️ [fetchDomainMetrics] Missing userId or website:", { userId, website });
+        console.warn("⚠️ [fetchDomainMetrics] Missing userId or website:", {
+          userId,
+          website,
+        });
         return { success: false, error: "Missing userId or website" };
       }
 
-      if (website === 'yourdomain.com' || website.trim() === '') {
-        console.log("⏭️ [fetchDomainMetrics] Skipping - invalid website:", website);
+      if (website === "yourdomain.com" || website.trim() === "") {
+        console.log(
+          "⏭️ [fetchDomainMetrics] Skipping - invalid website:",
+          website,
+        );
         return { success: false, error: "Invalid website" };
       }
 
-      console.log("📡 [fetchDomainMetrics] Calling supabase.functions.invoke...");
-      
+      console.log(
+        "📡 [fetchDomainMetrics] Calling supabase.functions.invoke...",
+      );
+
       const invokePromise = supabase.functions.invoke("fetch-domain-metrics", {
         body: { user_id: String(userId), website: String(website) },
       });
 
       console.log("⏳ [fetchDomainMetrics] Waiting for response...");
       const { data, error } = await invokePromise;
-      
-      console.log("📥 [fetchDomainMetrics] Response received:", { 
-        hasData: !!data, 
+
+      console.log("📥 [fetchDomainMetrics] Response received:", {
+        hasData: !!data,
         hasError: !!error,
         dataKeys: data ? Object.keys(data) : [],
-        errorMessage: error?.message 
+        errorMessage: error?.message,
       });
 
       if (error) {
@@ -1550,12 +1617,21 @@ If you're testing, try these workarounds:
       }
 
       if (data?.success) {
-        console.log(`✅ [fetchDomainMetrics] Success - DA: ${data.domain_authority ?? 'N/A'}`);
-        return { success: true, domain_authority: data.domain_authority, spam_score: data.spam_score };
+        console.log(
+          `✅ [fetchDomainMetrics] Success - DA: ${data.domain_authority ?? "N/A"}`,
+        );
+        return {
+          success: true,
+          domain_authority: data.domain_authority,
+          spam_score: data.spam_score,
+        };
       }
 
       console.warn("⚠️ [fetchDomainMetrics] Unsuccessful response:", data);
-      return { success: false, message: data?.message || "Failed to fetch metrics" };
+      return {
+        success: false,
+        message: data?.message || "Failed to fetch metrics",
+      };
     } catch (error) {
       console.error("❌ [fetchDomainMetrics] Exception caught:", error);
       console.error("❌ [fetchDomainMetrics] Error stack:", error.stack);
@@ -1607,7 +1683,7 @@ If you're testing, try these workarounds:
           console.log("🔄 Attempting to restore session from localStorage...");
           try {
             const { error: setError } = await supabase.auth.setSession(
-              JSON.parse(storedSession)
+              JSON.parse(storedSession),
             );
             if (setError) {
               console.error("❌ Failed to restore session:", setError);
@@ -1636,10 +1712,10 @@ If you're testing, try these workarounds:
               () =>
                 reject(
                   new Error(
-                    `Database query timeout after 10 seconds (attempt ${attempts})`
-                  )
+                    `Database query timeout after 10 seconds (attempt ${attempts})`,
+                  ),
                 ),
-              10000
+              10000,
             );
           });
 
@@ -1656,10 +1732,10 @@ If you're testing, try these workarounds:
           if (userError && attempts < maxAttempts) {
             console.log(
               `⚠️ Query failed on attempt ${attempts}, retrying...`,
-              userError
+              userError,
             );
             await new Promise((resolve) =>
-              setTimeout(resolve, 1000 * attempts)
+              setTimeout(resolve, 1000 * attempts),
             ); // Exponential backoff
           }
         } catch (error) {
@@ -1668,7 +1744,7 @@ If you're testing, try these workarounds:
             userError = error;
           } else {
             await new Promise((resolve) =>
-              setTimeout(resolve, 1000 * attempts)
+              setTimeout(resolve, 1000 * attempts),
             ); // Wait before retry
           }
         }
@@ -1725,7 +1801,7 @@ If you're testing, try these workarounds:
 
       if (!updateData || updateData.length === 0) {
         console.error(
-          "❌ No rows updated - user may not exist or permission denied"
+          "❌ No rows updated - user may not exist or permission denied",
         );
         throw new Error("No rows updated - check user ID and permissions");
       }
@@ -1848,7 +1924,7 @@ If you're testing, try these workarounds:
         console.log(
           "✅ hasTrackedContent: Found",
           userCount,
-          "entries by user_id"
+          "entries by user_id",
         );
         return true;
       }
@@ -1867,7 +1943,7 @@ If you're testing, try these workarounds:
           console.log(
             "✅ hasTrackedContent: Found",
             keyCount,
-            "entries by api_key"
+            "entries by api_key",
           );
           return true;
         }

@@ -1,17 +1,17 @@
-import React from 'react';
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import DashboardLayout from './DashboardLayout';
-import LoadingSpinner from '../LoadingSpinner';
-import ErrorMessage from '../ErrorMessage';
-import { useDashboardStats } from '../../hooks/useApi';
-import { useAuth } from '../../contexts/AuthContext';
-import OnboardingTracker from '../OnboardingTracker';
-import ProfileOnboardingModal from './OnboardingModal';
-import OnboardingModal from '../OnboardingModal';
-import CelebrationModal from '../CelebrationModal';
-import ContextualHelp from '../ContextualHelp';
-import ProfileCompletionModal from '../ProfileCompletionModal';
+import React from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import DashboardLayout from "./DashboardLayout";
+import LoadingSpinner from "../LoadingSpinner";
+import ErrorMessage from "../ErrorMessage";
+import { useDashboardStats } from "../../hooks/useApi";
+import { useAuth } from "../../contexts/AuthContext";
+import OnboardingTracker from "../OnboardingTracker";
+import ProfileOnboardingModal from "./OnboardingModal";
+import OnboardingModal from "../OnboardingModal";
+import CelebrationModal from "../CelebrationModal";
+import ContextualHelp from "../ContextualHelp";
+import ProfileCompletionModal from "../ProfileCompletionModal";
 import {
   Link as LinkIcon,
   ArrowRight,
@@ -24,11 +24,11 @@ import {
   BarChart3,
   TrendingUp,
   Zap,
-  CheckCheck
-} from 'lucide-react';
-import { supabase } from '../../lib/supabase';
-import supabaseService from '../../services/supabaseService';
-import TierBadge from './TierBadge';
+  CheckCheck,
+} from "lucide-react";
+import { supabase } from "../../lib/supabase";
+import supabaseService from "../../services/supabaseService";
+import TierBadge from "./TierBadge";
 
 // Types for dashboard data
 export type Backlink = {
@@ -65,12 +65,12 @@ const PRO_CREDITS = 15;
 
 // Helper to format join date from user.created_at
 const formatJoinDate = (iso?: string | null) => {
-  if (!iso) return 'Member';
+  if (!iso) return "Member";
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return 'Member';
+  if (Number.isNaN(d.getTime())) return "Member";
   return d.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'long',
+    year: "numeric",
+    month: "long",
   });
 };
 
@@ -82,8 +82,8 @@ const Dashboard = () => {
   const [showProfileCompletion, setShowProfileCompletion] = useState(false);
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [celebrationType, setCelebrationType] = useState<
-    'first-request' | 'first-backlink' | 'completed-onboarding'
-  >('completed-onboarding');
+    "first-request" | "first-backlink" | "completed-onboarding"
+  >("completed-onboarding");
   const [currentStep, setCurrentStep] = useState(0);
   const { data: dashboardData, loading, error, refetch } = useDashboardStats();
   const [currentCredits, setCurrentCredits] = useState(user?.credits || 0);
@@ -93,38 +93,44 @@ const Dashboard = () => {
   // Listen for credit updates from other pages (Stripe success page, account page, etc.)
   useEffect(() => {
     const handleCreditsUpdate = async (event: Event) => {
-      console.log('🎯 Dashboard received creditsUpdated event!');
+      console.log("🎯 Dashboard received creditsUpdated event!");
       const customEvent = event as CustomEvent;
-      console.log('📊 Event detail:', customEvent.detail);
+      console.log("📊 Event detail:", customEvent.detail);
       const { newCredits } = customEvent.detail || {};
-      console.log('💳 Extracted newCredits:', newCredits);
+      console.log("💳 Extracted newCredits:", newCredits);
 
       if (newCredits !== undefined) {
-        console.log('✅ Setting credits from event:', newCredits);
+        console.log("✅ Setting credits from event:", newCredits);
         setCurrentCredits(newCredits);
-        console.log('✅ Main dashboard credits updated from event:', newCredits);
+        console.log(
+          "✅ Main dashboard credits updated from event:",
+          newCredits,
+        );
       } else {
         // Fallback: fetch fresh data if event doesn't contain credit data
-        console.log('🔄 No credit data in event, fetching fresh data...');
+        console.log("🔄 No credit data in event, fetching fresh data...");
         try {
           const authStatus = await supabaseService.getAuthStatus();
           const freshCredits = authStatus.user?.credits || 0;
-          console.log('📊 Fresh auth status:', authStatus);
-          console.log('💳 Fresh credits from fallback:', freshCredits);
+          console.log("📊 Fresh auth status:", authStatus);
+          console.log("💳 Fresh credits from fallback:", freshCredits);
           setCurrentCredits(freshCredits);
-          console.log('✅ Main dashboard credits updated from fresh fetch:', freshCredits);
+          console.log(
+            "✅ Main dashboard credits updated from fresh fetch:",
+            freshCredits,
+          );
         } catch (error) {
-          console.error('❌ Failed to fetch fresh credits:', error);
+          console.error("❌ Failed to fetch fresh credits:", error);
         }
       }
     };
 
-    console.log('🔗 Dashboard registering creditsUpdated event listener');
-    window.addEventListener('creditsUpdated', handleCreditsUpdate);
+    console.log("🔗 Dashboard registering creditsUpdated event listener");
+    window.addEventListener("creditsUpdated", handleCreditsUpdate);
 
     return () => {
-      console.log('🔗 Dashboard removing creditsUpdated event listener');
-      window.removeEventListener('creditsUpdated', handleCreditsUpdate);
+      console.log("🔗 Dashboard removing creditsUpdated event listener");
+      window.removeEventListener("creditsUpdated", handleCreditsUpdate);
     };
   }, []);
 
@@ -138,8 +144,10 @@ const Dashboard = () => {
     if (loading) {
       const timeout = setTimeout(() => {
         if (loading) {
-          setDashboardError('Dashboard is taking too long to load. Showing with default data.');
-          console.warn('⚠️ Dashboard loading timeout - showing fallback');
+          setDashboardError(
+            "Dashboard is taking too long to load. Showing with default data.",
+          );
+          console.warn("⚠️ Dashboard loading timeout - showing fallback");
         }
       }, 15000); // 15 second timeout
 
@@ -148,14 +156,26 @@ const Dashboard = () => {
   }, [loading]);
 
   const [onboardingProgress, setOnboardingProgress] = useState(() => {
-    const stored = localStorage.getItem('linkzy_onboarding_progress');
-    return stored ? JSON.parse(stored) : { request: false, track: false, analytics: false };
+    const stored = localStorage.getItem("linkzy_onboarding_progress");
+    return stored
+      ? JSON.parse(stored)
+      : { request: false, track: false, analytics: false };
   });
 
   const updateOnboardingProgress = (step: string, value: boolean) => {
     const updated = { ...onboardingProgress, [step]: value };
     setOnboardingProgress(updated);
-    localStorage.setItem('linkzy_onboarding_progress', JSON.stringify(updated));
+    localStorage.setItem("linkzy_onboarding_progress", JSON.stringify(updated));
+  };
+
+  const updateUserFirstBacklink = async (first_backlink: boolean) => {
+    const result =
+      await supabaseService.updateUserFirstBacklink(first_backlink);
+    if (result.success) {
+      console.log("User first backlink updated successfully");
+    } else {
+      console.error("Error updating user first backlink:", result.error);
+    }
   };
 
   // Enhanced dashboard loading with fallback logic
@@ -168,12 +188,14 @@ const Dashboard = () => {
       if (error) {
         try {
           // Try Supabase auth first
-          const { data: { session } } = await supabase.auth.getSession();
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
           if (session?.user) return;
 
           // Fallback to localStorage
-          const localUser = localStorage.getItem('linkzy_user');
-          const localApiKey = localStorage.getItem('linkzy_api_key');
+          const localUser = user;
+          const localApiKey = user?.api_key;
 
           if (localUser && localApiKey) {
             // We have auth data, the error might be temporary - let normal retry handle it
@@ -181,10 +203,10 @@ const Dashboard = () => {
           }
 
           // If nothing works, redirect to login instead of showing error
-          navigate('/');
+          navigate("/");
         } catch (authError) {
           // Don't show timeout modal, just redirect to login
-          navigate('/');
+          navigate("/");
         }
       }
     };
@@ -198,15 +220,15 @@ const Dashboard = () => {
   useEffect(() => {
     if (!onboardingProgress.track) {
       const timer = setTimeout(() => {
-        updateOnboardingProgress('track', true);
+        updateOnboardingProgress("track", true);
       }, 1500);
       return () => clearTimeout(timer);
     }
   }, [onboardingProgress.track]);
 
   useEffect(() => {
-    if (window.location.pathname.includes('/dashboard/analytics')) {
-      updateOnboardingProgress('analytics', true);
+    if (window.location.pathname.includes("/dashboard/analytics")) {
+      updateOnboardingProgress("analytics", true);
     }
   }, []);
 
@@ -216,47 +238,50 @@ const Dashboard = () => {
       const hasNoBacklinks =
         ((dashboardData as DashboardDataType)?.totalBacklinks || 0) === 0;
 
-      const userPlan = user?.plan || 'free';
+      const userPlan = user?.plan || "free";
       const initialFreeCredits = FREE_CREDITS;
-      const isFreePlan = userPlan === 'free';
+      const isFreePlan = userPlan === "free";
 
       // Use live credits (currentCredits) for this logic
-      const currentOrUserCredits =
-        currentCredits ?? user?.credits ?? 0;
-      const hasOnlyFreeCredits =
-        currentOrUserCredits <= initialFreeCredits;
+      const currentOrUserCredits = currentCredits ?? user?.credits ?? 0;
+      const hasOnlyFreeCredits = currentOrUserCredits <= initialFreeCredits;
 
       const shouldShowOnboarding =
         hasNoBacklinks &&
         isFreePlan &&
         hasOnlyFreeCredits &&
-        !localStorage.getItem('linkzy_onboarding_shown');
+        !user?.completed_onboarding;
 
       if (shouldShowOnboarding) {
         // Show onboarding modal after a short delay
-        setTimeout(() => {
+        setTimeout(async () => {
           setShowOnboardingModal(true);
-          localStorage.setItem('linkzy_onboarding_shown', 'true');
+          const result = await supabaseService.updateUserCompletedOnboarding(true);
+          if (result.success) {
+            console.log("✅ User completed onboarding updated successfully");
+          } else {
+            console.error("❌ Failed to update user completed onboarding:", result.error);
+          }
         }, 1500);
       }
 
       // Check if user needs to complete their profile
       const needsProfileCompletion =
         user &&
-        (
-          !user.website ||
-          user.website === 'yourdomain.com' ||
-          user.website === 'https://example.com' ||
+        (!user.website ||
+          user.website === "yourdomain.com" ||
+          user.website === "https://example.com" ||
           !user.niche ||
-          user.niche === 'technology' ||
-          user.niche === 'Technology'
-        );
+          user.niche === "technology" ||
+          user.niche === "Technology");
 
-      const hasSeenProfileCompletion = localStorage.getItem('linkzy_profile_completion_seen');
-      const hasSeenProfileOnboarding = localStorage.getItem('linkzy_profile_onboarding_seen');
+      const hasSeenProfileCompletion = user?.completed_profile;
+      const hasSeenProfileOnboarding = localStorage.getItem(
+        "linkzy_profile_onboarding_seen",
+      );
 
       // Debug logging
-      console.log('🔍 Profile completion check:', {
+      console.log("🔍 Profile completion check:", {
         needsProfileCompletion,
         hasSeenProfileCompletion,
         hasSeenProfileOnboarding,
@@ -264,7 +289,7 @@ const Dashboard = () => {
         showProfileCompletion,
         showProfileOnboarding,
         userWebsite: user?.website,
-        userNiche: user?.niche
+        userNiche: user?.niche,
       });
 
       // Only show ONE profile completion modal - prioritize the newer ProfileCompletionModal
@@ -275,28 +300,41 @@ const Dashboard = () => {
         !showProfileCompletion &&
         !showProfileOnboarding
       ) {
-        console.log('🔄 Showing ProfileCompletionModal for user:', user);
-        setTimeout(() => {
-          setShowProfileCompletion(true);
-          // Don't set completion flag here - wait for actual completion
-        }, shouldShowOnboarding ? 3000 : 1000);
+        console.log("🔄 Showing ProfileCompletionModal for user:", user);
+        setTimeout(
+          () => {
+            setShowProfileCompletion(true);
+            // Don't set completion flag here - wait for actual completion
+          },
+          shouldShowOnboarding ? 3000 : 1000,
+        );
       }
 
       // Check if user just got their first backlink
       const justReceivedFirstBacklink =
-        localStorage.getItem('linkzy_had_no_backlinks') === 'true' &&
+        user?.first_backlink === false &&
         ((dashboardData as DashboardDataType)?.totalBacklinks || 0) > 0;
 
       if (justReceivedFirstBacklink) {
         // Show celebration modal
-        localStorage.removeItem('linkzy_had_no_backlinks');
-        setCelebrationType('first-backlink');
+        updateUserFirstBacklink(true);
+
+        if (error) {
+          console.error("Error updating user first_backlink:", error);
+        }
+        setCelebrationType("first-backlink");
         setTimeout(() => setShowCelebrationModal(true), 1000);
-      } else if (hasNoBacklinks) {
-        localStorage.setItem('linkzy_had_no_backlinks', 'true');
       }
     }
-  }, [dashboardData, user, showOnboardingModal, showProfileCompletion, currentCredits, loading, error]);
+  }, [
+    dashboardData,
+    user,
+    showOnboardingModal,
+    showProfileCompletion,
+    currentCredits,
+    loading,
+    error,
+  ]);
 
   if (loading) {
     return (
@@ -323,38 +361,37 @@ const Dashboard = () => {
     ((dashboardData as DashboardDataType)?.totalBacklinks || 0) > 0;
 
   // Use live credits from state, with safe fallback
-  const effectiveCredits =
-    currentCredits ?? user?.credits ?? 0;
+  const effectiveCredits = currentCredits ?? user?.credits ?? 0;
 
   // Plan label for the badge
-  const userPlan = user?.plan || 'free';
+  const userPlan = user?.plan || "free";
   const planLabel = (() => {
     switch (userPlan) {
-      case 'starter':
+      case "starter":
         return `Starter plan • ${STARTER_CREDITS} credits/mo`;
-      case 'pro':
+      case "pro":
         return `Pro plan • ${PRO_CREDITS} credits/mo`;
       default:
-        return 'Free plan';
+        return "Free plan";
     }
   })();
 
   // Onboarding steps
   const onboardingSteps = [
     {
-      label: 'Integrate your website',
+      label: "Integrate your website",
       completed: onboardingProgress.request,
-      description: 'Connect your site to enable automated backlink matching',
+      description: "Connect your site to enable automated backlink matching",
     },
     {
-      label: 'Track progress',
+      label: "Track progress",
       completed: onboardingProgress.track,
-      description: 'Monitor your backlink status',
+      description: "Monitor your backlink status",
     },
     {
-      label: 'View results',
+      label: "View results",
       completed: onboardingProgress.analytics,
-      description: 'Analyze your SEO improvements',
+      description: "Analyze your SEO improvements",
     },
   ];
 
@@ -362,60 +399,62 @@ const Dashboard = () => {
   const stats = [
     ...(hasBacklinks
       ? [
-        {
-          name: 'Total Backlinks',
-          value: String((dashboardData as DashboardDataType)?.totalBacklinks ?? 0),
-          change: '+6% from last month',
-          changeType: 'increase',
-          icon: LinkIcon,
-          color: 'text-white',
-        },
-        {
-          name: 'Success Rate',
-          value: `${((dashboardData as DashboardDataType)?.successRate || 0).toString()}%`,
-          change: '+2% from last month',
-          changeType: 'increase',
-          icon: TrendingUp,
-          color: 'text-white',
-        },
-      ]
+          {
+            name: "Total Backlinks",
+            value: String(
+              (dashboardData as DashboardDataType)?.totalBacklinks ?? 0,
+            ),
+            change: "+6% from last month",
+            changeType: "increase",
+            icon: LinkIcon,
+            color: "text-white",
+          },
+          {
+            name: "Success Rate",
+            value: `${((dashboardData as DashboardDataType)?.successRate || 0).toString()}%`,
+            change: "+2% from last month",
+            changeType: "increase",
+            icon: TrendingUp,
+            color: "text-white",
+          },
+        ]
       : []),
     {
-      name: 'Credits Remaining',
+      name: "Credits Remaining",
       value: effectiveCredits.toString(),
-      change: 'Available for use',
-      changeType: 'neutral',
+      change: "Available for use",
+      changeType: "neutral",
       icon: Zap,
-      color: 'text-white',
+      color: "text-white",
     },
     {
-      name: 'Monthly Spend',
+      name: "Monthly Spend",
       value: `$${((dashboardData as DashboardDataType)?.monthlySpend || 0).toString()}`,
-      change: 'Current period',
-      changeType: 'neutral',
+      change: "Current period",
+      changeType: "neutral",
       icon: DollarSign,
-      color: 'text-white',
+      color: "text-white",
     },
   ];
 
-  const recentBacklinks =
-    ((dashboardData as DashboardDataType)?.recentBacklinks || []) as Backlink[];
+  const recentBacklinks = ((dashboardData as DashboardDataType)
+    ?.recentBacklinks || []) as Backlink[];
 
-  const performanceData =
-    ((dashboardData as DashboardDataType)?.performanceData || {
-      successful: 85,
-      pending: 10,
-      failed: 5,
-    }) as PerformanceData;
+  const performanceData = ((dashboardData as DashboardDataType)
+    ?.performanceData || {
+    successful: 85,
+    pending: 10,
+    failed: 5,
+  }) as PerformanceData;
 
   // Build userData object used in a few places
   const userData = {
-    email: user?.email || 'user@example.com',
-    website: user?.website || 'https://example.com',
-    niche: user?.niche || 'Technology',
-    apiKey: user?.api_key || 'linkzy_user_example_com_1234567890',
+    email: user?.email || "user@example.com",
+    website: user?.website || "https://example.com",
+    niche: user?.niche || "Technology",
+    apiKey: user?.api_key || "linkzy_user_example_com_1234567890",
     credits: effectiveCredits || FREE_CREDITS,
-    isPro: userPlan !== 'free',
+    isPro: userPlan !== "free",
     joinDate: formatJoinDate((user as any)?.created_at),
   };
 
@@ -426,18 +465,20 @@ const Dashboard = () => {
           {/* Welcome Section */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3 flex-wrap">
-              {hasBacklinks ? 'Welcome back!' : 'Welcome to Linkzy'}
+              {hasBacklinks ? "Welcome back!" : "Welcome to Linkzy"}
               <span
-                className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${userData.isPro
-                  ? 'bg-green-900/30 text-green-300 border-green-500/30'
-                  : 'bg-gray-800 text-gray-300 border-gray-600'
-                  }`}
+                className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                  userData.isPro
+                    ? "bg-green-900/30 text-green-300 border-green-500/30"
+                    : "bg-gray-800 text-gray-300 border-gray-600"
+                }`}
               >
                 {planLabel}
               </span>
-              {user?.tier && ['bronze', 'silver', 'gold'].includes(user.tier) && (
-                <TierBadge tier={user.tier} size="md" />
-              )}
+              {user?.tier &&
+                ["bronze", "silver", "gold"].includes(user.tier) && (
+                  <TierBadge tier={user.tier} size="md" />
+                )}
               {!hasBacklinks && (
                 <ContextualHelp
                   title="Getting Started"
@@ -506,7 +547,9 @@ const Dashboard = () => {
               <div className="bg-gray-900 border border-gray-700 rounded-xl p-6">
                 <div className="flex items-center space-x-3 mb-4">
                   <BarChart3 className="w-5 h-5 text-orange-500" />
-                  <h3 className="text-xl font-bold text-white">Track Progress</h3>
+                  <h3 className="text-xl font-bold text-white">
+                    Track Progress
+                  </h3>
                 </div>
                 <div className="space-y-4">
                   {recentBacklinks.length > 0 ? (
@@ -521,14 +564,16 @@ const Dashboard = () => {
                               {link.domain || link.url}
                             </p>
                             <span
-                              className={`px-3 py-1.5 rounded-full text-xs font-medium ${link.status === 'success' || link.status === 'placed'
-                                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                                : link.status === 'pending'
-                                  ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                                  : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                                }`}
+                              className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+                                link.status === "success" ||
+                                link.status === "placed"
+                                  ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                                  : link.status === "pending"
+                                    ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                                    : "bg-red-500/20 text-red-400 border border-red-500/30"
+                              }`}
                             >
-                              {(link.status || 'pending').toUpperCase()}
+                              {(link.status || "pending").toUpperCase()}
                             </span>
                           </div>
                           <p className="text-gray-400 text-sm">
@@ -539,7 +584,7 @@ const Dashboard = () => {
                               {link.clicks || 0} clicks
                             </span>
                             <span className="text-gray-500">
-                              Traffic: {link.trafficIncrease || '+0%'}
+                              Traffic: {link.trafficIncrease || "+0%"}
                             </span>
                           </div>
                         </div>
@@ -551,8 +596,8 @@ const Dashboard = () => {
                   ) : (
                     <div className="text-center py-8 px-4 bg-gray-800/50 rounded-xl border border-gray-700">
                       <p className="text-gray-300">
-                        No integrations yet. Integrate your website to start tracking
-                        progress!
+                        No integrations yet. Integrate your website to start
+                        tracking progress!
                       </p>
                     </div>
                   )}
@@ -591,7 +636,9 @@ const Dashboard = () => {
           )} */}
 
           {/* Stats Grid */}
-          <div className={`grid grid-cols-1 md:grid-cols-${stats.length} gap-6 mb-8`}>
+          <div
+            className={`grid grid-cols-1 md:grid-cols-${stats.length} gap-6 mb-8`}
+          >
             {stats.map((stat) => (
               <div
                 key={stat.name}
@@ -604,7 +651,7 @@ const Dashboard = () => {
                       {stat.name}
                     </p>
                   </div>
-                  {stat.changeType === 'increase' && (
+                  {stat.changeType === "increase" && (
                     <TrendingUp className="w-4 h-4 text-green-400" />
                   )}
                 </div>
@@ -647,14 +694,16 @@ const Dashboard = () => {
                             {link.domain || link.target_url}
                           </p>
                           <span
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium ${link.status === 'completed' || link.status === 'placed'
-                              ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                              : link.status === 'pending'
-                                ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                                : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                              }`}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+                              link.status === "completed" ||
+                              link.status === "placed"
+                                ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                                : link.status === "pending"
+                                  ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                                  : "bg-red-500/20 text-red-400 border border-red-500/30"
+                            }`}
                           >
-                            {(link.status || 'pending').toUpperCase()}
+                            {(link.status || "pending").toUpperCase()}
                           </span>
                           {link.domainAuthority && (
                             <span className="bg-blue-500/20 text-white px-3 py-1.5 rounded-full text-xs font-medium border border-blue-500/30">
@@ -670,7 +719,7 @@ const Dashboard = () => {
                             {link.clicks || 0} clicks
                           </span>
                           <span className="text-gray-500">
-                            Traffic: {link.trafficIncrease || '+0%'}
+                            Traffic: {link.trafficIncrease || "+0%"}
                           </span>
                         </div>
                       </div>
@@ -696,8 +745,8 @@ const Dashboard = () => {
                             </p>
                             <p>
                               With Linkzy, we place your backlinks on
-                              high-quality, relevant websites in your niche. This
-                              helps search engines see your site as more
+                              high-quality, relevant websites in your niche.
+                              This helps search engines see your site as more
                               authoritative.
                             </p>
                           </div>
@@ -712,7 +761,9 @@ const Dashboard = () => {
                     <button
                       className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-4 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center space-x-2 mx-auto mb-6 shadow-lg shadow-orange-500/20 animate-pulse min-h-[56px] w-full md:w-auto"
                       onClick={() =>
-                        navigate('/dashboard/account', { state: { tab: 'integrations' } })
+                        navigate("/dashboard/account", {
+                          state: { tab: "integrations" },
+                        })
                       }
                     >
                       <Plus className="w-4 h-4" />
@@ -738,7 +789,10 @@ const Dashboard = () => {
               </div>
 
               <div className="mt-6">
-                <button onClick={() => navigate('/dashboard/account')} className="w-full bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-600">
+                <button
+                  onClick={() => navigate("/dashboard/account")}
+                  className="w-full bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 border border-gray-600"
+                >
                   <span>View All Backlinks</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
@@ -782,8 +836,9 @@ const Dashboard = () => {
                         fill="none"
                         stroke="#10b981"
                         strokeWidth="8"
-                        strokeDasharray={`${performanceData.successful * 2.513
-                          } ${(100 - performanceData.successful) * 2.513}`}
+                        strokeDasharray={`${
+                          performanceData.successful * 2.513
+                        } ${(100 - performanceData.successful) * 2.513}`}
                         strokeDashoffset="0"
                         className="transition-all duration-1000"
                       />
@@ -796,10 +851,12 @@ const Dashboard = () => {
                         fill="none"
                         stroke="#f59e0b"
                         strokeWidth="8"
-                        strokeDasharray={`${performanceData.pending * 2.513
-                          } ${(100 - performanceData.pending) * 2.513}`}
-                        strokeDashoffset={`-${performanceData.successful * 2.513
-                          }`}
+                        strokeDasharray={`${
+                          performanceData.pending * 2.513
+                        } ${(100 - performanceData.pending) * 2.513}`}
+                        strokeDashoffset={`-${
+                          performanceData.successful * 2.513
+                        }`}
                         className="transition-all duration-1000"
                       />
 
@@ -811,12 +868,14 @@ const Dashboard = () => {
                         fill="none"
                         stroke="#ef4444"
                         strokeWidth="8"
-                        strokeDasharray={`${performanceData.failed * 2.513
-                          } ${(100 - performanceData.failed) * 2.513}`}
-                        strokeDashoffset={`-${(performanceData.successful +
-                          performanceData.pending) *
+                        strokeDasharray={`${
+                          performanceData.failed * 2.513
+                        } ${(100 - performanceData.failed) * 2.513}`}
+                        strokeDashoffset={`-${
+                          (performanceData.successful +
+                            performanceData.pending) *
                           2.513
-                          }`}
+                        }`}
                         className="transition-all duration-1000"
                       />
                     </svg>
@@ -867,8 +926,8 @@ const Dashboard = () => {
                     </span>
                   </div>
                   <p className="text-white text-sm">
-                    Your success rate is{' '}
-                    {performanceData.successful >= 80 ? 'above' : 'at'} industry
+                    Your success rate is{" "}
+                    {performanceData.successful >= 80 ? "above" : "at"} industry
                     average. Keep up the great work!
                   </p>
                 </div>
@@ -884,16 +943,18 @@ const Dashboard = () => {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 relative">
                 <div
-                  className={`bg-gray-800 rounded-lg p-5 text-center ${currentStep === 0
-                    ? 'ring-2 ring-orange-500 shadow-lg shadow-orange-500/20'
-                    : ''
-                    }`}
+                  className={`bg-gray-800 rounded-lg p-5 text-center ${
+                    currentStep === 0
+                      ? "ring-2 ring-orange-500 shadow-lg shadow-orange-500/20"
+                      : ""
+                  }`}
                 >
                   <div
-                    className={`w-12 h-12 ${currentStep === 0
-                      ? 'bg-orange-500 animate-pulse'
-                      : 'bg-gray-700'
-                      } rounded-xl flex items-center justify-center mx-auto mb-4 transition-colors`}
+                    className={`w-12 h-12 ${
+                      currentStep === 0
+                        ? "bg-orange-500 animate-pulse"
+                        : "bg-gray-700"
+                    } rounded-xl flex items-center justify-center mx-auto mb-4 transition-colors`}
                   >
                     <Plus className="w-6 h-6 text-white" />
                   </div>
@@ -906,16 +967,18 @@ const Dashboard = () => {
                 </div>
 
                 <div
-                  className={`bg-gray-800 rounded-lg p-5 text-center ${currentStep === 1
-                    ? 'ring-2 ring-orange-500 shadow-lg shadow-orange-500/20'
-                    : ''
-                    }`}
+                  className={`bg-gray-800 rounded-lg p-5 text-center ${
+                    currentStep === 1
+                      ? "ring-2 ring-orange-500 shadow-lg shadow-orange-500/20"
+                      : ""
+                  }`}
                 >
                   <div
-                    className={`w-12 h-12 ${currentStep === 1
-                      ? 'bg-orange-500 animate-pulse'
-                      : 'bg-gray-700'
-                      } rounded-xl flex items-center justify-center mx-auto mb-4 transition-colors`}
+                    className={`w-12 h-12 ${
+                      currentStep === 1
+                        ? "bg-orange-500 animate-pulse"
+                        : "bg-gray-700"
+                    } rounded-xl flex items-center justify-center mx-auto mb-4 transition-colors`}
                   >
                     <Calendar className="w-6 h-6 text-white" />
                   </div>
@@ -940,9 +1003,7 @@ const Dashboard = () => {
                               Places your backlinks in contextually relevant
                               content
                             </li>
-                            <li>
-                              Verifies the link is live and indexed
-                            </li>
+                            <li>Verifies the link is live and indexed</li>
                           </ul>
                         </div>
                       }
@@ -952,16 +1013,18 @@ const Dashboard = () => {
                 </div>
 
                 <div
-                  className={`bg-gray-800 rounded-lg p-5 text-center ${currentStep === 2
-                    ? 'ring-2 ring-orange-500 shadow-lg shadow-orange-500/20'
-                    : ''
-                    }`}
+                  className={`bg-gray-800 rounded-lg p-5 text-center ${
+                    currentStep === 2
+                      ? "ring-2 ring-orange-500 shadow-lg shadow-orange-500/20"
+                      : ""
+                  }`}
                 >
                   <div
-                    className={`w-12 h-12 ${currentStep === 2
-                      ? 'bg-orange-500 animate-pulse'
-                      : 'bg-gray-700'
-                      } rounded-xl flex items-center justify-center mx-auto mb-4 transition-colors`}
+                    className={`w-12 h-12 ${
+                      currentStep === 2
+                        ? "bg-orange-500 animate-pulse"
+                        : "bg-gray-700"
+                    } rounded-xl flex items-center justify-center mx-auto mb-4 transition-colors`}
                   >
                     <Zap className="w-6 h-6 text-white" />
                   </div>
@@ -976,7 +1039,9 @@ const Dashboard = () => {
                       title="Expected Results"
                       content={
                         <div className="space-y-2">
-                          <p>After your backlinks are placed, you can expect:</p>
+                          <p>
+                            After your backlinks are placed, you can expect:
+                          </p>
                           <ul className="list-disc pl-4 space-y-1">
                             <li>Increased domain authority (2-4 weeks)</li>
                             <li>Better keyword rankings (3-8 weeks)</li>
@@ -1016,14 +1081,24 @@ const Dashboard = () => {
           {/* Onboarding Modal */}
           <OnboardingModal
             isOpen={showOnboardingModal}
-            onClose={() => {
+            onClose={async () => {
               setShowOnboardingModal(false);
-              localStorage.setItem('linkzy_onboarding_shown', 'true');
+              const result = await supabaseService.updateUserCompletedOnboarding(true);
+              if (result.success) {
+                console.log("✅ User completed onboarding updated successfully");
+              } else {
+                console.error("❌ Failed to update user completed onboarding:", result.error);
+              }
             }}
-            onAction={() => {
+            onAction={async () => {
               setShowOnboardingModal(false);
-              localStorage.setItem('linkzy_onboarding_shown', 'true');
-              navigate('/dashboard/account');
+              const result = await supabaseService.updateUserCompletedOnboarding(true);
+              if (result.success) {
+                console.log("✅ User completed onboarding updated successfully");
+              } else {
+                console.error("❌ Failed to update user completed onboarding:", result.error);
+              }
+              navigate("/dashboard/account");
             }}
             creditsRemaining={userData.credits || FREE_CREDITS}
           />
@@ -1031,13 +1106,31 @@ const Dashboard = () => {
           {/* Profile Completion Modal */}
           <ProfileCompletionModal
             isOpen={showProfileCompletion}
-            onClose={() => {
+            onClose={async () => {
               setShowProfileCompletion(false);
-              localStorage.setItem('linkzy_profile_completion_seen', 'true');
+              const result =
+                await supabaseService.updateUserCompletedProfile(true);
+              if (result.success) {
+                console.log("✅ Profile completion marked as seen");
+              } else {
+                console.error(
+                  "❌ Failed to mark profile completion as seen:",
+                  result.error,
+                );
+              }
             }}
-            onComplete={() => {
+            onComplete={async () => {
               setShowProfileCompletion(false);
-              localStorage.setItem('linkzy_profile_completion_seen', 'true');
+              const result =
+                await supabaseService.updateUserCompletedProfile(true);
+              if (result.success) {
+                console.log("✅ Profile completion marked as seen");
+              } else {
+                console.error(
+                  "❌ Failed to mark profile completion as seen:",
+                  result.error,
+                );
+              }
               // Refresh dashboard data to show updated profile
               refetch();
             }}
@@ -1056,15 +1149,15 @@ const Dashboard = () => {
             isOpen={showProfileOnboarding}
             onComplete={(website, niche) => {
               setShowProfileOnboarding(false);
-              localStorage.setItem('linkzy_profile_onboarding_seen', 'true');
+              localStorage.setItem("linkzy_profile_onboarding_seen", "true");
               // Refresh dashboard data to show updated profile
               refetch();
             }}
             onSkip={() => {
               setShowProfileOnboarding(false);
-              localStorage.setItem('linkzy_profile_onboarding_seen', 'true');
+              localStorage.setItem("linkzy_profile_onboarding_seen", "true");
             }}
-            userEmail={user?.email || ''}
+            userEmail={user?.email || ""}
           />
         </div>
       </DashboardLayout>
