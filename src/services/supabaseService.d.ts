@@ -15,6 +15,9 @@ declare class SupabaseService {
   generateApiKey(email: string): string;
   sendWelcomeEmail(email: string, apiKey: string, website: string, niche: string, verificationToken?: string): Promise<any>;
   updateUserProfile(website: string, niche: string): Promise<{ success: boolean; error?: string }>;
+  updateUserFirstBacklink(first_backlink: boolean): Promise<{ success: boolean; error?: string }>;
+  updateUserCompletedProfile(completed_profile: boolean): Promise<{ success: boolean; error?: string }>;
+  updateUserCompletedOnboarding(completed_onboarding: boolean): Promise<{ success: boolean; error?: string }>;
   getDashboardStats(): Promise<any>;
   getBacklinks(page?: number, limit?: number): Promise<any>;
   updateUserCredits(userId: string, creditsToAdd: number, paymentDetails: any): Promise<any>;
@@ -33,6 +36,11 @@ declare class SupabaseService {
   getKeywordAnalytics(): Promise<any>;
   getBillingHistory(userId: string): Promise<any[]>;
   fetchDomainMetrics(userId: string, website: string): Promise<any>;
+
+  // Domain verification
+  getVerifiedDomains(): Promise<Array<{ id: string; domain: string; verification_method: string | null; verified_at: string | null; created_at: string }>>;
+  verifyDomain(domain: string): Promise<any>;
+  removeVerifiedDomain(id: string): Promise<{ success: boolean }>;
 }
 
 declare const supabaseService: SupabaseService;
