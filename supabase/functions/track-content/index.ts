@@ -20,6 +20,8 @@ const json = (status: number, body: unknown) =>
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") ?? "";
+const RATE_LIMIT_PER_MINUTE = Math.max(1, parseInt(Deno.env.get("TRACK_CONTENT_RATE_LIMIT") ?? "60", 10));
+const REQUIRE_DOMAIN_VERIFICATION = Deno.env.get("TRACK_CONTENT_REQUIRE_VERIFICATION") === "true";
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
@@ -203,7 +205,63 @@ async function safeTriggerMatching(contentId: string, userId: string) {
   }
 }
 
-/** -------- Main handler -------- */
+/** -------- Rate limiting (fixed window, per user per minute) -------- */
+
+function getMinuteWindow(): string {
+  const ms = Date.now();
+  const truncated = new Date(Math.floor(ms / 60000) * 60000);
+  return truncated.toISOString();
+}
+
+function extractHostnameFromUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url.startsWith("http") ? url : `https://${url}`);
+    const host = parsed.hostname?.toLowerCase();
+    if (!host || host === "localhost" || host === "127.0.0.1") return null;
+    return host;
+  } catch {
+    return null;
+  }
+}
+
+function toApexDomain(hostname: string): string {
+  return hostname.replace(/^www\./, "");
+}
+
+async function isDomainVerified(userId: string, hostname: string): Promise<boolean> {
+  const apex = toApexDomain(hostname);
+  const domainsToCheck = apex === hostname ? [hostname] : [hostname, apex];
+  const { data } = await supabase
+    .from("verified_domains")
+    .select("id")
+    .eq("user_id", userId)
+    .not("verified_at", "is", null)
+    .in("domain", domainsToCheck)
+    .limit(1)
+    .maybeSingle();
+  return !!data?.id;
+}
+
+async function checkRateLimit(userId: string): Promise<{ allowed: boolean; current: number; limit: number }> {
+  const windowStart = getMinuteWindow();
+
+  // Upsert: increment count and return new value
+  const { data, error } = await supabase.rpc("track_content_rate_limit_upsert", {
+    p_user_id: userId,
+    p_window_start: windowStart,
+  }).single();
+
+  if (error) {
+    // Fallback: if RPC doesn't exist yet, allow (fail open for backwards compat during rollout)
+    console.warn("Rate limit check failed, allowing request:", error.message);
+    return { allowed: true, current: 0, limit: RATE_LIMIT_PER_MINUTE };
+  }
+
+  const current = typeof data?.count === "number" ? data.count : 0;
+  const allowed = current <= RATE_LIMIT_PER_MINUTE;
+
+  return { allowed, current, limit: RATE_LIMIT_PER_MINUTE };
+}
 
 serve(async (req) => {
   // CORS preflight
@@ -224,6 +282,51 @@ serve(async (req) => {
 
   if (!payload.apiKey || !payload.url || !payload.timestamp) {
     return json(400, { error: "Missing required fields: apiKey, url, timestamp" });
+  }
+
+  // Validate API key and rate limit EARLY (before expensive LLM/keyword work)
+  const { data: userData, error: userError } = await supabase
+    .from("users")
+    .select("id")
+    .eq("api_key", payload.apiKey)
+    .single();
+
+  if (userError || !userData) {
+    return json(401, { error: "Invalid API key" });
+  }
+
+  const rateResult = await checkRateLimit(userData.id);
+  if (!rateResult.allowed) {
+    return new Response(
+      JSON.stringify({
+        error: "Rate limit exceeded",
+        message: `Maximum ${rateResult.limit} track-content requests per minute. Try again in a minute.`,
+        retryAfter: 60,
+      }),
+      {
+        status: 429,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "Retry-After": "60",
+        },
+      }
+    );
+  }
+
+  // Domain verification (when enabled): only allow tracking from verified domains
+  if (REQUIRE_DOMAIN_VERIFICATION) {
+    const hostname = extractHostnameFromUrl(payload.url);
+    if (!hostname) {
+      return json(400, { error: "Invalid URL: could not extract hostname" });
+    }
+    const verified = await isDomainVerified(userData.id, hostname);
+    if (!verified) {
+      return json(403, {
+        error: "Domain not verified",
+        message: `The domain ${hostname} must be verified before tracking. Add it in Dashboard → Domain Verification.`,
+      });
+    }
   }
 
   const contentText = String(payload.content || "");
@@ -252,17 +355,6 @@ serve(async (req) => {
     const matches = contentText.match(re);
     const count = matches ? matches.length : 0;
     density[phrase] = ((count / Math.max(totalWords, 1)) * 100).toFixed(2);
-  }
-
-  // Validate API key -> user id (service role bypasses RLS)
-  const { data: userData, error: userError } = await supabase
-    .from("users")
-    .select("id")
-    .eq("api_key", payload.apiKey)
-    .single();
-
-  if (userError || !userData) {
-    return json(401, { error: "Invalid API key" });
   }
 
   // Try to find existing tracked content (0 rows is NOT fatal)
