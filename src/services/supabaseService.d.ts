@@ -36,6 +36,11 @@ declare class SupabaseService {
   getKeywordAnalytics(): Promise<any>;
   getBillingHistory(userId: string): Promise<any[]>;
   fetchDomainMetrics(userId: string, website: string): Promise<any>;
+
+  // Domain verification
+  getVerifiedDomains(): Promise<Array<{ id: string; domain: string; verification_method: string | null; verified_at: string | null; created_at: string }>>;
+  verifyDomain(domain: string): Promise<any>;
+  removeVerifiedDomain(id: string): Promise<{ success: boolean }>;
 }
 
 declare const supabaseService: SupabaseService;

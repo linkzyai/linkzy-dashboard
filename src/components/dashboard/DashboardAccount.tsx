@@ -6,10 +6,12 @@ import PurchaseCreditsModal from "./PurchaseCreditsModal";
 import TierBadge from "./TierBadge";
 import {
   AlertTriangle,
+  CheckCircle,
   CreditCard,
   FileText,
   LogOut,
   Settings,
+  Shield,
   Download,
   Monitor,
   Send,
@@ -101,6 +103,14 @@ const DashboardAccount = () => {
   const [backlinksPage, setBacklinksPage] = useState(1);
   const [backlinksTotalPages, setBacklinksTotalPages] = useState(0);
   const [backlinksTotal, setBacklinksTotal] = useState(0);
+
+  // Domain verification
+  const [verifiedDomains, setVerifiedDomains] = useState<
+    Array<{ id: string; domain: string; verification_method: string | null; verified_at: string | null }>
+  >([]);
+  const [domainToVerify, setDomainToVerify] = useState("");
+  const [domainVerifyLoading, setDomainVerifyLoading] = useState(false);
+  const [domainVerifyMessage, setDomainVerifyMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Listen for credit updates from success page
   useEffect(() => {
@@ -251,6 +261,52 @@ const DashboardAccount = () => {
       loadBacklinks(1);
     }
   }, [user?.id, activeTab, loadBacklinks]);
+
+  useEffect(() => {
+    if (activeTab === "integrations" && user?.id) {
+      supabaseService
+        .getVerifiedDomains()
+        .then(setVerifiedDomains)
+        .catch(() => setVerifiedDomains([]));
+    }
+  }, [activeTab, user?.id]);
+
+  const handleVerifyDomain = async () => {
+    const domain = domainToVerify.trim();
+    if (!domain) return;
+    setDomainVerifyLoading(true);
+    setDomainVerifyMessage(null);
+    try {
+      const result = await supabaseService.verifyDomain(domain);
+      if (result?.verified) {
+        setDomainVerifyMessage({ type: "success", text: `${result.domain} verified successfully!` });
+        setDomainToVerify("");
+        supabaseService.getVerifiedDomains().then(setVerifiedDomains);
+      } else if (result?.token) {
+        const metaInst = result.instructions?.meta || `Add meta tag with content="${result.token}"`;
+        setDomainVerifyMessage({
+          type: "success",
+          text: `Add verification to your site, then click Verify again. ${metaInst}`,
+        });
+        supabaseService.getVerifiedDomains().then(setVerifiedDomains);
+      } else {
+        setDomainVerifyMessage({ type: "error", text: result?.error || "Verification failed" });
+      }
+    } catch (err) {
+      setDomainVerifyMessage({ type: "error", text: (err as Error).message || "Verification failed" });
+    } finally {
+      setDomainVerifyLoading(false);
+    }
+  };
+
+  const handleRemoveDomain = async (id: string) => {
+    try {
+      await supabaseService.removeVerifiedDomain(id);
+      setVerifiedDomains((prev) => prev.filter((d) => d.id !== id));
+    } catch (err) {
+      console.error("Remove domain failed:", err);
+    }
+  };
 
   const handleBacklinksPageChange = (newPage: number) => {
     if (newPage < 1) return;
@@ -1807,6 +1863,79 @@ const DashboardAccount = () => {
 
   const renderIntegrationsTab = () => (
     <div className="space-y-8">
+      {/* Domain Verification Card */}
+      <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
+        <div className="flex items-center gap-2 mb-4">
+          <Shield className="w-6 h-6 text-orange-500" />
+          <h3 className="text-xl font-bold text-white">Domain Verification</h3>
+        </div>
+        <p className="text-gray-400 mb-4">
+          Verify ownership of domains before tracking content. When domain verification is enabled, only verified
+          domains can send tracking data.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <input
+            type="text"
+            placeholder="example.com"
+            value={domainToVerify}
+            onChange={(e) => setDomainToVerify(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleVerifyDomain()}
+            className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
+          />
+          <button
+            type="button"
+            onClick={handleVerifyDomain}
+            disabled={domainVerifyLoading || !domainToVerify.trim()}
+            className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-5 py-3 rounded-lg font-medium transition-colors"
+          >
+            {domainVerifyLoading ? "Verifying..." : "Add & Verify"}
+          </button>
+        </div>
+        {domainVerifyMessage && (
+          <div
+            className={`mb-4 p-3 rounded-lg text-sm ${
+              domainVerifyMessage.type === "success"
+                ? "bg-green-900/30 text-green-300 border border-green-500/30"
+                : "bg-red-900/30 text-red-300 border border-red-500/30"
+            }`}
+          >
+            {domainVerifyMessage.text}
+          </div>
+        )}
+        {verifiedDomains.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-gray-300">Verified domains</h4>
+            <ul className="space-y-2">
+              {verifiedDomains.map((d) => (
+                <li
+                  key={d.id}
+                  className="flex items-center justify-between bg-gray-800 border border-gray-600 rounded-lg px-4 py-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="text-white font-medium">{d.domain}</span>
+                    {d.verification_method && (
+                      <span className="text-xs text-gray-400">via {d.verification_method}</span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveDomain(d.id)}
+                    className="text-gray-400 hover:text-red-400 text-sm"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <div className="mt-4 text-xs text-gray-500 space-y-1">
+          <p><strong>Method 1 — Meta tag:</strong> Add to your site&apos;s &lt;head&gt;: <code className="bg-gray-800 px-1 rounded">{"<meta name=\"linkzy-verification\" content=\"YOUR_TOKEN\">"}</code></p>
+          <p><strong>Method 2 — File:</strong> Create <code className="bg-gray-800 px-1 rounded">/.well-known/linkzy-verify.txt</code> with the token as content.</p>
+        </div>
+      </div>
+
       {/* API Integration Card - Only Integration Option */}
       <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
         <h3 className="text-xl font-bold text-white mb-4">API Integration</h3>

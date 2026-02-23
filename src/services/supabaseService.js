@@ -1639,6 +1639,56 @@ If you're testing, try these workarounds:
     }
   }
 
+  // Domain verification for track-content
+  async getVerifiedDomains() {
+    try {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error("Not authenticated");
+      }
+      const { data, error } = await supabase
+        .from("verified_domains")
+        .select("id, domain, verification_method, verified_at, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error("getVerifiedDomains failed:", error);
+      throw error;
+    }
+  }
+
+  async verifyDomain(domain) {
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-domain", {
+        body: { domain },
+      });
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("verifyDomain failed:", error);
+      throw error;
+    }
+  }
+
+  async removeVerifiedDomain(id) {
+    try {
+      const { error } = await supabase
+        .from("verified_domains")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+      return { success: true };
+    } catch (error) {
+      console.error("removeVerifiedDomain failed:", error);
+      throw error;
+    }
+  }
+
   // Update user credits after successful payment
   async updateUserCredits(userId, creditsToAdd, paymentDetails) {
     try {
