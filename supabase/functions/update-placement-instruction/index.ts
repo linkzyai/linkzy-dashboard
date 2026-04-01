@@ -27,11 +27,53 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { instructionId, status, result } = await req.json();
+    const { instructionId, status, result, apiKey } = await req.json();
     
     if (!instructionId || !status) {
       return new Response(JSON.stringify({ error: 'Missing instructionId or status' }), {
         status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!apiKey) {
+      return new Response(JSON.stringify({ error: 'Missing apiKey' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Validate API key -> user
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('api_key', apiKey)
+      .single();
+
+    if (userError || !userData) {
+      return new Response(JSON.stringify({ error: 'Invalid API key' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Verify the instruction belongs to this user before allowing update
+    const { data: existingInstruction, error: fetchError } = await supabase
+      .from('placement_instructions')
+      .select('id, user_id')
+      .eq('id', instructionId)
+      .single();
+
+    if (fetchError || !existingInstruction) {
+      return new Response(JSON.stringify({ error: 'Instruction not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (existingInstruction.user_id !== userData.id) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -125,4 +167,4 @@ serve(async (req: Request) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
-}); 
+});
