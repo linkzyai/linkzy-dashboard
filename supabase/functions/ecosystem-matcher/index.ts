@@ -273,7 +273,7 @@ async function findMatchingOpportunities(contentId: string, userId: string) {
         if (scores.overall >= 0.1) {
           const anchorSuggestions = generateAnchorTextSuggestions(
             targetContent.keywords || [],
-            sourceContent.url || sourceUser.website // error found - need to change sourceContent.users.website -> .url
+            sourceContent.url
           );
           opportunities.push({
             source_content_id: contentId as string,
